@@ -448,9 +448,9 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
                            LINK_NAMELIST + std::string("#laser-envelope-model"));
         }
         
-        PyTools::extract( "envelope_initialization", envelope_initialization, "LaserEnvelope" );
-        if ( (envelope_initialization != "inside_the_window") && (envelope_initialization != "injection_from_xmin") ){
-            ERROR_NAMELIST("Unknown envelope_solver - only 'inside_the_window' and 'injection_from_xmin' are available. ",
+        PyTools::extract( "envelope_type", envelope_type, "LaserEnvelope" );
+        if ( (envelope_type != "inside_window") && (envelope_type != "from_xmin") ){
+            ERROR_NAMELIST("Unknown envelope_solver - only 'inside_window' and 'from_xmin' are available. ",
                            LINK_NAMELIST + std::string("#laser-envelope-model"));
         }
         if (geometry=="1Dcartesian"){
@@ -1422,7 +1422,7 @@ void Params::print_init()
         info << "\tpolarization angle      : " << envelope_polarization_phi << endl;
         info << "\t\tellipticity             : " << envelope_ellipticity << endl;
         info << "\t\tEnvelope solver         : " << envelope_solver << endl;
-        info << "\t\tEnvelope initialization : " << envelope_initialization << endl;
+        info << "\t\tEnvelope initialization : " << envelope_type << endl;
         MESSAGE( 1, info.str() );
         for( unsigned int i=0 ; i<grid_length.size() ; i++ ) {
             MESSAGE( 1, "\tdimension " << i );

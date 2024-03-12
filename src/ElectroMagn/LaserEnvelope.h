@@ -42,7 +42,7 @@ public:
     // This coefficient is used for the ponderomotive potential Phi = ellipticity_factor*|A|^2/2.
 
     std:: string envelope_solver  = "explicit"; // default value
-    std:: string envelope_initialization = "inside_the_window"; // default value
+    std:: string envelope_type = "inside_window"; // default value
     
     Field *A_;         // envelope value at timestep n
     Field *A0_;        // envelope value at timestep n-1

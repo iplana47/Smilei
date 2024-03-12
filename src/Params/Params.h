@@ -154,7 +154,7 @@ public:
     // define the solver for the envelope equation
     std::string envelope_solver;
     // define the initialization method for the laser envelope 
-    std::string envelope_initialization;
+    std::string envelope_type;
     
     //Poisson solver
     //! Do we solve poisson

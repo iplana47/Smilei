@@ -36,9 +36,9 @@ Changes made in the repository (not released)
   * Changed coordinate reference for 2D probe in 3D or AM geometry
     (zero is the box origin projected orthogonally on the probe plane).
     
-* **LaserEnvelope model**:
+* LaserEnvelope model:
 
-  * Now the laser pulse can be initialized either inside the window (default mode) or from the ``xmin`` border setting the ``envelope_initialization`` variable.
+  * Now the laser pulse can be initialized either inside the window (default mode) or from the ``xmin`` border setting the ``envelope_type`` variable.
 
 * Documentation:
 
