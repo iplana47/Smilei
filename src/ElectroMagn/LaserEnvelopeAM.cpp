@@ -74,7 +74,7 @@ LaserEnvelopeAM::LaserEnvelopeAM( LaserEnvelope *envelope, Patch *patch, Params 
 }
 
 
-void LaserEnvelopeAM::initEnvelope( Patch *patch, ElectroMagn *EMfields )
+void LaserEnvelopeAM::initEnvelopeInsideTheWindow( Patch *patch, ElectroMagn *EMfields )
 {
     cField2D *A2Dcyl          = static_cast<cField2D *>( A_ );
     cField2D *A02Dcyl         = static_cast<cField2D *>( A0_ );
@@ -174,6 +174,10 @@ void LaserEnvelopeAM::initEnvelope( Patch *patch, ElectroMagn *EMfields )
     }
 }
 
+void LaserEnvelopeAM::injectEnvelopeFromXmin( Params &params, bool inject_envelope_from_this_patch, double time_dual )
+{
+      
+}
 
 LaserEnvelopeAM::~LaserEnvelopeAM()
 {

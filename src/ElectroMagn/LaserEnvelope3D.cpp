@@ -75,7 +75,7 @@ LaserEnvelope3D::LaserEnvelope3D( LaserEnvelope *envelope, Patch *patch, Params 
 }
 
 
-void LaserEnvelope3D::initEnvelope( Patch *patch, ElectroMagn *EMfields )
+void LaserEnvelope3D::initEnvelopeInsideTheWindow( Patch *patch, ElectroMagn *EMfields )
 {
     cField3D *A3D          = static_cast<cField3D *>( A_ );
     cField3D *A03D         = static_cast<cField3D *>( A0_ );
@@ -199,6 +199,11 @@ void LaserEnvelope3D::initEnvelope( Patch *patch, ElectroMagn *EMfields )
         } // end y loop
     } // end x loop
     
+}
+
+void LaserEnvelope3D::injectEnvelopeFromXmin( Params &params, bool inject_envelope_from_this_patch, double time_dual )
+{
+      
 }
 
 

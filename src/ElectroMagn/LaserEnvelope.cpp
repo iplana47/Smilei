@@ -23,6 +23,7 @@ LaserEnvelope::LaserEnvelope( Params &params, Patch *patch ) :
     
 {
 
+    // Read envelope profile
     PyObject *profile = NULL;
     if( !PyTools::extract_pyProfile( "envelope_profile", profile, "LaserEnvelope" ) ) {
         MESSAGE( "No envelope profile set !" );
@@ -39,16 +40,23 @@ LaserEnvelope::LaserEnvelope( Params &params, Patch *patch ) :
     ostringstream name( "" );
     name << "Laser Envelope " << endl;
     
-    // extract laser frequency
+    // Read laser frequency
     PyTools::extract( "omega", omega, "LaserEnvelope" );
 
-    // Read laser envelope parameters
+    // Read solver for envelope equation 
     PyTools::extract( "envelope_solver", envelope_solver, "LaserEnvelope" );
 
     if ( (envelope_solver != "explicit") && (envelope_solver != "explicit_reduced_dispersion") ){
         ERROR("Unknown envelope_solver - only 'explicit' and 'explicit_reduced_dispersion' are available. ");
     }
+    
+    // Read initialization method for the laser envelope
+    PyTools::extract( "envelope_initialization", envelope_initialization, "LaserEnvelope" );
+    if ( (envelope_initialization != "injection_from_xmin") && (envelope_initialization != "inside_the_window") ){
+        ERROR("Unknown envelope_initialization - only 'inside_the_window' and 'injection_from_xmin' are available. ");
+    }
 
+    // Read laser ellipticity
     PyTools::extract( "polarization_phi", polarization_phi, "LaserEnvelope" );
     PyTools::extract( "ellipticity", ellipticity, "LaserEnvelope" );
     if ((ellipticity != 0.) and (ellipticity != 1.)){
@@ -62,9 +70,10 @@ LaserEnvelope::LaserEnvelope( Params &params, Patch *patch ) :
         ellipticity_factor = 2.;
     }
 
+    // Read laser polarization angle (relevant only for the momentum initialization of electrons born from ionization)
     params.envelope_polarization_phi = polarization_phi;
   
-    // auxiliary quantities
+    // auxiliary quantities used in the envelope solver
     std::complex<double>     i1 = std::complex<double>( 0., 1 ); // imaginary unit
     double k0 = omega; // normalized laser wavenumber
     i1_2k0_over_2dx = i1*2.*k0/2./cell_length[0];
@@ -102,6 +111,7 @@ LaserEnvelope::LaserEnvelope( LaserEnvelope *envelope, Patch *patch, Params &par
     ellipticity(envelope->ellipticity),
     ellipticity_factor(envelope->ellipticity_factor),
     envelope_solver(envelope->envelope_solver),
+    envelope_initialization(envelope->envelope_initialization),
     one_ov_2dt(envelope->one_ov_2dt),
     dt_sq(envelope->dt_sq),
     one_ov_dx_sq(envelope->one_ov_dx_sq),
