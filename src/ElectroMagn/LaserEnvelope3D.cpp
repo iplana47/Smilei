@@ -225,12 +225,27 @@ void LaserEnvelope3D::injectEnvelopeFromXmin( Patch *patch, Params &params, doub
         position[1] = pos1;
         for( unsigned int j=0 ; j<A_->dims_[1] ; j++ ) {
             position[2] = pos2;
-            for( unsigned int k=0 ; k<A_->dims_[2] ; j++ ) {     
+            for( unsigned int k=0 ; k<A_->dims_[2] ; k++ ) {
                 ( *A3D  )( oversize_-1, j, k ) += profile_->complexValueAt( position, t );
                 ( *A03D )( oversize_-1, j, k ) += profile_->complexValueAt( position, t_previous_timestep );
                 position[2] += cell_length[2];
             }
             position[1] += cell_length[1];
+        }
+        
+        if (envelope_solver=="explicit_reduced_dispersion"){
+            position[0] = -cell_length[0];
+            position[1] = pos1;
+            for( unsigned int j=0 ; j<A_->dims_[1] ; j++ ) {
+                position[2] = pos2;
+                for( unsigned int k=0 ; k<A_->dims_[2] ; k++ ) {
+                    ( *A3D  )( oversize_-2, j, k ) += profile_->complexValueAt( position, t );
+                    ( *A03D )( oversize_-2, j, k ) += profile_->complexValueAt( position, t_previous_timestep );
+                    position[2] += cell_length[2];
+                }
+                position[1] += cell_length[1];
+            }
+            
         }
     }
       
