@@ -201,8 +201,38 @@ void LaserEnvelope3D::initEnvelopeInsideTheWindow( Patch *patch, ElectroMagn *EM
     
 }
 
-void LaserEnvelope3D::injectEnvelopeFromXmin( Params &params, bool inject_envelope_from_this_patch, double time_dual )
+void LaserEnvelope3D::injectEnvelopeFromXmin( Patch *patch, Params &params, double time_dual )
 {
+
+    cField3D *A3D                 = static_cast<cField3D *>( A_ );
+    cField3D *A03D                = static_cast<cField3D *>( A0_ );
+
+    double t                      = time_dual;          // x-ct     , t=0
+    double t_previous_timestep    = time_dual-timestep; // x-c(t-dt), t=0
+
+    vector<double> position( 3, 0 );
+    position[0]                   = 0.;
+    double pos1 = cell_length[1]*( ( double )( patch->getCellStartingGlobalIndex( 1 ) )+( A_->isDual( 1 )?-0.5:0. ) );
+    double pos2 = cell_length[2]*( ( double )( patch->getCellStartingGlobalIndex( 2 ) )+( A_->isDual( 2 )?-0.5:0. ) );
+
+    // oversize
+    int oversize_                 = params.oversize[0];
+
+
+    bool inject_envelope_from_this_patch = ( patch->isBoundary(0) ) && (  patch->isXmin() );
+    // Impose the envelope value for x=0 at time t and t-dt 
+    if ( inject_envelope_from_this_patch ){
+        position[1] = pos1;
+        for( unsigned int j=0 ; j<A_->dims_[1] ; j++ ) {
+            position[2] = pos2;
+            for( unsigned int k=0 ; k<A_->dims_[2] ; j++ ) {     
+                ( *A3D  )( oversize_-1, j, k ) += profile_->complexValueAt( position, t );
+                ( *A03D )( oversize_-1, j, k ) += profile_->complexValueAt( position, t_previous_timestep );
+                position[2] += cell_length[2];
+            }
+            position[1] += cell_length[1];
+        }
+    }
       
 }
 

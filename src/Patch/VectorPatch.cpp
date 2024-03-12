@@ -1180,9 +1180,8 @@ void VectorPatch::injectEnvelopeFromXminIfNeeded( Params &params, double time_du
     if ( ( ( *this )( 0 )->EMfields->envelope!=NULL ) && (( *this )( 0 )->EMfields->envelope->envelope_initialization=="injection_from_xmin") ) {
         #pragma omp for schedule(static)
         for( unsigned int ipatch=0 ; ipatch<this->size() ; ipatch++ ) {
-            bool inject_envelope_from_this_patch = ( ( *this )( ipatch )->isBoundary(0) ) && (  ( *this )( ipatch )->isXmin() );
             // Apply boundary conditions for envelope and |A| to inject the laser
-            ( *this )( ipatch )->EMfields->envelope->injectEnvelopeFromXmin( params, inject_envelope_from_this_patch, time_dual );
+            ( *this )( ipatch )->EMfields->envelope->injectEnvelopeFromXmin( ( *this )( ipatch ), params, time_dual );
         }
     }
 

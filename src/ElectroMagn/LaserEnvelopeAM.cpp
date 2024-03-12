@@ -174,8 +174,42 @@ void LaserEnvelopeAM::initEnvelopeInsideTheWindow( Patch *patch, ElectroMagn *EM
     }
 }
 
-void LaserEnvelopeAM::injectEnvelopeFromXmin( Params &params, bool inject_envelope_from_this_patch, double time_dual )
+void LaserEnvelopeAM::injectEnvelopeFromXmin( Patch *patch, Params &params, double time_dual )
 {
+  
+    cField2D *A2D                 = static_cast<cField2D *>( A_ );
+    cField2D *A02D                = static_cast<cField2D *>( A0_ );
+
+    double t                      = time_dual;          // x-ct     , t=0
+    double t_previous_timestep    = time_dual-timestep; // x-c(t-dt), t=0
+
+    vector<double> position( 2, 0 );
+    position[0]                   = 0.;
+    double pos1 = cell_length[1]*( ( double )( patch->getCellStartingGlobalIndex( 1 ) )+( A_->isDual( 1 )?-0.5:0. ) );
+
+    // oversize
+    int oversize_                 = params.oversize[0];
+
+
+    bool inject_envelope_from_this_patch = ( patch->isBoundary(0) ) && (  patch->isXmin() );
+    bool isYmin = patch->isYmin();
+    
+    // Impose the envelope value for x=0 at time t and t-dt 
+    if ( inject_envelope_from_this_patch ){
+        position[1] = pos1;
+        for( unsigned int j=0 ; j<A_->dims_[1] ; j++ ) {    
+            ( *A2D  )( oversize_-1, j ) += profile_->complexValueAt( position, t );
+            ( *A02D )( oversize_-1, j ) += profile_->complexValueAt( position, t_previous_timestep );
+            position[1] += cell_length[1];
+        }
+    }
+    
+    if (isYmin){ // axis BC
+        unsigned int j = 2;  // j_p=2 corresponds to r=0    
+        ( *A2D  )( oversize_-1, j-1 )  = ( *A2D  )( oversize_-1, j+1 );
+        ( *A02D )( oversize_-1, j-2 )  = ( *A02D )( oversize_-1, j+2 );    
+                  
+    } // end l loop
       
 }
 
