@@ -485,7 +485,7 @@ def LaserPlanar1D( box_side="xmin", a0=1., omega=1.,
     )
 
 def LaserEnvelopePlanar1D( a0=1., omega=1., time_envelope=tconstant(),
-        envelope_solver = "explicit",Envelope_boundary_conditions = [["reflective"]],
+        envelope_solver = "explicit",envelope_initialization = "inside_the_window",Envelope_boundary_conditions = [["reflective"]],
         polarization_phi = 0.,ellipticity = 0.):
     from numpy import vectorize, sqrt
 
@@ -495,12 +495,13 @@ def LaserEnvelopePlanar1D( a0=1., omega=1., time_envelope=tconstant(),
 
     # Create Laser Envelope
     LaserEnvelope(
-        omega               = omega,
-        envelope_profile    = space_time_envelope,
-        envelope_solver     = envelope_solver,
+        omega                        = omega,
+        envelope_profile             = space_time_envelope,
+        envelope_solver              = envelope_solver,
+        envelope_initialization      = envelope_initialization,
         Envelope_boundary_conditions = Envelope_boundary_conditions,
-        polarization_phi    = polarization_phi,
-        ellipticity         = ellipticity
+        polarization_phi             = polarization_phi,
+        ellipticity                  = ellipticity
     )
 
 
@@ -569,7 +570,7 @@ def LaserGaussian2D( box_side="xmin", a0=1., omega=1., focus=None, waist=3., inc
     )
 
 def LaserEnvelopeGaussian2D( a0=1., omega=1., focus=None, waist=3., time_envelope=tconstant(),
-        envelope_solver = "explicit",Envelope_boundary_conditions = [["reflective"]],
+        envelope_solver = "explicit",envelope_initialization = "inside_the_window",Envelope_boundary_conditions = [["reflective"]],
         polarization_phi = 0.,ellipticity = 0.):
     import cmath
     from numpy import exp, sqrt, arctan, vectorize
@@ -589,12 +590,13 @@ def LaserEnvelopeGaussian2D( a0=1., omega=1., focus=None, waist=3., time_envelop
 
     # Create Laser Envelope
     LaserEnvelope(
-        omega               = omega,
-        envelope_profile    = gaussian_beam_with_temporal_profile,
-        envelope_solver     = envelope_solver,
+        omega                        = omega,
+        envelope_profile             = gaussian_beam_with_temporal_profile,
+        envelope_solver              = envelope_solver,
+        envelope_initialization      = envelope_initialization,
         Envelope_boundary_conditions = Envelope_boundary_conditions,
-        polarization_phi    = polarization_phi,
-        ellipticity         = ellipticity
+        polarization_phi             = polarization_phi,
+        ellipticity                  = ellipticity
     )
 
 def LaserGaussian3D( box_side="xmin", a0=1., omega=1., focus=None, waist=3., incidence_angle=[0.,0.],
@@ -666,7 +668,7 @@ def LaserGaussian3D( box_side="xmin", a0=1., omega=1., focus=None, waist=3., inc
     )
 
 def LaserEnvelopeGaussian3D( a0=1., omega=1., focus=None, waist=3., time_envelope=tconstant(),
-        envelope_solver = "explicit",Envelope_boundary_conditions = [["reflective"]],
+        envelope_solver = "explicit",Envelope_boundary_conditions = [["reflective"]], envelope_initialization = "inside_the_window",
         polarization_phi = 0.,ellipticity = 0.):
     import cmath
     from numpy import exp, sqrt, arctan, vectorize
@@ -686,12 +688,13 @@ def LaserEnvelopeGaussian3D( a0=1., omega=1., focus=None, waist=3., time_envelop
 
     # Create Laser Envelope
     LaserEnvelope(
-        omega               = omega,
-        envelope_profile    = gaussian_beam_with_temporal_profile,
-        envelope_solver     = envelope_solver,
+        omega                        = omega,
+        envelope_profile             = gaussian_beam_with_temporal_profile,
+        envelope_solver              = envelope_solver,
+        envelope_initialization      = envelope_initialization,
         Envelope_boundary_conditions = Envelope_boundary_conditions,
-        polarization_phi    = polarization_phi,
-        ellipticity         = ellipticity
+        polarization_phi             = polarization_phi,
+        ellipticity                  = ellipticity
     )
 
 
@@ -725,7 +728,7 @@ def LaserGaussianAM( box_side="xmin", a0=1., omega=1., focus=None, waist=3.,
 
 
 def LaserEnvelopeGaussianAM( a0=1., omega=1., focus=None, waist=3., time_envelope=tconstant(),
-        envelope_solver = "explicit",Envelope_boundary_conditions = [["reflective"]],
+        envelope_solver = "explicit",envelope_initialization = "inside_the_window",Envelope_boundary_conditions = [["reflective"]],
         Env_pml_sigma_parameters = [[0.90,2],[10.0,2],[10.0,2]],
         Env_pml_kappa_parameters = [[1.00,1.00,2],[1.00,1.00,2],[1.00,1.00,2]],
         Env_pml_alpha_parameters = [[0.90,0.90,1],[0.75,0.75,1],[0.75,0.75,1]],
@@ -748,15 +751,16 @@ def LaserEnvelopeGaussianAM( a0=1., omega=1., focus=None, waist=3., time_envelop
 
     # Create Laser Envelope
     LaserEnvelope(
-        omega               = omega,
-        envelope_profile    = gaussian_beam_with_temporal_profile,
-        envelope_solver     = envelope_solver,
+        omega                        = omega,
+        envelope_profile             = gaussian_beam_with_temporal_profile,
+        envelope_solver              = envelope_solver,
+        envelope_initialization      = envelope_initialization,
         Envelope_boundary_conditions = Envelope_boundary_conditions,
-        Env_pml_sigma_parameters = Env_pml_sigma_parameters,
-        Env_pml_kappa_parameters = Env_pml_kappa_parameters,
-        Env_pml_alpha_parameters = Env_pml_alpha_parameters,
-        polarization_phi    = polarization_phi,
-        ellipticity         = ellipticity
+        Env_pml_sigma_parameters     = Env_pml_sigma_parameters,
+        Env_pml_kappa_parameters     = Env_pml_kappa_parameters,
+        Env_pml_alpha_parameters     = Env_pml_alpha_parameters,
+        polarization_phi             = polarization_phi,
+        ellipticity                  = ellipticity
     )
 
 # Define the tools for the propagation of a laser profile

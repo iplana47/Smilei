@@ -477,6 +477,7 @@ class LaserEnvelope(SmileiSingleton):
     Env_pml_alpha_parameters = [[0.90,0.90,1],[0.75,0.75,1],[0.75,0.75,1]]
     polarization_phi = 0.
     ellipticity = 0.
+    envelope_initialization = "inside_the_window" #"injection_from_xmin"
 
 
 class Collisions(SmileiComponent):
