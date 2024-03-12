@@ -171,6 +171,15 @@ void LaserEnvelope2D::injectEnvelopeFromXmin( Patch *patch, Params &params, doub
             ( *A02D )( oversize_-1, j ) += profile_->complexValueAt( position, t_previous_timestep );
             position[1] += cell_length[1];
         }
+        if (envelope_solver=="explicit_reduced_dispersion"){
+            position[0] = -cell_length[0];
+            position[1] = pos1;
+            for( unsigned int j=0 ; j<A_->dims_[1] ; j++ ) {    
+                ( *A2D  )( oversize_-2, j ) += profile_->complexValueAt( position, t );
+                ( *A02D )( oversize_-2, j ) += profile_->complexValueAt( position, t_previous_timestep );
+                position[1] += cell_length[1];
+            }
+        }    
     }
       
 }
