@@ -130,7 +130,7 @@ void LaserEnvelope1D::initEnvelopeInsideTheWindow( Patch *patch, ElectroMagn *EM
     
 }
 
-void LaserEnvelope1D::injectEnvelopeFromXmin( Params &params, bool inject_envelope_from_this_patch, double time_dual )
+void LaserEnvelope1D::injectEnvelopeFromXmin( Patch *patch, Params &params, double time_dual )
 {
     cField1D *A1D                 = static_cast<cField1D *>( A_ );
     cField1D *A01D                = static_cast<cField1D *>( A0_ );
@@ -144,10 +144,17 @@ void LaserEnvelope1D::injectEnvelopeFromXmin( Params &params, bool inject_envelo
     // oversize
     int oversize_                 = params.oversize[0];
     
+    bool inject_envelope_from_this_patch = ( patch->isBoundary(0) ) && (  patch->isXmin() );
+    
     // Impose the envelope value for x=0 at time t and t-dt 
     if ( inject_envelope_from_this_patch ){    
         ( *A1D  )( oversize_-1 ) += profile_->complexValueAt( position, t );
         ( *A01D )( oversize_-1 ) += profile_->complexValueAt( position, t_previous_timestep );
+        if (envelope_solver=="explicit_reduced_dispersion"){
+            position[0]               = -cell_length[0];
+            ( *A1D  )( oversize_-2 ) += profile_->complexValueAt( position, t );
+            ( *A01D )( oversize_-2 ) += profile_->complexValueAt( position, t_previous_timestep );
+        }
     }
     
 }
