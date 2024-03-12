@@ -197,17 +197,32 @@ void LaserEnvelopeAM::injectEnvelopeFromXmin( Patch *patch, Params &params, doub
     // Impose the envelope value for x=0 at time t and t-dt 
     if ( inject_envelope_from_this_patch ){
         position[1] = pos1;
-        for( unsigned int j=0 ; j<A_->dims_[1] ; j++ ) {    
+        for( unsigned int j=0 ; j<A_->dims_[1] ; j++ ) { 
             ( *A2D  )( oversize_-1, j ) += profile_->complexValueAt( position, t );
             ( *A02D )( oversize_-1, j ) += profile_->complexValueAt( position, t_previous_timestep );
             position[1] += cell_length[1];
         }
+        
+        if (envelope_solver=="explicit_reduced_dispersion"){
+            position[0] = -cell_length[0];
+            position[1] = pos1;
+            for( unsigned int j=0 ; j<A_->dims_[1] ; j++ ) {    
+                ( *A2D  )( oversize_-2, j ) += profile_->complexValueAt( position, t );
+                ( *A02D )( oversize_-2, j ) += profile_->complexValueAt( position, t_previous_timestep );
+                position[1] += cell_length[1];
+            }
+        }   
     }
     
     if (isYmin){ // axis BC
         unsigned int j = 2;  // j_p=2 corresponds to r=0    
         ( *A2D  )( oversize_-1, j-1 )  = ( *A2D  )( oversize_-1, j+1 );
-        ( *A02D )( oversize_-1, j-2 )  = ( *A02D )( oversize_-1, j+2 );    
+        ( *A02D )( oversize_-1, j-2 )  = ( *A02D )( oversize_-1, j+2 );  
+        
+        if (envelope_solver=="explicit_reduced_dispersion"){
+            ( *A2D  )( oversize_-2, j-1 )  = ( *A2D  )( oversize_-2, j+1 );
+            ( *A02D )( oversize_-2, j-2 )  = ( *A02D )( oversize_-2, j+2 );  
+        }  
                   
     } // end l loop
       
