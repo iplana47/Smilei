@@ -638,8 +638,8 @@ def LaserGaussian3D( box_side="xmin", a0=1., omega=1., focus=None, waist=3., inc
         cy = cos(incidence_angle[0]); sy = sin(incidence_angle[0])
         cz = cos(incidence_angle[1]); sz = sin(incidence_angle[1])
         cycz = cy*cz; cysz = cy*sz; sycz = sy*cz; sysz = sy*sz
-        amplitudeY = sysz * amplitudeZ + cy * amplitudeY
-        amplitudeZ *= cz
+        amplitudeZ = sysz * amplitudeY + cy * amplitudeZ
+        amplitudeY *= cz
         def spatial(y,z):
             X = invZr * (-focus[0]*cycz + (y-focus[1])*cysz - (z-focus[2])*sy )
             Y = invW  * ( focus[0]*sz   + (y-focus[1])*cz                     )
@@ -701,7 +701,11 @@ def LaserEnvelopeGaussian3D( a0=1., omega=1., focus=None, waist=3., time_envelop
 def LaserGaussianAM( box_side="xmin", a0=1., omega=1., focus=None, waist=3.,
         polarization_phi=0., ellipticity=0., time_envelope=tconstant(), phase_offset=0.):
     from math import cos, sin, tan, atan, sqrt, exp
-    assert len(focus)==1, "LaserGaussianAM: focus must be a list of length 1."
+    if (len(focus)<1) or (len(focus)>2): 
+        print("ERROR: focus should be a list of length 1")
+        exit(1)
+    elif (len(focus)==2):
+        print("WARNING: deprecated focus in LaserGaussianAM should be a list of length 1")
     # Polarization and amplitude
     [dephasing, amplitudeY, amplitudeZ] = transformPolarization(polarization_phi, ellipticity)
     amplitudeY *= a0 * omega
@@ -735,7 +739,11 @@ def LaserEnvelopeGaussianAM( a0=1., omega=1., focus=None, waist=3., time_envelop
         polarization_phi = 0.,ellipticity = 0.):
     import cmath
     from numpy import exp, sqrt, arctan, vectorize
-    assert len(focus)==1, "LaserEnvelopeGaussianAM: focus must be a list of length 1."
+    if (len(focus)<1) or (len(focus)>2): 
+        print("ERROR: focus should be a list of length 1")
+        exit(1)
+    elif (len(focus)==2):
+        print("WARNING: deprecated focus in LaserEnvelopeGaussianAM should be a list of length 1")
 
     def gaussian_beam_with_temporal_profile(x,r,t):
         polarization_amplitude_factor = 1/sqrt(1.+ellipticity**2)

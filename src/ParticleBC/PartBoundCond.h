@@ -4,7 +4,6 @@
 #include "Params.h"
 #include "Species.h"
 #include "Particles.h"
-#include "tabulatedFunctions.h"
 
 class Patch;
 
@@ -44,7 +43,7 @@ public:
         } else {
             int *const cell_keys = species->particles->getPtrCellKeys();
 
-#if defined( SMILEI_OPENACC_MODE )
+#if defined( SMILEI_ACCELERATOR_GPU_OACC )
     #pragma acc parallel deviceptr( cell_keys )
     #pragma acc loop gang worker vector
 #elif defined( SMILEI_ACCELERATOR_GPU_OMP )

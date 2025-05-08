@@ -140,12 +140,7 @@ public:
 
 #ifdef __DETAILED_TIMERS
     inline void __attribute__((always_inline)) startFineTimer(unsigned int index) {
-#ifdef _OMPTASKS
-        const int ithread = Tools::getOMPThreadNum();
-        patch_tmp_timers_[index * number_of_threads_ + ithread] = MPI_Wtime();
-#else
-        patch_tmp_timers_[index] = MPI_Wtime();
-#endif
+    patch_tmp_timers_[index] = MPI_Wtime();
 #else
     inline void __attribute__((always_inline)) startFineTimer(unsigned int) {
 #endif
@@ -153,12 +148,7 @@ public:
     
 #ifdef  __DETAILED_TIMERS
     inline void __attribute__((always_inline)) stopFineTimer(unsigned int index) {
-#ifdef _OMPTASKS
-        const int ithread = Tools::getOMPThreadNum();   
-        patch_timers_[index * number_of_threads_ + ithread] += MPI_Wtime() - patch_tmp_timers_[index * number_of_threads_ + ithread];
-#else
-        patch_timers_[index] += MPI_Wtime() - patch_tmp_timers_[index];
-#endif
+    patch_timers_[index] += MPI_Wtime() - patch_tmp_timers_[index];
 #else
     inline void __attribute__((always_inline)) stopFineTimer(unsigned int) {
 #endif
@@ -174,7 +164,7 @@ public:
     //! Clean the MPI buffers for communications
     void cleanMPIBuffers( int ispec, Params &params );
     //! manage Idx of particles per direction,
-    void initExchParticles( int ispec, Params &params );
+    void copyExchParticlesToBuffers( int ispec, Params &params );
     //! init comm  nbr of particles
     void exchNbrOfParticles( SmileiMPI *smpi, int ispec, Params &params, int iDim, VectorPatch *vecPatch );
     //! finalize comm / nbr of particles, init exch / particles
@@ -184,7 +174,7 @@ public:
     //! effective exchange of particles
     void exchParticles( SmileiMPI *smpi, int ispec, Params &params, int iDim, VectorPatch *vecPatch );
     //! finalize exch / particles
-    void finalizeExchParticles( int ispec, int iDim );
+    void waitExchParticles( int ispec, int iDim );
     //! Treat diagonalParticles
     void cornersParticles( int ispec, Params &params, int iDim );
     //! inject particles received in main data structure and particles sorting
@@ -194,21 +184,25 @@ public:
     //! delete Particles included in the index of particles to exchange. Assumes indexes are sorted.
     void cleanupSentParticles( int ispec, std::vector<int> *indexes_of_particles_to_exchange );
 
-#ifdef SMILEI_ACCELERATOR_MODE
+#ifdef SMILEI_ACCELERATOR_GPU
     //! Allocate and copy all the field grids on device
     void allocateAndCopyFieldsOnDevice();
 
-    //! Allocate all field grids on device
+    //! Allocate all fields on device
     void allocateFieldsOnDevice();
 
-    //! Copy All field grids from device to host
+    //! Copy All fields from device to host
     void copyFieldsFromDeviceToHost();
 
     //! Copy All fields from host to device
     void copyFieldsFromHostToDevice();
 
-    //! Deallocate field grids on device
+    //! Deallocate fields on device
     void deleteFieldsOnDevice();
+
+    //! Reset fields on device
+    //Not used for the moment
+    //void ResetFieldsOnDevice();
 #endif
 
     //! init comm / sum densities
@@ -412,10 +406,6 @@ public:
     {
         return min_local_;
     }
-    
-    //! Return the volume (or surface or length depending on simulation dimension)
-    //! of one cell at the position of a given particle
-    virtual double getPrimalCellVolume( Particles *p, unsigned int ipart, Params &params ) = 0;
     
     //! Given several arrays (x,y,z for instance), return indices of points in patch
     virtual std::vector<unsigned int> indicesInDomain( double **position, unsigned int n_particles ) = 0;

@@ -138,7 +138,7 @@ public :
     //! Particle sorting for all patches. This is done at initialization time.
     void initialParticleSorting( Params &params );
     
-    //! For all patch, move particles (restartRhoJ(s), dynamics and exchangeParticles)
+    //! For all patch, move particles (restartRhoJ(s), dynamics and initExchParticles)
     void dynamics( Params &params,
                    SmileiMPI *smpi,
                    SimWindow *simWindow,
@@ -157,9 +157,10 @@ public :
                    Timers &timers, int itime );
     
     //! For all patches, exchange particles and sort them.
-    void finalizeAndSortParticles( Params &params, SmileiMPI *smpi, SimWindow *simWindow,
-                                  double time_dual,
-                                  Timers &timers, int itime );
+    void initExchParticles( Params &params, SmileiMPI *smpi, SimWindow *simWindow,
+                                  double time_dual, Timers &timers, int itime );
+    void finalizeExchParticlesAndSort( Params &params, SmileiMPI *smpi, SimWindow *simWindow,
+                                  double time_dual, Timers &timers, int itime );
     void finalizeSyncAndBCFields( Params &params, SmileiMPI *smpi, SimWindow *simWindow,
                                       double time_dual, Timers &timers, int itime );
 
@@ -182,7 +183,7 @@ public :
                                Timers &timers, int itime );
                                
     // compute rho only given by relativistic species which require initialization of the relativistic fields
-    void computeChargeRelativisticSpecies( double time_primal, Params &params );
+    void computeChargeRelativisticSpecies( double time_primal, Params &params, unsigned int ispec );
     
     // run particles ponderomptive dynamics, envelope's solver
     void runEnvelopeModule( Params &params,
@@ -239,7 +240,7 @@ public :
         Timers &timers, 
         SimWindow *simWindow );
         
-    void runAllDiagsTasks( Params &params, SmileiMPI *smpi, unsigned int itime, Timers &timers, SimWindow *simWindow );
+    void rebootDiagTimers();
     void initAllDiags( Params &params, SmileiMPI *smpi );
     void closeAllDiags( SmileiMPI *smpi );
     
@@ -253,8 +254,8 @@ public :
     
     //! Solve relativistic Poisson problem to initialize E and B of a relativistic bunch
     void runRelativisticModule( double time_prim, Params &params, SmileiMPI* smpi,  Timers &timers );
-    void solveRelativisticPoisson( Params &params, SmileiMPI *smpi, double time_primal );
-    void solveRelativisticPoissonAM( Params &params, SmileiMPI *smpi, double time_primal );
+    void solveRelativisticPoisson( Params &params, SmileiMPI *smpi, double time_primal, unsigned int ispec );
+    void solveRelativisticPoissonAM( Params &params, SmileiMPI *smpi, double time_primal, unsigned int ispec );
     
     //! For all patch initialize the externals (lasers, fields, antennas)
     void initExternals( Params &params );
@@ -310,26 +311,6 @@ public :
         Timers    &timers,
         int       itime
     );
-
-#ifdef _OMPTASKS
-    //! macro-particle operations with tasks
-    void dynamicsWithTasks( Params &params,
-                   SmileiMPI *smpi,
-                   SimWindow *simWindow,
-                   RadiationTables &RadiationTables,
-                   MultiphotonBreitWheelerTables &MultiphotonBreitWheelerTables,
-                   double time_dual,
-                   Timers &timers, int itime );
-    //! macro-particle operations with envelope and tasks
-    void ponderomotiveUpdateSusceptibilityAndMomentumWithTasks( Params &params,
-            SmileiMPI *smpi,
-            SimWindow *simWindow,
-            double time_dual, Timers &timers, int itime );
-    void ponderomotiveUpdatePositionAndCurrentsWithTasks( Params &params,
-            SmileiMPI *smpi,
-            SimWindow *simWindow,
-            double time_dual, Timers &timers, int itime );
-#endif
     
     // Lists of fields
     std::vector<Field *> densities;
@@ -513,7 +494,7 @@ public :
                             RadiationTables * radiation_tables,
                             MultiphotonBreitWheelerTables *multiphoton_Breit_Wheeler_tables );
     
-#if defined( SMILEI_ACCELERATOR_MODE)
+#if defined( SMILEI_ACCELERATOR_GPU)
 
     //! Field Synchronization from the GPU (Device) to the host (CPU)
 

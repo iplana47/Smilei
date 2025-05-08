@@ -36,7 +36,7 @@
 ################################################################################
 
 SMILEICXX := CC
-SMILEICXX.DEPS := $(SMILEICXX)
+SMILEICXX_DEPS := $(SMILEICXX)
 # GPU_COMPILER := hipcc
 GPU_COMPILER := $(SMILEICXX)
 
@@ -85,7 +85,6 @@ ADASTRA_DEBUG_FLAGS           := -g -ggdb $(ADASTRA_DEBUG_SANITIZER_FLAGS) -v # 
 
 ifneq (,$(call parse_config,gpu_amd))
     # When using OMP
-    ADASTRA_ACCELERATOR_GPU_OMP_DEFINE_FLAGS := -DSMILEI_ACCELERATOR_GPU_OMP=1
 
     # ADASTRA_ACCELERATOR_GPU_TARGET := gfx908
 	# ADASTRA_ACCELERATOR_GPU_TARGET := gfx908:xnack-
@@ -110,7 +109,7 @@ endif
 # ADASTRA_INCLUDES_MPI := -I$(CRAY_MPICH_DIR)/include
 # ADASTRA_INCLUDES_HIP := -I$(ROCM_PATH)/hiprand/include -I$(ROCM_PATH)/rocrand/include
 
-ADASTRA_INCLUDES := $(ADASTRA_INCLUDES_MPI) $(ADASTRA_INCLUDES_HIP)
+ADASTRA_INCLUDES := $(ADASTRA_INCLUDES_MPI) $(ADASTRA_INCLUDES_HIP) -I/opt/software/rocm/5.7.1/include 
 
 ################################################################################
 # Libs

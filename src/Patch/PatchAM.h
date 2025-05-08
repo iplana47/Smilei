@@ -22,14 +22,6 @@ public:
     //! Destructor for Patch
     ~PatchAM() override  final;
     
-    //! Return the volume (or surface or length depending on simulation dimension)
-    //! of one cell at the position of a given particle
-    double getPrimalCellVolume( Particles *, unsigned int, Params & ) override final
-    {
-        ERROR( "getPrimalCellVolume not implemented in geometry AM" );
-        return cell_volume;
-    };
-    
     //! Given several arrays (x,y,z), return indices of points in patch
     std::vector<unsigned int> indicesInDomain( double **position, unsigned int n_particles ) override
     {

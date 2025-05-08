@@ -58,7 +58,7 @@ public:
     //! param[in] particle_chi particle quantum parameter
     //! param[in] particle_gamma particle Lorentz factor
     //! param[in] integfochi_table table of the discretized integrated f/chi function for Photon production yield computation
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
     #pragma acc routine seq
 #endif
     double computePhotonProductionYield( const double particle_chi,
@@ -77,7 +77,7 @@ public:
     //! \param[in] xi
     //! \param[in] table_min_photon_chi
     //! \param[in] table_xi
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
     #pragma acc routine seq
 #endif
     double computeRandomPhotonChiWithInterpolation( double particle_chi,
@@ -95,7 +95,7 @@ public:
     //! from the computed table niel_.table
     //! \param particle_chi particle quantum parameter
     
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
     #pragma acc routine seq
 #endif
     double getHNielFromTable( double particle_chi, double * tableNiel);
@@ -116,7 +116,7 @@ public:
     //! \param particle_chi particle quantum parameter
     //! \param dt time step
     //#pragma omp declare simd
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
     #pragma acc routine seq
 #endif
     inline double __attribute__((always_inline)) getRidgersCorrectedRadiatedEnergy( const double particle_chi,
@@ -131,14 +131,15 @@ public:
     //#pragma omp declare simd
     static inline double __attribute__((always_inline)) computeRidgersFit( double particle_chi )
     {
-        return std::pow( 1.0 + 4.8*( 1.0+particle_chi )*std::log( 1.0 + 1.7*particle_chi )
-                    + 2.44*particle_chi*particle_chi, -2.0/3.0 );
+        double a = 1.0 + 4.8 * ( 1.0 + particle_chi )*std::log( 1.0 + 1.7 * particle_chi ) 
+                    + 2.44 * particle_chi * particle_chi;
+        return 1.0 / std::cbrt( a * a );
     };
 
     //! Get of the classical continuous radiated energy during dt
     //! \param particle_chi particle quantum parameter
     //! \param dt time step
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
     #pragma acc routine seq
 #endif
     inline double __attribute__((always_inline)) getClassicalRadiatedEnergy( double particle_chi, double dt )
@@ -148,7 +149,7 @@ public:
 
     //! Return the minimum_chi_discontinuous_ value
     //! Under this value, no discontinuous radiation reaction
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
     #pragma acc routine seq
 #endif
     inline double __attribute__((always_inline)) getMinimumChiDiscontinuous()
@@ -158,7 +159,7 @@ public:
 
     //! Return the minimum_chi_continuous_ value
     //! Under this value, no continuous radiation reaction
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
     #pragma acc routine seq
 #endif
     inline double __attribute__((always_inline)) getMinimumChiContinuous()

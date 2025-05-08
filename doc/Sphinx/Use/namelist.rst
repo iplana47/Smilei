@@ -1,3 +1,7 @@
+.. |exp| raw:: html
+
+   <span class="exp-label">experimental</span>
+
 Write a namelist
 ----------------
 
@@ -60,7 +64,8 @@ for each MPI process). The following steps are executed:
 
    * The rank of the current MPI process as :py:data:`smilei_mpi_rank`.
    * The total number of MPI processes as :py:data:`smilei_mpi_size`.
-   * The maximum random integer as :py:data:`smilei_rand_max`.
+   * The number of OpenMP threads per MPI :py:data:`smilei_omp_threads`.
+   * The total number of cores :py:data:`smilei_total_cores`.
 
 #. The namelist(s) is executed.
 
@@ -142,8 +147,12 @@ The block ``Main`` is **mandatory** and has the following syntax::
 
   Interpolation order, defines particle shape function:
 
+  * ``1``  : 2 points stencil in r with Ruyten correction, 3 points stencil in x. Supported only in AM geometry.
   * ``2``  : 3 points stencil, supported in all configurations.
   * ``4``  : 5 points stencil, not supported in vectorized 2D geometry.
+
+  The Ruyten correction is the scheme described bu equation 4.2 in `this paper <https://www.sciencedirect.com/science/article/abs/pii/S0021999183710703>`_ .
+  It allows for a more accurate description on axis at the cost of a higher statistic noise so it often requires the use of more macro-particles.
 
 .. py:data:: interpolator
 
@@ -231,10 +240,6 @@ The block ``Main`` is **mandatory** and has the following syntax::
   The finest sorting is achieved with ``cluster_width=1`` and no sorting with ``cluster_width`` equal to the full size of a patch along dimension X.
   The cluster size in dimension Y and Z is always the full extent of the patch.
 
-  .. warning::
-
-    The size of clusters becomes particularly important when :doc:`/Understand/task_parallelization` is used.
-
 .. py:data:: maxwell_solver
 
   :default: 'Yee'
@@ -243,10 +248,11 @@ The block ``Main`` is **mandatory** and has the following syntax::
   Only ``"Yee"`` and ``"M4"`` are available for all geometries at the moment.
   ``"Cowan"``, ``"Grassi"``, ``"Lehe"`` and ``"Bouchard"`` are available for ``2DCartesian``.
   ``"Lehe"`` and ``"Bouchard"`` are available for ``3DCartesian``.
-  ``"Lehe"`` is available for ``AMcylindrical``.
+  ``"Lehe"`` and ``"Terzani"`` are available for ``AMcylindrical``.
   The M4 solver is described in `this paper <https://doi.org/10.1016/j.jcp.2020.109388>`_.
   The Lehe solver is described in `this paper <https://journals.aps.org/prab/abstract/10.1103/PhysRevSTAB.16.021301>`_.
-  The Bouchard solver is described in `this thesis p. 109 <https://tel.archives-ouvertes.fr/tel-02967252>`_
+  The Bouchard solver is described in `this thesis p. 109 <https://tel.archives-ouvertes.fr/tel-02967252>`_.
+  The Terzani solver is described in `this paper <https://doi.org/10.1016/j.cpc.2019.04.007>`_.
 
 .. py:data:: solve_poisson
 
@@ -881,8 +887,11 @@ Each species has to be defined in a ``Species`` block::
 
   :default: 0
 
-  The atomic number of the particles, required only for ionization.
-  It must be lower than 101.
+  The atomic number of the particles (must be below 101).
+  It is required for ionization and nuclear reactions.
+  It has an effect on collisions by accounting for the atomic screening
+  (if not defined, or set to 0 for ions, screening is discarded as if
+  the ion was fully ionized).
 
 .. py:data:: maximum_charge_state
 
@@ -978,11 +987,23 @@ Each species has to be defined in a ``Species`` block::
 
   :default: ``"none"``
 
-  The model for ionization:
+  The model for :ref:`field ionization <field_ionization>`:
 
-  * ``"tunnel"`` for :ref:`field ionization <field_ionization>` (requires species with an :py:data:`atomic_number`)
+  * ``"tunnel"`` for tunnel ionization using :ref:`PPT-ADK <ppt_adk>` (requires species with an :py:data:`atomic_number`)
+  * ``"tunnel_full_PPT"`` |exp| for tunnel ionization using :ref:`PPT-ADK with account for magnetic number<ppt_adk>` (requires species with an :py:data:`atomic_number`)
   * ``"tunnel_envelope_averaged"`` for :ref:`field ionization with a laser envelope <field_ionization_envelope>`
   * ``"from_rate"``, relying on a :ref:`user-defined ionization rate <rate_ionization>` (requires species with a :py:data:`maximum_charge_state`).
+
+.. py:data:: bsi_model
+
+  :default: ``"none"``
+
+  Apply the :ref:`Barrier Suppression Ionization <barrier_suppression>` correction for ionization in strong fields.
+  This correction is supported only for ``ionization_model`` = ``"tunnel"`` or ``tunnel_full_PPT``.
+  The available BSI models are:
+
+  * ``"Tong_Lin"`` for :ref:`Tong and Lin <tong_lin>`'s rate.
+  * ``"KAG"`` for :ref:`Kostyukov Artemenko Golovanov <KAG>`'s rate. 
 
 .. py:data:: ionization_rate
 
@@ -1146,6 +1167,9 @@ Each species has to be defined in a ``Species`` block::
   be accessed in some diagnostics such as :ref:`particle binning <DiagParticleBinning>` or
   :ref:`tracking <DiagTrackParticles>`. The available fields are ``"Ex"``, ``"Ey"``, ``"Ez"``, 
   ``"Bx"``, ``"By"`` and ``"Bz"``.
+  
+  Note that magnetic field components, as they originate from the interpolator,
+  are shifted by half a timestep compared to those from the *Fields* diagnostics.
   
   Additionally, the work done by each component of the electric field is available as
   ``"Wx"``, ``"Wy"`` and ``"Wz"``. Contrary to the other interpolated fields, these quantities
@@ -1382,8 +1406,8 @@ Lasers
 ^^^^^^
 
 A laser consists in applying oscillating boundary conditions for the magnetic
-field on one of the box sides. The only boundary condition that supports lasers
-is ``"silver-muller"`` (see :py:data:`EM_boundary_conditions`).
+field on one of the box sides. The only boundary conditions that support lasers
+are ``"silver-muller"`` and ``"PML"`` (see :py:data:`EM_boundary_conditions`).
 There are several syntaxes to introduce a laser in :program:`Smilei`:
 
 .. note::
@@ -1432,10 +1456,10 @@ There are several syntaxes to introduce a laser in :program:`Smilei`:
 
 .. py:data:: space_time_profile_AM
 
-    :type: A list of maximum 2 x ``number_of_AM`` *python* functions.
+    :type: A list of maximum 2 x ``number_of_AM`` complex valued *python* functions.
 
-    These profiles define the first modes of :math:`B_r` and :math:`B_\theta` in the
-    order shown in the above example. Undefined modes are considered zero.
+    These profiles define the first modes of :math:`B_r` and :math:`B_\theta` of the laser in the
+    order shown in the above example. Higher undefined modes are considered zero.
     This can be used only in ``AMcylindrical`` geometry. In this
     geometry a two-dimensional :math:`(x,r)` grid is used and the laser is injected from a
     :math:`x` boundary, thus the provided profiles must be a function of :math:`(r,t)`.
@@ -2012,8 +2036,8 @@ at the beginning of the simulation using the ``ExternalField`` block::
 
 .. py:data:: field
 
-  Field name in Cartesian geometries: ``"Ex"``, ``"Ey"``, ``"Ez"``, ``"Bx"``, ``"By"``, ``"Bz"``, ``"Bx_m"``, ``"By_m"``, ``"Bz_m"``
-  Field name in AM geometry: ``"El"``, ``"Er"``, ``"Et"``, ``"Bl"``, ``"Br"``, ``"Bt"``, ``"Bl_m"``, ``"Br_m"``, ``"Bt_m"``, ``"A"``, ``"A0"`` .
+  Field names in Cartesian geometries: ``"Ex"``, ``"Ey"``, ``"Ez"``, ``"Bx"``, ``"By"``, ``"Bz"``, ``"Bx_m"``, ``"By_m"``, ``"Bz_m"``.
+  Field names in AM geometry: ``"El_mode_m"``, ``"Er_mode_m"``, ``"Et_mode_m"``, ``"Bl_mode_m"``, ``"Br_mode_m"``, ``"Bt_mode_m"``, ``"Bl_m_mode_m"``, ``"Br_m_mode_m"``, ``"Bt_m_mode_m"``, ``"A_mode_1"``, ``"A0_mode_1"`` .
 
 .. py:data:: profile
 
@@ -2058,12 +2082,24 @@ This feature is accessible using the ``PrescribedField`` block::
 
 .. py:data:: field
 
-  Field name: ``"Ex"``, ``"Ey"``, ``"Ez"``, ``"Bx_m"``, ``"By_m"`` or ``"Bz_m"``.
+  Field names in Cartesian geometries: ``"Ex"``, ``"Ey"``, ``"Ez"``, ``"Bx_m"``, ``"By_m"`` or ``"Bz_m"``.
+  Field names in AM geometry: ``"El_mode_m"``, ``"Er_mode_m"``, ``"Et_mode_m"``, ``"Bl_m_mode_m"``, ``"Br_m_mode_m"`` or ``"Bt_m_mode_m"``.
 
 .. warning::
 
   When prescribing a magnetic field, always use the time-centered fields ``"Bx_m"``, ``"By_m"`` or ``"Bz_m"``.
   These fields are those used in the particle pusher, and are defined at integer time-steps.
+
+.. warning::
+
+  When prescribing a field in AM geometry, the mode "m" must be specified explicitly in the name of the field and the profile
+  must return a complex value.
+
+.. warning::
+
+  ``PrescribedFields`` are not visible in the ``Field`` diagnostic, 
+  but can be visualised through ``Probes`` and with the fields attributes of ``TrackParticles`` 
+  (since they sample the total field acting on the macro-particles).
 
 .. py:data:: profile
 
@@ -2121,6 +2157,8 @@ It is applied using an ``Antenna`` block::
   If it accepts numpy arrays, these arrays will correspond to the coordinates of 1 patch,
   and the return value must be a numpy array of the same size.
 
+
+
 ----
 
 Walls
@@ -2169,6 +2207,13 @@ They are specified by one or several ``Collisions`` blocks::
       ionizing = False,
   #      nuclear_reaction = [],
   )
+
+.. note::
+
+  The screening from bound electrons, which is important when
+  the atom is neutral or partially ionized, is accounted for only in the
+  case of e-i collisions. To activate it, atom species **must have**
+  their :py:data:`atomic_number` defined and non-zero.
 
 
 .. py:data:: species1
@@ -2230,7 +2275,6 @@ They are specified by one or several ``Collisions`` blocks::
   * If :math:`= 0`, the Coulomb logarithm is automatically computed for each collision.
   * If :math:`> 0`, the Coulomb logarithm is equal to this value.
   * If :math:`< 0`, collisions are not treated (but other reactions may happen).
-
 
 .. py:data:: coulomb_log_factor
 
@@ -2720,7 +2764,8 @@ or several points arranged in a 2-D or 3-D grid.
   * **In "AMcylindrical" geometry**, probes are defined with 3D Cartesian coordinates
     and cannot be separated per mode. Use Field diagnostics for cylindrical coordinates and
     information per mode.
-
+  * **Probes rely on the particle interpolator to compute fields** so that the
+    magnetic field is shifted by half a timestep compared to that of *Fields* diagnostics.
 
 To add one probe diagnostic, include the block ``DiagProbe``::
 
@@ -2865,6 +2910,7 @@ To add one probe diagnostic, include the block ``DiagProbe``::
 A *particle binning diagnostic* collects data from the macro-particles and processes them during runtime.
 It does not provide information on individual particles: instead, it produces
 **averaged quantities** like the particle density, currents, etc.
+The raw data and how it is post-processed by happi is described :doc:`here <binning_units>`.
 
 The data is discretized inside a "grid" chosen by the user. This grid may be of any dimension.
 
@@ -2952,7 +2998,7 @@ for instance::
 
   :default: 1
 
-  The number of time-steps during which the data is averaged before output.
+  The number of time-steps during which the data is averaged. The data is averaged over `time_average` consecutive iterations after the selected time.
 
 
 .. py:data:: species
@@ -3087,8 +3133,10 @@ for instance::
 
 A *screen* collects data from the macro-particles when they cross a surface.
 It processes this data similarly to the :ref:`particle binning diagnostics <DiagParticleBinning>`
-as it makes a histogram of the macro-particle properties. The only difference is
-that the histogram is made only by the particles that cross the surface.
+as it makes a histogram of the macro-particle properties. There are two differences:
+
+* the histogram is made only by the particles that cross the surface
+* the data is accumulated for all timesteps.
 
 You can add a screen by including a block ``DiagScreen()`` in the namelist,
 for instance::
@@ -3344,19 +3392,20 @@ for instance::
     def my_filter(particles):
         return (particles.px>-1.)*(particles.px<1.) + (particles.pz>3.)
 
-.. Warning:: The ``px``, ``py`` and ``pz`` quantities are not exactly the momenta.
-  They are actually the velocities multiplied by the lorentz factor, i.e.,
-  :math:`\gamma v_x`, :math:`\gamma v_y` and :math:`\gamma v_z`. This is true only
-  inside the ``filter`` function (not for the output of the diagnostic).
-
-.. Note:: The ``id`` attribute contains the :doc:`particles identification number<ids>`.
-  This number is set to 0 at the beginning of the simulation. **Only after particles have
-  passed the filter**, they acquire a positive ``id``.
-
-.. Note:: For advanced filtration, Smilei provides the quantity ``Main.iteration``,
-  accessible within the ``filter`` function. Its value is always equal to the current
-  iteration number of the PIC loop. The current time of the simulation is thus
-  ``Main.iteration * Main.timestep``.
+.. Note::
+  
+  * In the ``filter`` function only, the ``px``, ``py`` and ``pz`` quantities
+    are not exactly the momenta.
+    They are actually the velocities multiplied by the lorentz factor, i.e.,
+    :math:`\gamma v_x`, :math:`\gamma v_y` and :math:`\gamma v_z`.
+    This is *not* true for the output of the diagnostic.
+  * The ``id`` attribute contains the :doc:`particles identification number<ids>`.
+    This number is set to 0 at the beginning of the simulation. **Only after particles have
+    passed the filter**, they acquire a positive ``id``.
+  * For advanced filtration, Smilei provides the quantity ``Main.iteration``,
+    accessible within the ``filter`` function. Its value is always equal to the current
+    iteration number of the PIC loop. The current time of the simulation is thus
+    ``Main.iteration * Main.timestep``.
 
 .. py:data:: attributes
 
@@ -3368,6 +3417,11 @@ for instance::
   their statistical weight (``"w"``), their quantum parameter
   (``"chi"``, only for species with radiation losses) or the fields interpolated
   at their  positions (``"Ex"``, ``"Ey"``, ``"Ez"``, ``"Bx"``, ``"By"``, ``"Bz"``).
+
+.. Note:: Here, interpolated fields are normally computed after the Maxwell solver.
+  They may thus differ by half a timestep from those computed at the middle of the
+  timestep to push particles. When exact values are needed, use the option
+  :py:data:`keep_interpolated_fields`.
 
 ----
 
@@ -3489,6 +3543,16 @@ For more clarity, this graph illustrates the five syntaxes for time selections:
 
 ----
 
+Profiles
+^^^^^^^^^^^^^^^
+
+Some of the quantities described in the previous sections can be profiles that depend on 
+space and/or time. See the :doc:`documentation on profiles <profiles>` for detailed
+instructions.
+
+
+----
+
 .. _Checkpoints:
 
 Checkpoints
@@ -3590,6 +3654,9 @@ A few things are important to know when you need dumps and restarts.
 
     In a previous run, the simulation state may have been dumped several times.
     These dumps are numbered 0, 1, 2, etc. until the number :py:data:`keep_n_dumps`.
+    In case multiple dumps are kept, the newest one will overwrite the oldest one. 
+    To restart the simulation from the most advanced point, specify the dump number 
+    corresponding to the newest that was created.
 
 
 ----
@@ -3608,9 +3675,15 @@ namelist. They should not be re-defined by the user!
 
   The total number of MPI processes.
 
-..
-  <<Not showing this anymore because of new rand system>>
-  .. py:data:: smilei_rand_max
+.. py:data:: smilei_omp_threads
 
-    The largest random integer.
+  The number of OpenMP threads per MPI.
 
+.. py:data:: smilei_total_cores
+
+  The total number of cores.
+
+.. note::
+  
+  These variables can be access during ``happi`` post-processing, e.g.
+  ``S.namelist.smilei_mpi_size``.

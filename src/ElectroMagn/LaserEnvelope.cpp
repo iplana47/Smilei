@@ -50,6 +50,14 @@ LaserEnvelope::LaserEnvelope( Params &params, Patch *patch ) :
         ERROR("Unknown envelope_solver - only 'explicit' and 'explicit_reduced_dispersion' are available. ");
     }
     
+    WARNING("CFL: no general CFL condition is available for the envelope solvers. The maximum stable timestep may be lower than the CFL limit of the electromagnetic solver.");
+    if (envelope_solver == "explicit"){
+        WARNING("Envelope solver: more accurate results (albeit at a slightly higher computational cost), expecially at longer distances, require the 'explicit_reduced_dispersion' envelope solver.")
+    }
+    if (envelope_solver == "explicit_reduced_dispersion"){
+        WARNING("CFL: The maximum stable timestep of the 'explicit_reduced_dispersion' envelope solver may be lower than the one of the 'explicit' solver.")
+    }
+
     // Read initialization method for the laser envelope
     PyTools::extract( "envelope_type", envelope_type, "LaserEnvelope" );
     if ( (envelope_type != "from_xmin") && (envelope_type != "inside_window") ){

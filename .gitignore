@@ -1,4 +1,4 @@
-build/*
+build*
 .*.swp
 *.lst
 *.d
@@ -33,3 +33,4 @@ exec_script.sh.*
 .DS_Store
 tables/*
 *.stats*
+.venv*

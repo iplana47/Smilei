@@ -23,11 +23,73 @@ You can find older, `unsupported versions here <https://github.com/SmileiPIC/Smi
 Changes made in the repository (not released)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-* GPU:
+* **Ported to GPU**:
 
+  * Collisions (without ionization or nuclear reaction)
+
+* **Features**:
+
+  * Electron-ion collisions now include screening from bound electrons,
+    thus supporting electron-neutral collisions.
+  * Prescribed fields in AM geometry.
+  * Particle reflective boundary conditions at Rmax in AM geometry.
+  * 1st order Ruyten shape function in AM geometry.
+  * Support for collisions in single mode AM geometry.
+  * Remove experimental support for task parallelization.
+  * Low dispersion Maxwell solver ``"Terzani"`` from `this article <https://doi.org/10.1016/j.cpc.2019.04.007>`_ in ``"AMcylindrical"`` geometry.
+  * Tunnel ionization supports fullPPT model and 2 BSI models.
+
+* **Bug fixes**:
+
+  * Tunnel ionization was wrong in some cases for high atomic numbers.
+  * Custom functions in ``ParticleBinning`` crashed with python 3.12.
+  * Species-specific diagnostics in AM geometry with vectorization.
+  * Frozen particles in AM geometry with adaptive vectorization.
+  * Happi's ``average`` argument would sometimes be missing the last bin.
+  * 1D projector on GPU without diagnostics.
+  * Fix a bug which would give false results when ionization was activated with vectorization and frozen species.
+  * OpenPMD compatibility: fixed units of density and weight.
+  * ``LaserGaussian3D`` was giving slightly wrong amplitude with large incidence angle.
+
+
+----
+
+Ongoing projects
+^^^^^^^^^^^^^^^^
+
+* Already available, but experimental:
+
+  * Particle merging
+  * Nuclear reactions
+  * Perfectly Matched Layers
+
+* In preparation:
+
+  * Spectral solvers
+
+
+----
+
+Release 5.1
+^^^^^^^^^^^^^^^^^^^^^
+
+* **GPU**:
+
+  * ``1Dcartesian`` geometry now available.
   * Compilation simplified and better documented.
+  * Improved performance of particle sorting.
 
-* Happi:
+* **Features**:
+
+  * Relativistic field initialization now supports multiple species and both direction propagations.
+  * Added the argument ``phase_offset`` in laser definitions such as ``LaserGaussian2D``.
+  * The ``LaserGaussianAM`` definition will only use one coordinate for its ``focus`` argument 
+    (the transverse coordinate of the focus in this geometry is zero).
+  * Small improvements in PML for envelope model (AM and 2D).
+  * Deprecated ``smilei_rand_max``.
+  * New namelist variables ``smilei_omp_threads`` and ``smilei_total_cores``.
+
+* **Happi**:
 
   * In ``Scalar``, it is now possible to make an operation on scalars such as ``"Uelm+Ukin"``.
   * The list of available scalars can be obtained from ``getScalars()``.
@@ -40,36 +102,15 @@ Changes made in the repository (not released)
 
   * Now the laser pulse can be initialized either inside the window (default mode) or from the ``xmin`` border setting the ``envelope_type`` variable.
 
-* Documentation:
+* **Documentation**:
 
   * Dark theme (click the switch on the bottom left, or set browser preferences).
 
-* Added the argument ``phase_offset`` in laser definitions such as ``LaserGaussian2D``.
-* The ``LaserGaussianAM`` definition will only use one coordinate for its ``focus`` argument 
-  (the transverse coordinate of the focus in this geometry is zero).
-
-* Bug fixes:
+* **Bug fixes** :
 
   * ``dump_minutes`` often failed to write some checkpoint files.
   * ``"auto"`` limits in ``ParticleBinning`` could fail with only one side on ``"auto"``.
   * CFL condition is more accurately determined in ``AMcylindrical`` and the feature ``timestep_over_CFL`` should be more reliable in that geometry.
-
-----
-
-Projects
-^^^^^^^^^^^^^^^^
-
-* Already available, but experimental:
-
-  * Particle merging
-  * Nuclear reactions
-  * Perfectly Matched Layers
-  * NewParticles diagnostic
-
-* In preparation:
-
-  * Spectral solvers
-
 
 ----
 

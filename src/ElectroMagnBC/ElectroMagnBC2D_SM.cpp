@@ -43,9 +43,10 @@ ElectroMagnBC2D_SM::ElectroMagnBC2D_SM( Params &params, Patch *patch, unsigned i
         B_val[axis1_].resize( n_p[axis1_], 0. ); // primal in the other direction
         B_val[2     ].resize( n_d[axis1_], 0. ); // dual in the other direction
 
-        smilei::tools::gpu::HostDeviceMemoryManagement::DeviceAllocate( B_val[0].data(), B_val[0].size() );
-        smilei::tools::gpu::HostDeviceMemoryManagement::DeviceAllocate( B_val[1].data(), B_val[1].size() );
-        smilei::tools::gpu::HostDeviceMemoryManagement::DeviceAllocate( B_val[2].data(), B_val[2].size() );
+        smilei::tools::gpu::HostDeviceMemoryManagement::DeviceAllocateAndCopyHostToDevice( B_val[0].data(), B_val[0].size() );
+        smilei::tools::gpu::HostDeviceMemoryManagement::DeviceAllocateAndCopyHostToDevice( B_val[1].data(), B_val[1].size() );
+        smilei::tools::gpu::HostDeviceMemoryManagement::DeviceAllocateAndCopyHostToDevice( B_val[2].data(), B_val[2].size() );
+
     }
     
     // -----------------------------------------------------
@@ -68,9 +69,9 @@ ElectroMagnBC2D_SM::ElectroMagnBC2D_SM( Params &params, Patch *patch, unsigned i
 
 ElectroMagnBC2D_SM::~ElectroMagnBC2D_SM()
 {
-    for (int i=0 ; i<B_val.size() ; ++i){
-        smilei::tools::gpu::HostDeviceMemoryManagement::DeviceFree( B_val[i].data(), B_val[i].size() );
-        //delete[] B_val[i];
+    for( auto B: B_val ){
+        smilei::tools::gpu::HostDeviceMemoryManagement::DeviceFree( B.data(), B.size() );
+        //delete[] B;
     }
 }
 
@@ -136,7 +137,7 @@ void ElectroMagnBC2D_SM::apply( ElectroMagn *EMfields, double time_dual, Patch *
         const double *const __restrict__ B_ext1 = B_val[1].data();
         const double *const __restrict__ B_ext2 = B_val[2].data();
 
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
         const int sizeofE0 = E[0]->number_of_points_;
         const int sizeofE1 = E[1]->number_of_points_;
         const int sizeofE2 = E[2]->number_of_points_;
@@ -155,23 +156,23 @@ void ElectroMagnBC2D_SM::apply( ElectroMagn *EMfields, double time_dual, Patch *
         // Lasers polarized along axis 1
         std::vector<double> b1( n_p[axis1_], 0. );
         double *const __restrict__ db1 = b1.data();
-	const unsigned int n1p    = n_p[axis1_];
+        const unsigned int n1p    = n_p[axis1_];
         const unsigned int n1d    = n_d[axis1_];
 
         const unsigned int nyp   = n_p[1];
         const unsigned int nyd   = n_d[1]; 
         const unsigned int iB0    = iB_[0];
-	const unsigned int p0     = iB_[0] - sign_;
+        const unsigned int p0     = iB_[0] - sign_;
         const unsigned int p1     = iB_[1] - sign_;
         const unsigned int iB1    = iB_[1];
-	const unsigned int iB2    = iB_[2];
+        const unsigned int iB2    = iB_[2];
         const unsigned int p2     = iB_[2] - sign_;
 
         const int b1_size = n1p ;
         const int b2_size = n1d ;
         std::vector<double> pos( 1 );
 
-	if( ! vecLaser.empty() ) {
+        if( ! vecLaser.empty() ) {
             for( unsigned int j=isBoundary1min ; j<n1p-isBoundary1max ; j++ ) {
                 pos[0] = patch->getDomainLocalMin( axis1_ ) + ( ( int )j - ( int )EMfields->oversize[axis1_] )*d[axis1_];
                 for( unsigned int ilaser=0; ilaser< vecLaser.size(); ilaser++ ) {
@@ -182,7 +183,7 @@ void ElectroMagnBC2D_SM::apply( ElectroMagn *EMfields, double time_dual, Patch *
         smilei::tools::gpu::HostDeviceMemoryManagement::DeviceAllocateAndCopyHostToDevice( db1, b1_size );
 
         if( axis0_ == 0 ) { // for By^(d,p)
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
             #pragma acc parallel present(E2[0:sizeofE2],B0[0:sizeofB0],B1[0:sizeofB1],B_ext1[0:B_ext_size1],B_ext0[0:B_ext_size0],db1[0:b1_size])
             #pragma acc loop gang worker vector
 #elif defined( SMILEI_ACCELERATOR_GPU_OMP )
@@ -199,7 +200,7 @@ void ElectroMagnBC2D_SM::apply( ElectroMagn *EMfields, double time_dual, Patch *
                     + B_ext1[j];
             }
         } else { // for Bx^(p,d)
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
             #pragma acc parallel present(E2[0:sizeofE2],B0[0:sizeofB0],B1[0:sizeofB1],B_ext1[0:B_ext_size1],B_ext0[0:B_ext_size0],db1[0:b1_size])
             #pragma acc loop gang worker vector
 #elif defined( SMILEI_ACCELERATOR_GPU_OMP )
@@ -234,7 +235,7 @@ void ElectroMagnBC2D_SM::apply( ElectroMagn *EMfields, double time_dual, Patch *
 
         // for Bz^(d,d)
         if( axis0_ == 0 ) {
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
             #pragma acc parallel present(E1[0:sizeofE1],B2[0:sizeofB2],B_ext2[0:B_ext_size2],db2[0:b2_size])
             #pragma acc loop gang worker vector
 #elif defined( SMILEI_ACCELERATOR_GPU_OMP )
@@ -247,7 +248,7 @@ void ElectroMagnBC2D_SM::apply( ElectroMagn *EMfields, double time_dual, Patch *
 
             }
         } else {
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
             #pragma acc parallel present(E0[0:sizeofE0],B2[0:sizeofB2],B_ext2[0:B_ext_size2],db2[0:b2_size])
             #pragma acc loop gang worker vector
 #elif defined( SMILEI_ACCELERATOR_GPU_OMP )

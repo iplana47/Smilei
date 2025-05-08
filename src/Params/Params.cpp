@@ -103,6 +103,9 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
     string seterr( "seterr" );
     string sChar( "s" );
     Py_DECREF( PyObject_CallMethod( numpy, &seterr[0], &sChar[0], "ignore" ) );
+    string numpy_version = "";
+    PyTools::getAttr( numpy, "__version__", numpy_version );
+    MESSAGE( "Numpy version " << numpy_version );
     Py_DECREF( numpy );
 #else
     WARNING("Numpy not found. Some options will not be available");
@@ -129,16 +132,20 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
     PyObject_SetAttrString( Py_main, "_test_mode", Py_False );
     PyTools::checkPyError();
 
-    // here we add the rank, in case some script need it
+    // we add the rank, in case some script needs it
     PyModule_AddIntConstant( Py_main, "smilei_mpi_rank", smpi->getRank() );
 
-    // here we add the MPI size, in case some script need it
+    // we add the MPI size, in case some script needs it
     PyModule_AddIntConstant( Py_main, "smilei_mpi_size", smpi->getSize() );
     namelist += string( "smilei_mpi_size = " ) + to_string( smpi->getSize() ) + "\n";
 
-    // here we add the larget int, important to get a valid seed for randomization
-    PyModule_AddIntConstant( Py_main, "smilei_rand_max", RAND_MAX );
-    namelist += string( "smilei_rand_max = " ) + to_string( RAND_MAX ) + "\n\n";
+    // we add the openMP size, in case some script needs it
+    PyModule_AddIntConstant( Py_main, "smilei_omp_threads", smpi->getOMPMaxThreads() );
+    namelist += string( "smilei_omp_threads = " ) + to_string( smpi->getOMPMaxThreads() ) + "\n";
+
+    // we add the total number of cores, in case some script needs it
+    PyModule_AddIntConstant( Py_main, "smilei_total_cores", smpi->getGlobalNumCores() );
+    namelist += string( "smilei_total_cores = " ) + to_string( smpi->getGlobalNumCores() ) + "\n";
 
     // Running pyprofiles.py
     runScript( string( reinterpret_cast<const char *>( pyprofiles_py ), pyprofiles_py_len ), "pyprofiles.py", globals );
@@ -277,10 +284,6 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
         if( interpolation_order != 1 && is_spectral ) {
             ERROR_NAMELIST( "Main.interpolation_order " << interpolation_order << " should be 1 for PSATD solver",
             LINK_NAMELIST + std::string("#main-variables") );
-        }
-        if( interpolation_order != 2 && !is_spectral ){
-            ERROR_NAMELIST( "Main.interpolation_order " << interpolation_order << " should be 2 for FDTD solver.",
-            LINK_NAMELIST + std::string("#main-variables"));
         }
     } else if( interpolation_order!=2 && interpolation_order!=4 && !is_spectral ) {
         ERROR_NAMELIST( "Main.interpolation_order " << interpolation_order << " should be 2 or 4",
@@ -556,8 +559,12 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
     // This method is detailed in P.-L. Bourgeois and X. Davoine (2023) https://doi.org/10.1017/S0022377823000223
     use_BTIS3 = false;
     PyTools::extract( "use_BTIS3_interpolation", use_BTIS3, "Main"   );
-    if (use_BTIS3 && interpolation_order != 2 ){
-        ERROR("B-TIS3 interpolation implemented only at order 2.");
+    if (use_BTIS3 && interpolation_order != 2 && (interpolation_order != 1 || geometry != "AMcylindrical" || is_spectral==true )){
+        if (geometry=="AMcylindrical"){
+            ERROR("B-TIS3 interpolation is not implemented for PSATD solver.");
+        } else {
+            ERROR("B-TIS3 interpolation is implemented only at order 2 for Cartesian geometries.");
+        }
     }
     
     // Current filter properties
@@ -659,12 +666,6 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
     if( timestep>dtCFL && !is_spectral ) {
         WARNING( "CFL problem: timestep=" << timestep << " should be smaller than " << dtCFL );
     }
-
-    // mark if OpenMP tasks are used or not
-    omptasks = false;
-#ifdef _OMPTASKS
-    omptasks = true;
-#endif
 
     // cluster_width_
     PyTools::extract( "cluster_width", cluster_width_, "Main"   );
@@ -798,25 +799,20 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
         }
         
         // Cell sorting not defined by the user
-        if (!defined_cell_sort) {
-            if (vectorization_mode == "off") {
-                cell_sorting_ = false;
-            } else {
-                cell_sorting_ = true;
-            }
-        }
-
+        if( !defined_cell_sort ) {
+            cell_sorting_ = ! ( vectorization_mode == "off" );
+        
         // Cell sorting explicitely defined by the user
-	    if (defined_cell_sort){
+        } else {
             // cell sorting explicitely set on
-            if (cell_sorting_) {
-                if (vectorization_mode == "off") {
-                    WARNING(" Cell sorting `cell_sorting` cannot be used when vectorization is off for the moment. Vectorization is automatically activated.")
+            if( cell_sorting_ ) {
+                if( vectorization_mode == "off" ) {
+                    WARNING("`cell_sorting` cannot be used when vectorization is off for the moment. Vectorization is automatically activated.")
                 }
             // cell sorting explicitely set off
             } else {
-                if (!( vectorization_mode == "off")) {
-                    ERROR_NAMELIST(" Cell sorting `cell_sorting` must be allowed in order to use vectorization.",
+                if( !( vectorization_mode == "off" ) ) {
+                    ERROR_NAMELIST("`cell_sorting` must be allowed in order to use vectorization.",
                         LINK_NAMELIST + std::string("#vectorization"))
                 }
             }
@@ -831,15 +827,16 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
         }
 
         // get parameter "every" which describes a timestep selection
-        if( ! adaptive_vecto_time_selection )
+        if( ! adaptive_vecto_time_selection ) {
             adaptive_vecto_time_selection = new TimeSelection(
                 PyTools::extract_py( "reconfigure_every", "Vectorization" ), "Adaptive vectorization"
             );
+        }
     }
 
     PyTools::extract( "gpu_computing", gpu_computing, "Main" );
     if( gpu_computing ) {
-#if( defined( SMILEI_OPENACC_MODE ) && defined( _OPENACC ) ) || defined( SMILEI_ACCELERATOR_GPU_OMP )
+#if( defined( SMILEI_ACCELERATOR_GPU_OACC ) && defined( _OPENACC ) ) || defined( SMILEI_ACCELERATOR_GPU_OMP )
         // If compiled for GPU and asking for GPU
         MESSAGE( 1, "Smilei will run on GPU devices" );
 #else
@@ -860,7 +857,7 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
     if( PyTools::nComponents( "Collisions" ) > 0 ) {
 
         // collisions need sorting per cell
-        if (defined_cell_sort && cell_sorting_ == false){
+        if( defined_cell_sort && cell_sorting_ == false ) {
             ERROR_NAMELIST(" Cell sorting or vectorization must be allowed in order to use collisions.",  LINK_NAMELIST + std::string("#collisions-reactions"));
         }
 
@@ -870,7 +867,8 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
         if( geometry!="1Dcartesian"
                 && geometry!="2Dcartesian"
                 && geometry!="3Dcartesian" ) {
-            ERROR_NAMELIST( "Collisions only valid for cartesian geometries for the moment",  LINK_NAMELIST + std::string("#collisions-reactions") );
+            //ERROR_NAMELIST( "Collisions only valid for cartesian geometries for the moment",  LINK_NAMELIST + std::string("#collisions-reactions") );
+            WARNING( "Collisions in AM geometry is experimental and valid only with a single mode" );
         }
 
     }
@@ -923,8 +921,7 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
     }
 
     // Force adaptive vectorization in scalar mode if cell_sorting requested
-    if ( cell_sorting_ ) {
-
+    if( cell_sorting_ && ! gpu_computing ) {
         if( vectorization_mode == "adaptive_mixed_sort" ) {
             ERROR_NAMELIST( "Cell sorting (required by Collision or Merging) is incompatible with the vectorization mode 'adaptive_mixed_sort'.",  LINK_NAMELIST + std::string("#vectorization") );
         } else if ( vectorization_mode == "off" ) {
@@ -987,9 +984,6 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
 
     // add the read or computed value of cluster_width_ to the content of smilei.py
     namelist += string( "Main.cluster_width= " ) + to_string( cluster_width_ ) + "\n";
-
-    // add the use (or or not) of the OpenMP tasks to the content of smilei.py
-    namelist += string( "Main.omptasks= " ) + to_string( omptasks ) + "\n";
 
     // Now the string "namelist" contains all the python files concatenated
     // It is written as a file: smilei.py
@@ -1057,27 +1051,26 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
             // Extract the list of profiles and verify their content
             PyObject *p = PyTools::extract_py( "_profiles", "Laser", i_laser );
             vector<PyObject *> profiles;
-            vector<int> profiles_n = {1, 2};
             if( ! PyTools::py2pyvector( p, profiles ) ) {
                 ERROR_NAMELIST( "For LaserOffset #" << n_laser_offset << ": space_time_profile must be a list of 2 profiles",  LINK_NAMELIST + std::string("#lasers") );
             }
             Py_DECREF( p );
-            if( profiles.size()!=2 ) {
+            if( profiles.size() != 2 ) {
                 ERROR_NAMELIST( "For LaserOffset #" << n_laser_offset << ": space_time_profile needs 2 profiles.",  LINK_NAMELIST + std::string("#lasers") );
             }
-            if( profiles[1] == Py_None ) {
-                profiles  .pop_back();
-                profiles_n.pop_back();
+            vector<int> profiles_n;
+            vector<PyObject *> profiles_kept;
+            for( unsigned int i = 0; i < 2; i++ ) {
+                if( profiles[i] != Py_None ) {
+                    profiles_kept.push_back( profiles[i] );
+                    profiles_n.push_back( i + 1 );
+                }
             }
-            if( profiles[0] == Py_None ) {
-                profiles  .erase( profiles  .begin() );
-                profiles_n.erase( profiles_n.begin() );
-            }
-            if( profiles.size() == 0 ) {
+            if( profiles_kept.size() == 0 ) {
                 ERROR_NAMELIST( "For LaserOffset #" << n_laser_offset << ": space_time_profile cannot be [None, None]", LINK_NAMELIST + std::string("#lasers") );
             }
-            for( unsigned int i=0; i<profiles.size(); i++ ) {
-                int nargs = PyTools::function_nargs( profiles[i] );
+            for( unsigned int i=0; i<profiles_kept.size(); i++ ) {
+                int nargs = PyTools::function_nargs( profiles_kept[i] );
                 if( nargs == -2 ) {
                     ERROR_NAMELIST( "For LaserOffset #" << n_laser_offset << ": space_time_profile["<<i<<"] not callable", LINK_NAMELIST + std::string("#lasers") );
                 }
@@ -1123,10 +1116,14 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
 
                 // Make the propagation happen and write out the file
                 if( ! smpi->test_mode ) {
-                    propagateX( profiles, profiles_n, offset, file, keep_n_strongest_modes, angle_z );
+                    propagateX( profiles_kept, profiles_n, offset, file, keep_n_strongest_modes, angle_z );
                 }
             }
-
+            
+            for( auto p: profiles ) {
+                Py_DECREF( p );
+            }
+            
             n_laser_offset ++;
         }
     }
@@ -1229,7 +1226,7 @@ void Params::compute()
 
     // Set cluster_width_ if not set by the user
     if( cluster_width_ == -1 ) {
-#if defined( SMILEI_ACCELERATOR_MODE )
+#if defined( SMILEI_ACCELERATOR_GPU )
         cluster_width_ = patch_size_[0];
         // On GPU, dont do the CPU automatic cluster_width computation, only one
         // bin is expected.
@@ -1278,7 +1275,7 @@ void Params::compute()
 
 
     // Verify that cluster_width_ divides patch_size_[0] or patch_size_[n] in GPU mode
-#if defined( SMILEI_ACCELERATOR_GPU_OMP ) || defined( SMILEI_OPENACC_MODE )
+#if defined( SMILEI_ACCELERATOR_GPU )
     const int kClusterWidth = getGPUClusterWidth();
 
     if( kClusterWidth < 0 ) {
@@ -1288,7 +1285,7 @@ void Params::compute()
     } else {
         for( std::size_t dimension_id = 0; dimension_id < nDim_particle; ++dimension_id ) {
             if( ( patch_size_[dimension_id] % kClusterWidth ) != 0 ) {
-                ERROR_NAMELIST( "The parameter `cluster_width`==" << kClusterWidth << " must divide the number of cells in a patch, in all dimensions.",
+                ERROR_NAMELIST( "On GPU, the number of cells in one patch must be a multiple of " << kClusterWidth << " (in all axes).",
                                 LINK_NAMELIST + std::string( "#main-variables" ) );
             }
         }
@@ -1360,6 +1357,9 @@ void Params::print_init()
 
     TITLE( "Geometry: " << geometry );
     MESSAGE( 1, "Interpolation order : " <<  interpolation_order );
+    if (use_BTIS3){
+        MESSAGE(1, "B-TIS3 interpolation scheme activated")
+    }
     MESSAGE( 1, "Maxwell solver : " <<  maxwell_sol );
     MESSAGE( 1, "simulation duration = " << simulation_time <<",   total number of iterations = " << n_time);
     MESSAGE( 1, "timestep = " << timestep << " = " << timestep/dtCFL << " x CFL,   time resolution = " << res_time);
@@ -1532,12 +1532,6 @@ void Params::print_parallelism_params( SmileiMPI *smpi )
 #else
         MESSAGE( 1, "OpenMP disabled" );
 #endif
-#ifdef _OMPTASKS
-        MESSAGE( 1, "OpenMP task parallelization activated");
-#else
-        MESSAGE( 1, "OpenMP task parallelization not activated");
-#endif
-        MESSAGE( "" );
 
         ostringstream np;
         np << "Number of patches: " << number_of_patches[0];
@@ -1834,7 +1828,7 @@ void Params::multiple_decompose_3D()
     // Number of domain in 3D
     // Decomposition in 2 times, X and larger side
     double tmp = (double)(number_of_patches[0]*number_of_patches[0]) / (double)(number_of_patches[1]*number_of_patches[2]);
-    number_of_region[0] = min( sz, max(1, (int) pow( (double)sz*tmp, 1./3. ) ) );
+    number_of_region[0] = min( sz, max(1, (int) (cbrt (sz*tmp)) ) );
 
     int rest = (int)(sz / number_of_region[0]);
     while ( (int)number_of_region[0]*rest != sz ) {
@@ -1891,7 +1885,7 @@ string Params::speciesField( string field_name )
     return "";
 }
 
-#if defined( SMILEI_ACCELERATOR_GPU_OMP ) || defined( SMILEI_OPENACC_MODE )
+#if defined( SMILEI_ACCELERATOR_GPU_OMP ) || defined( SMILEI_ACCELERATOR_GPU_OACC )
 
 bool Params::isGPUParticleBinningAvailable() const
 {
@@ -1908,7 +1902,7 @@ bool Params::isGPUParticleBinningAvailable() const
 
 #endif
 
-#if defined( SMILEI_ACCELERATOR_GPU_OMP ) || defined( SMILEI_OPENACC_MODE )
+#if defined( SMILEI_ACCELERATOR_GPU_OMP ) || defined( SMILEI_ACCELERATOR_GPU_OACC )
 
 int Params::getGPUClusterWidth() const
 {

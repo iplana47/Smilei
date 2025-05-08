@@ -6,7 +6,7 @@
 // #include "PyTools.h"
 
 #include "Particles.h"
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
 #include "nvidiaParticles.h"
 #endif
 #include "Params.h"
@@ -79,6 +79,9 @@ public:
     //! maximum charge state
     unsigned int maximum_charge_state_;
 
+    //! alpha parameter in the Tong-Lin ionization model
+    double ionization_tl_parameter_;
+
     //! user defined ionization rate profile
     PyObject *ionization_rate_;
 
@@ -113,8 +116,11 @@ public:
     //! Boundary conditions for particules
     std::vector<std::vector<std::string> > boundary_conditions_;
 
-    //! Ionization model per Specie (tunnel)
+    //! Ionization model per Species ("tunnel" or "tunnel_full_PPT" or "tunnel_envelope_averaged" or "from_rate")
     std::string ionization_model_;
+
+    //! Barrier suppression ionization model per Species
+    std::string bsi_model_;
 
     //! Type of density profile ("nb" or "charge")
     std::string density_profile_type_;
@@ -147,8 +153,6 @@ public:
 
     //! Vector containing all Particles of the considered Species
     Particles *particles;
-    //! Data structure through which passes particles which move from one patch to another
-    Particles *particles_to_move;
     Particles particles_sorted[2];
     //std::vector<int> index_of_particles_to_exchange;
 
@@ -344,7 +348,7 @@ public:
     // -----------------------------------------------------------------------------
     //  5. Methods
 
-    virtual void initCluster( Params & );
+    virtual void initCluster( Params &, Patch * );
 
     virtual void resizeCluster( Params & );
 
@@ -384,11 +388,17 @@ public:
         return particles->capacity();
     }
 
-#if defined( SMILEI_ACCELERATOR_MODE )
+#if defined( SMILEI_ACCELERATOR_GPU )
+
+    void allocateParticlesOnDevice();
 
     //! Copy particles from host to device
     void
     copyParticlesFromHostToDevice();
+
+    //! Copy particles from device to host
+    void
+    copyParticlesFromDeviceToHost();
 
     //! Prepare the species Current and Rho grids on Device
     void
@@ -453,11 +463,6 @@ public:
             Params &, 
             Patch *, SmileiMPI * ) {};
 
-    virtual void scalarPonderomotiveUpdateSusceptibilityAndMomentumTasks( double, 
-            ElectroMagn *,
-            Params &, 
-            Patch *, SmileiMPI *, int ) {};
-
     virtual void scalarPonderomotiveUpdatePositionAndCurrents( double, unsigned int,
             ElectroMagn *,
             Params &, bool, PartWalls *,
@@ -481,12 +486,6 @@ public:
 
     //! Method calculating the Particle charge on the grid (projection)
     virtual void computeCharge( ElectroMagn *EMfields, bool old=false );
-
-    //! Method used to select particles which will change of patches
-    virtual void extractParticles();
-
-    //! Method used to integrate particles which come from another patches
-    // virtual void injectParticles( Params &params );
 
     //! Method used to inject and sort particles
     virtual void sortParticles( Params &param );
@@ -520,8 +519,10 @@ public:
         particles->last_index[particles->last_index.size()-1]++;
     }
 
-    //! Method to know if we have to project this species or not.
-    bool  isProj( double time_dual, SimWindow *simWindow );
+    //! Method to know if this species must enter dynamics or trigger import from dynamic processes.
+    bool  isDynamic( double time_dual, SimWindow *simWindow );
+    //! Method to know if this species must project diagnostic or trigger exchanges of particles.
+    bool  hasMoved( double time_dual, SimWindow *simWindow );
 
     inline double computeEnergy()
     {
@@ -572,12 +573,14 @@ public:
 
     //! This method removes particles with a negative weight
     //! when a single bin is used
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
     void removeTaggedParticles(
         SmileiMPI *smpi,
         int *const first_index,
         int *const last_index,
         int ithread,
         bool compute_cell_keys = false);
+#endif
 
     //! Moving window boundary conditions managment
     void disableXmax();
@@ -617,45 +620,7 @@ public:
     //! Erase all particles with zero weight
     void eraseWeightlessParticles();
 
-#ifdef _OMPTASKS
-
-    //! Method calculating the Particle dynamics (interpolation, pusher, projection, ...) with tasks
-    virtual void dynamicsTasks(     double time, unsigned int ispec,
-                            ElectroMagn *EMfields,
-                            Params &params, bool diag_flag,
-                            PartWalls *partWalls, Patch *patch, SmileiMPI *smpi,
-                            RadiationTables &RadiationTables,
-                            MultiphotonBreitWheelerTables &MultiphotonBreitWheelerTables, int buffer_id );
-
-    //! Method projecting susceptibility and calculating the particles updated momentum (interpolation, momentum pusher), only particles interacting with envelope
-    virtual void ponderomotiveUpdateSusceptibilityAndMomentumTasks( double time_dual,
-            ElectroMagn *EMfields,
-            Params &params,
-            Patch *patch, SmileiMPI *smpi, int buffer_id );
-
-    //! Method calculating the Particle updated position (interpolation, position pusher, only particles interacting with envelope)
-    // and projecting charge density and thus current density (through Esirkepov method) for Maxwell's Equations
-    virtual void ponderomotiveUpdatePositionAndCurrentsTasks( double time_dual, unsigned int ispec,
-            ElectroMagn *EMfields,
-            Params &params, bool diag_flag, PartWalls *partWalls,
-            Patch *patch, SmileiMPI *smpi, int buffer_id );
-
-    //! Method calculating the Particle dynamics with scalar operators (interpolation, pusher, projection) with tasks
-    virtual void scalarDynamicsTasks( double, unsigned int,
-                                  ElectroMagn *,
-                                  Params &, bool,
-                                  PartWalls *, Patch *, SmileiMPI *,
-                                  RadiationTables &,
-                                  MultiphotonBreitWheelerTables &, int ) {};
-
-    virtual void scalarPonderomotiveUpdatePositionAndCurrentsTasks( double, unsigned int,
-            ElectroMagn *,
-            Params &, bool, PartWalls *,
-            Patch *, SmileiMPI *, int ) {};
-
-#endif
-
-    // ---- Variables for tasks
+    // ---- Variables for tasks -> does not look like it's only used for tasks now ...
 
     // Number of bins for the use of tasks
     unsigned int Nbins;

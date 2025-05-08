@@ -69,10 +69,11 @@ void ProjectorAM2OrderV::currentsAndDensity( ElectroMagnAM *emAM,
                                    double * __restrict__ deltaold,
                                    std::complex<double> * __restrict__ array_eitheta_old,
                                    int npart_total,
-                                   int ipart_ref )
+                                   int ipart_ref,
+                                   int ispec )
 {
 
-    currents( emAM, particles,  istart, iend, invgf, iold, deltaold, array_eitheta_old, npart_total, ipart_ref );
+    currents( emAM, particles,  istart, iend, invgf, iold, deltaold, array_eitheta_old, npart_total, ipart_ref, ispec+1 ); //ispec+1 is passed as a marker of diag
 
     int ipo = iold[0];
     int jpo = iold[1];
@@ -131,6 +132,9 @@ void ProjectorAM2OrderV::currentsAndDensity( ElectroMagnAM *emAM,
     int iloc0 = ipom2*nprimr_+jpom2;
     for( unsigned int imode=0; imode<( unsigned int )Nmode_; imode++ ) {
         rho =  &( *emAM->rho_AM_[imode] )( 0 );
+        unsigned int n_species = emAM->rho_AM_s.size() / Nmode_;
+        unsigned int ifield = imode*n_species+ispec;
+        rho  = emAM->rho_AM_s    [ifield] ? &( * ( emAM->rho_AM_s    [ifield] ) )( 0 ) : &( *emAM->rho_AM_    [imode] )( 0 ) ;
         int iloc = iloc0;
         for( unsigned int i=0 ; i<5 ; i++ ) {
             #pragma omp simd
@@ -269,22 +273,23 @@ void ProjectorAM2OrderV::axisBC(ElectroMagnAM *emAM, bool diag_flag )
 
 void ProjectorAM2OrderV::apply_axisBC(std::complex<double> *rhoj,std::complex<double> *Jl, std::complex<double> *Jr, std::complex<double> *Jt, unsigned int imode, bool diag_flag )
 {
-
-   double sign = -1.;
-   for (unsigned int i=0; i< imode; i++) sign *= -1;
+   // Mode 0 contribution "below axis" is added.
+   // Non zero modes are substracted because a particle sitting exactly on axis has a non defined theta and can not contribute to a theta dependent mode. 
+   double sign = (imode == 0) ? 1 : -1 ;
 
    if (diag_flag && rhoj) {
        for( unsigned int i=2 ; i<npriml_*nprimr_+2; i+=nprimr_ ) {
            //Fold rho
            for( unsigned int j=1 ; j<3; j++ ) {
                rhoj[i+j] += sign * rhoj[i-j];
-               rhoj[i-j]  = sign * rhoj[i+j];
            }
            //Apply BC
            if (imode > 0){
                rhoj[i] = 0.;
+               rhoj[i-1]  = - rhoj[i+1]; // Zero Jl mode > 0 on axis.
            } else {
-               rhoj[i] = (4.*rhoj[i+1] - rhoj[i+2])/3.;
+               rhoj[i] = rhoj[i+1]; //This smoothing is just for cosmetics on the picture, rho has no influence on the results.
+               rhoj[i-1]  = rhoj[i+1]; // Non zero Jl mode > 0 on axis.
            }
        }
    }
@@ -293,14 +298,14 @@ void ProjectorAM2OrderV::apply_axisBC(std::complex<double> *rhoj,std::complex<do
        for( unsigned int i=2 ; i<(npriml_+1)*nprimr_+2; i+=nprimr_ ) {
            //Fold Jl
            for( unsigned int j=1 ; j<3; j++ ) {
-               Jl [i+j] +=  sign * Jl[i-j];
-               Jl[i-j]   =  sign * Jl[i+j];
+               Jl [i+j] +=  sign * Jl[i-j]; //Add even modes, substract odd modes since el(theta=0 = el(theta=pi) at all r.
             }
             if (imode > 0){
                 Jl [i] = 0. ;
+                Jl[i-1]   =  -Jl[i+1]; // Zero Jl mode > 0 on axis.
            } else {
-                //Force dJl/dr = 0 at r=0.
-                Jl [i] =  (4.*Jl [i+1] - Jl [i+2])/3. ;
+		//Jl mode 0 on axis should be left as is. It looks over estimated but it might be necessary to conserve a correct divergence and a proper evaluation on the field on axis.
+                Jl [i-1] =  Jl [i+1] ; // Non zero Jl mode 0 on axis.
            }
        }
    }
@@ -311,24 +316,19 @@ void ProjectorAM2OrderV::apply_axisBC(std::complex<double> *rhoj,std::complex<do
            int ilocr = i*(nprimr_+1)+3;
            //Fold Jt
            for( unsigned int j=1 ; j<3; j++ ) {
-               Jt [iloc+j] += -sign * Jt[iloc-j];
-               Jt[iloc-j]   = -sign * Jt[iloc+j];
+               Jt [iloc+j] += sign * Jt[iloc-j]; 
            }
            for( unsigned int j=0 ; j<3; j++ ) {
-               Jr [ilocr+2-j] += -sign * Jr [ilocr-3+j];
-               Jr[ilocr-3+j]     = -sign * Jr[ilocr+2-j];
+               Jr [ilocr+2-j] += sign * Jr [ilocr-3+j];
            }
 
            if (imode == 1){
-               Jt [iloc]= -Icpx/8.*( 9.*Jr[ilocr]- Jr[ilocr+1]);
-               //Force dJr/dr = 0 at r=0.
-               //Jr [ilocr] =  (25.*Jr[ilocr+1] - 9*Jr[ilocr+2])/16. ;
-               Jr [ilocr-1] = 2.*Icpx*Jt[iloc] - Jr [ilocr];
+               Jt [iloc]= -Icpx/8.*( 9.*Jr[ilocr]- Jr[ilocr+1]);// Jt mode 1 = -I Jr mode 1 on axis to keep div(J) = 0.
+               Jr [ilocr-1] = Jr [ilocr]; // Jr mode 1 is non zero on axis.
            } else{
-               Jt [iloc] = 0. ;
-               //Force dJr/dr = 0 and Jr=0 at r=0.
-               //Jr [ilocr] =  Jr [ilocr+1]/9.;
-               Jr [ilocr-1] = -Jr [ilocr];
+               Jt [iloc] = 0. ; // only mode 1 is non zero on axis
+               Jt [iloc-1] = -Jt [iloc+1]; // only mode 1 is non zero on axis
+               Jr [ilocr-1] = -Jr [ilocr]; // only mode 1 is non zero on axis
            }
        }
    }
@@ -455,7 +455,8 @@ void ProjectorAM2OrderV::currents( ElectroMagnAM *emAM,
                                    double * __restrict__ deltaold,
                                    std::complex<double> * __restrict__ array_eitheta_old,
                                    int npart_total,
-                                   int ipart_ref )
+                                   int ipart_ref,
+                                   int ispec )
 {
     // -------------------------------------
     // Variable declaration & initialization
@@ -537,7 +538,13 @@ void ProjectorAM2OrderV::currents( ElectroMagnAM *emAM,
     int iloc0 = ipom2*nprimr_+jpom2;
 
     for( unsigned int imode=0; imode<( unsigned int )Nmode_; imode++ ) {
-        Jl =  &( *emAM->Jl_[imode] )( 0 );
+        if (ispec == 0) { // When diags are not needed ispec is always 0.
+            Jl =  &( *emAM->Jl_[imode] )( 0 );
+        } else { // When diags are needed ispec+1 is passed.
+            unsigned int n_species = emAM->Jl_s.size() / Nmode_;
+            unsigned int ifield = imode*n_species+ispec-1;
+            Jl  = emAM->Jl_s    [ifield] ? &( * ( emAM->Jl_s    [ifield] ) )( 0 ) : &( *emAM->Jl_    [imode] )( 0 ) ;
+        }
         int iloc = iloc0;
         for( unsigned int i=1 ; i<5 ; i++ ) {
             iloc += nprimr_;
@@ -556,7 +563,14 @@ void ProjectorAM2OrderV::currents( ElectroMagnAM *emAM,
 
 
     for( unsigned int imode=0; imode<( unsigned int )Nmode_; imode++ ) {
-        Jr =  &( *emAM->Jr_[imode] )( 0 );
+        if (ispec == 0) { // When diags are not needed ispec is always 0.
+            Jr =  &( *emAM->Jr_[imode] )( 0 );
+        } else { // When diags are needed ispec+1 is passed.
+            unsigned int n_species = emAM->Jr_s.size() / Nmode_;
+            unsigned int ifield = imode*n_species+ispec-1;
+            Jr  = emAM->Jr_s    [ifield] ? &( * ( emAM->Jr_s    [ifield] ) )( 0 ) : &( *emAM->Jr_    [imode] )( 0 ) ;
+        }
+
         int iloc = iloc0 + ipom2 + 1;
         for( unsigned int i=0 ; i<5 ; i++ ) {
             #pragma omp simd
@@ -574,7 +588,13 @@ void ProjectorAM2OrderV::currents( ElectroMagnAM *emAM,
     }
 
     for( unsigned int imode=0; imode<( unsigned int )Nmode_; imode++ ) {
-        Jt =  &( *emAM->Jt_[imode] )( 0 );
+        if (ispec == 0) { // When diags are not needed ispec is always 0.
+            Jt =  &( *emAM->Jt_[imode] )( 0 );
+        } else { // When diags are needed ispec+1 is passed.
+            unsigned int n_species = emAM->Jt_s.size() / Nmode_;
+            unsigned int ifield = imode*n_species+ispec-1;
+            Jt  = emAM->Jt_s    [ifield] ? &( * ( emAM->Jt_s    [ifield] ) )( 0 ) : &( *emAM->Jt_    [imode] )( 0 ) ;
+        }
         int iloc = iloc0;
         for( unsigned int i=0 ; i<5 ; i++ ) {
             #pragma omp simd
@@ -596,7 +616,7 @@ void ProjectorAM2OrderV::currents( ElectroMagnAM *emAM,
 // ---------------------------------------------------------------------------------------------------------------------
 //! Wrapper for projection
 // ---------------------------------------------------------------------------------------------------------------------
-void ProjectorAM2OrderV::currentsAndDensityWrapper( ElectroMagn *EMfields, Particles &particles, SmileiMPI *smpi, int istart, int iend, int ithread,  bool diag_flag, bool is_spectral, int /*ispec*/, int scell, int ipart_ref )
+void ProjectorAM2OrderV::currentsAndDensityWrapper( ElectroMagn *EMfields, Particles &particles, SmileiMPI *smpi, int istart, int iend, int ithread,  bool diag_flag, bool is_spectral, int ispec, int scell, int ipart_ref )
 {
     if( istart == iend ) {
         return;    //Don't treat empty cells.
@@ -630,7 +650,7 @@ void ProjectorAM2OrderV::currentsAndDensityWrapper( ElectroMagn *EMfields, Parti
         //double *b_Jy  = EMfields->Jy_s [ispec] ? &( *EMfields->Jy_s [ispec] )( 0 ) : &( *EMfields->Jy_ )( 0 ) ;
         //double *b_Jz  = EMfields->Jz_s [ispec] ? &( *EMfields->Jz_s [ispec] )( 0 ) : &( *EMfields->Jz_ )( 0 ) ;
         //double *b_rho = EMfields->rho_s[ispec] ? &( *EMfields->rho_s[ispec] )( 0 ) : &( *EMfields->rho_ )( 0 ) ;
-        currentsAndDensity( emAM, particles, istart, iend, invgf->data(), iold, delta->data(), array_eitheta_old->data(), invgf->size(), ipart_ref );
+        currentsAndDensity( emAM, particles, istart, iend, invgf->data(), iold, delta->data(), array_eitheta_old->data(), invgf->size(), ipart_ref, ispec );
     }
 }
 
@@ -677,10 +697,6 @@ void ProjectorAM2OrderV::susceptibility( ElectroMagn *EMfields, Particles &parti
     double charge_weight[8] __attribute__( ( aligned( 64 ) ) );
     // double r_bar[8] __attribute__( ( aligned( 64 ) ) );
 
-    //double *invR_local = &(invR_[jpom2]);
-    // double *invRd_local = &(invRd_[jpom2]);
-
-    double *invR_local = &(invR_[jpom2]);
     // Pointer for GPU and vectorization on ARM processors
     double * __restrict__ position_x = particles.getPtrPosition(0);
     double * __restrict__ position_y = particles.getPtrPosition(1);

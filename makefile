@@ -13,6 +13,7 @@
 # BOOST_ROOT_DIR   : the local path to the boost library
 # TABLES_BUILD_DIR : build directory for databases (default ./tools/tables/build)
 
+
 BUILD_DIR ?= build
 SMILEICXX ?= mpicxx
 PYTHONEXE ?= python
@@ -52,7 +53,7 @@ DIRS := $(shell find src -type d)
 SRCS := $(shell find src/* -name \*.cpp)
 OBJS := $(addprefix $(BUILD_DIR)/, $(SRCS:.cpp=.o))
 DEPS := $(addprefix $(BUILD_DIR)/, $(SRCS:.cpp=.d))
-SITEDIR = $(shell $(PYTHONEXE) -c 'import site; site._script()' --user-site)
+SITEDIR = $(shell d=`$(PYTHONEXE) -m site --user-site` && echo $$d || $(PYTHONEXE) -c "import sysconfig; print(sysconfig.get_path('purelib'))")
 
 # Smilei tools
 TABLES_DIR := tools/tables
@@ -121,6 +122,8 @@ PYSCRIPTS = $(shell find src/Python -name \*.py)
 PYHEADERS := $(addprefix $(BUILD_DIR)/, $(PYSCRIPTS:.py=.pyh))
 PY_CXXFLAGS := $(shell $(PYTHONCONFIG) --includes)
 CXXFLAGS += $(PY_CXXFLAGS)
+DEPSFLAGS += $(PY_CXXFLAGS)
+
 PY_LDFLAGS := $(shell $(PYTHONCONFIG) --ldflags)
 LDFLAGS += $(PY_LDFLAGS)
 ifneq ($(strip $(PYTHONHOME)),)
@@ -200,9 +203,9 @@ endif
 ifneq (,$(call parse_config,gpu_nvidia))
 	override config += noopenmp # Prevent openmp for nvidia
 	
-	CXXFLAGS += -DSMILEI_ACCELERATOR_MODE -DSMILEI_OPENACC_MODE
+	CXXFLAGS += -DSMILEI_ACCELERATOR_GPU -DSMILEI_ACCELERATOR_GPU_OACC
 	GPU_COMPILER ?= nvcc
-	GPU_COMPILER_FLAGS += -x cu -DSMILEI_ACCELERATOR_MODE -DSMILEI_OPENACC_MODE
+	GPU_COMPILER_FLAGS += -x cu -DSMILEI_ACCELERATOR_GPU -DSMILEI_ACCELERATOR_GPU_OACC $(DIRS:%=-I%)
 	GPU_COMPILER_FLAGS += -I$(BUILD_DIR)/src/Python $(PY_CXXFLAGS)
 	GPU_KERNEL_SRCS := $(shell find src/* -name \*.cu)
 	GPU_KERNEL_OBJS := $(addprefix $(BUILD_DIR)/, $(GPU_KERNEL_SRCS:.cu=.o))
@@ -212,9 +215,9 @@ endif
 
 # AMD GPUs
 ifneq (,$(call parse_config,gpu_amd))
-	CXXFLAGS += -DSMILEI_ACCELERATOR_MODE
+	CXXFLAGS += -DSMILEI_ACCELERATOR_GPU -DSMILEI_ACCELERATOR_GPU_OMP
 	GPU_COMPILER ?= $(CC)
-	GPU_COMPILER_FLAGS += -x hip -DSMILEI_ACCELERATOR_MODE -std=c++14 $(DIRS:%=-I%) #$(PY_FLAGS)
+	GPU_COMPILER_FLAGS += -x hip -DSMILEI_ACCELERATOR_GPU -DSMILEI_ACCELERATOR_GPU_OMP -std=c++14 $(DIRS:%=-I%)
 	GPU_COMPILER_FLAGS += -I$(BUILD_DIR)/src/Python $(PY_CXXFLAGS)
 	GPU_KERNEL_SRCS := $(shell find src/* -name \*.cu)
 	GPU_KERNEL_OBJS := $(addprefix $(BUILD_DIR)/, $(GPU_KERNEL_SRCS:.cu=.o))
@@ -258,17 +261,7 @@ ifneq (,$(call parse_config,no_mpi_tm))
 	CXXFLAGS += -D_NO_MPI_TM
 endif
 
-# Use OpenMP tasks
-ifneq (,$(call parse_config,omptasks))
-	CXXFLAGS += -D_OMPTASKS
-endif
-
-ifneq (,$(call parse_config,part_event_tracing_tasks_on))
-	CXXFLAGS += -D_OMPTASKS
-	CXXFLAGS += -D_PARTEVENTTRACING
-endif
-
-ifneq (,$(call parse_config,part_event_tracing_tasks_off))
+ifneq (,$(call parse_config,part_event_tracing))
 	CXXFLAGS += -D_PARTEVENTTRACING
 endif
 
@@ -287,7 +280,7 @@ ifneq ($(strip $(my_config)),)
 $(error "Unused parameters in config : $(my_config)")
 endif
 
-SMILEICXX.DEPS ?= $(SMILEICXX)
+SMILEICXX_DEPS ?= $(SMILEICXX)
 
 #-----------------------------------------------------
 # Rules for building the excutable smilei
@@ -309,9 +302,7 @@ header:
 	@if [ $(call parse_config,opt-report) ]; then echo "- Optimization report requested"; fi;
 	@if [ $(call parse_config,detailed_timers) ]; then echo "- Detailed timers option requested"; fi;
 	@if [ $(call parse_config,no_mpi_tm) ]; then echo "- Compiled without MPI_THREAD_MULTIPLE"; fi;
-	@if [ $(call parse_config,omptasks) ]; then echo "- Compiled with OpenMP tasks"; fi;
-	@if [ $(call parse_config,part_event_tracing_tasks_on) ]; then echo "- Compiled particle events tracing, with tasks"; fi;
-	@if [ $(call parse_config,part_event_tracing_tasks_off) ]; then echo "- Compiled with particle events tracing, without tasks"; fi;
+	@if [ $(call parse_config,part_event_tracing) ]; then echo "- Compiled with particle events tracing"; fi;
 	@echo " _____________________________________"
 	@echo ""
 
@@ -339,13 +330,13 @@ $(BUILD_DIR)/%.pyh: %.py
 $(BUILD_DIR)/%.d: %.cpp
 	@echo "Checking dependencies for $<"
 	$(Q) if [ ! -d "$(@D)" ]; then mkdir -p "$(@D)"; fi;
-	$(Q) $(SMILEICXX.DEPS) $(DEPSFLAGS) -MF"$@" -MM -MP -MT"$@ $(@:.d=.o)" $<
+	$(Q) $(SMILEICXX_DEPS) $(DEPSFLAGS) -MF"$@" -MM -MP -MT"$@ $(@:.d=.o)" $<
 
 # Calculate dependencies: special for Params.cpp which needs pyh files
 $(BUILD_DIR)/src/Params/Params.d: src/Params/Params.cpp $(PYHEADERS)
 	@echo "Checking dependencies for $<"
 	$(Q) if [ ! -d "$(@D)" ]; then mkdir -p "$(@D)"; fi;
-	$(Q) $(SMILEICXX.DEPS) $(DEPSFLAGS) -MF"$@" -MM -MP -MT"$@ $(@:.d=.o)" $<
+	$(Q) $(SMILEICXX_DEPS) $(DEPSFLAGS) -MF"$@" -MM -MP -MT"$@ $(@:.d=.o)" $<
 
 ifeq ($(findstring icpc, $(COMPILER_INFO)), icpc)
 $(BUILD_DIR)/src/Diagnostic/DiagnosticScalar.o : src/Diagnostic/DiagnosticScalar.cpp
@@ -447,7 +438,7 @@ uninstall_happi:
 print-% :
 	$(info $* : $($*)) @true
 
-env:  print-VERSION print-SMILEICXX print-OPENMP_FLAG print-HDF5_ROOT_DIR print-FFTW3_LIB_DIR print-SITEDIR print-PYTHONEXE print-PY_CXXFLAGS print-PY_LDFLAGS print-CXXFLAGS print-LDFLAGS print-COMPILER_INFO
+env:  print-VERSION print-SMILEICXX print-OPENMP_FLAG print-HDF5_ROOT_DIR print-FFTW3_LIB_DIR print-SITEDIR print-PYTHONEXE print-PY_CXXFLAGS print-PY_LDFLAGS print-CXXFLAGS print-LDFLAGS print-GPU_COMPILER print-GPU_COMPILER_FLAGS print-COMPILER_INFO
 
 #-----------------------------------------------------
 # Smilei tables
@@ -507,12 +498,6 @@ help:
 	@echo '    advisor                      : to compile for Intel Advisor analysis'
 	@echo '    vtune                        : to compile for Intel Vtune analysis'
 	@echo '    inspector                    : to compile for Intel Inspector analysis'
-#    @echo '    omptasks                     : to compile with OpenMP tasks'
-#    @echo '    part_event_tracing_tasks_on  : to compile particle event tracing and OpenMP tasks'
-#    @echo '    part_event_tracing_tasks_off : to compile particle event tracing without OpenMP tasks'
-#    @echo '    omptasks                     : to compile with OpenMP tasks'
-#    @echo '    part_event_tracing_tasks_on  : to compile particle event tracing and OpenMP tasks'
-#    @echo '    part_event_tracing_tasks_off : to compile particle event tracing without OpenMP tasks'
 	@echo
 	@echo 'Examples:'
 	@echo '  make config=verbose'
@@ -525,7 +510,7 @@ help:
 	@echo
 	@echo 'Environment variables needed for compilation:'
 	@echo '  SMILEICXX         : mpi c++ compiler (possibly GPU-aware) [mpicxx]'
-	@echo '  SMILEICXX.DEPS    : c++ compiler for calculating dependencies [$$SMILEICXX]'
+	@echo '  SMILEICXX_DEPS    : c++ compiler for calculating dependencies [$$SMILEICXX]'
 	@echo '  CXXFLAGS          : FLAGS for $$SMILEICXX []'
 	@echo '  LDFLAGS           : FLAGS for the linker []'
 	@echo '  HDF5_ROOT_DIR     : folder where the HDF5 library was installed [$$HDF5_ROOT_DIR]'
@@ -557,3 +542,4 @@ help:
 	@echo 'https://github.com/SmileiPIC/Smilei'
 	@echo
 	@if [ -f scripts/compile_tools/machine/$(machine) ]; then echo "Machine comments for $(machine):"; grep '^#' scripts/compile_tools/machine/$(machine) || echo "None"; else echo "Available machines:"; ls -1 scripts/compile_tools/machine; fi
+

@@ -32,7 +32,7 @@ class RadiationTools {
         //! Valid between particle_chi in 1E-3 and 1E1
         //! \param particle_chi particle quantum parameter
         // -----------------------------------------------------------------------------
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
         #pragma acc routine seq
 #endif
         static inline double __attribute__((always_inline)) getHNielFitOrder10(double particle_chi)
@@ -62,7 +62,7 @@ class RadiationTools {
         //! Valid between particle_chi in 1E-3 and 1E1
         //! \param particle_chi particle quantum parameter
         // -----------------------------------------------------------------------------
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
         #pragma acc routine seq
 #endif
         static inline double __attribute__((always_inline)) getHNielFitOrder5(double particle_chi)
@@ -86,7 +86,7 @@ class RadiationTools {
         //! Ridgers et al., ArXiv 1708.04511 (2017)
         //! \param particle_chi particle quantum parameter
         // -----------------------------------------------------------------------------
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
         #pragma acc routine seq
 #endif
         static inline double __attribute__((always_inline)) getHNielFitRidgers(double particle_chi)
@@ -94,36 +94,34 @@ class RadiationTools {
             const double chi2 = particle_chi * particle_chi;
             const double chi3 = chi2 * particle_chi;
             return chi3*1.9846415503393384
-                *std::pow(
-                    1.0 + (1. + 4.528*particle_chi)*std::log(1.+12.29*particle_chi) + 4.632*chi2
-                    ,-7./6.
-                );
+                *std::pow(1.0 + (1. + 4.528*particle_chi)*std::log(1.+12.29*particle_chi) + 4.632*chi2,-7./6.);
         }
 
         //! Computation of the function g of Erber using the Ridgers
         //! approximation formulae
         //! \param particle_chi particle quantum parameter
         //#pragma omp declare simd
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
         #pragma acc routine seq
 #endif
-        static inline double __attribute__((always_inline)) computeGRidgers(double particle_chi)
+        static inline double __attribute__((always_inline)) computeGRidgers(double particle_chi)  // this is a duplicate of computeRidgersFit from radiationTables.h
         {
-            return std::pow(1. + 4.8*(1.0+particle_chi)*std::log(1. + 1.7*particle_chi)
-                       + 2.44*particle_chi*particle_chi,-2./3.);
+            double a = 1.0 + 4.8 * ( 1.0 + particle_chi )*std::log( 1.0 + 1.7 * particle_chi ) 
+                       + 2.44 * particle_chi * particle_chi;
+            return 1.0 / std::cbrt( a * a );
         };
 
         // -----------------------------------------------------------------------------
         //! Return f1(nu) = Int_nu^\infty K_{5/3}(y) dy
         //! used in computed synchrotron power spectrum
         // -----------------------------------------------------------------------------
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
         #pragma acc routine seq
 #endif
         static inline double __attribute__((always_inline)) computeF1Nu(double nu)
         {
-            if (nu<0.1)      return 2.149528241483088*std::pow(nu,-0.6666666666666667) - 1.813799364234217;
-            else if (nu>10)  return 1.253314137315500*std::pow(nu,-0.5)*exp(-nu);
+            if (nu<0.1)      return 2.149528241483088/std::cbrt(nu*nu) - 1.813799364234217;
+            else if (nu>10)  return 1.253314137315500/std::sqrt(nu)*exp(-nu);
             else {
                 const double lognu = std::log(nu);
                 double lognu_power_n = lognu;
@@ -142,10 +140,10 @@ class RadiationTools {
 
                 return std::exp(f);
 
-                /*return exp(-1.042081355552157e-02 * pow(lognu,5)
-                           -5.349995695960174e-02 * pow(lognu,4)
-                           -1.570476212230771e-01 * pow(lognu,3)
-                           -4.575331390887448e-01 * pow(lognu,2)
+                /*return exp(-1.042081355552157e-02 * pow (lognu,5)
+                           -5.349995695960174e-02 * pow (lognu,4)
+                           -1.570476212230771e-01 * pow (lognu,3)
+                           -4.575331390887448e-01 * pow (lognu,2)
                            -1.687909081004528e+00 * lognu
                            -4.341018460806052e-01) ;*/
             }
@@ -155,13 +153,13 @@ class RadiationTools {
         //! Return f2(nu) = BesselK_{2/3}(nu)
         //! used in computed synchrotron power spectrum
         // -----------------------------------------------------------------------------
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
         #pragma acc routine seq
 #endif
         static inline double __attribute__((always_inline)) computeF2Nu(double nu)
         {
-            if (nu<0.05)     return 1.074764120720013*std::pow(nu,-0.6666666666666667);
-            else if (nu>10)  return 1.253314137315500*std::pow(nu,-0.5)*exp(-nu);
+            if (nu<0.05)     return 1.074764120720013/std::cbrt(nu*nu) ;
+            else if (nu>10)  return 1.253314137315500/std::sqrt(nu)*exp(-nu);
             else {
                 const double lognu = std::log(nu);
                 double lognu_power_n = lognu;
@@ -194,7 +192,7 @@ class RadiationTools {
         //! = Int_nu^\infty K_{5/3}(y) dy + cst * BesselK_{2/3}(nu)
         //! used in computed synchrotron power spectrum
         // -----------------------------------------------------------------------------
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
         #pragma acc routine seq
 #endif
         static inline double __attribute__((always_inline)) computeBesselPartsRadiatedPower(double nu, double cst)

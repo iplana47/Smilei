@@ -68,7 +68,7 @@ void PusherHigueraCary::operator()( Particles &particles, SmileiMPI *smpi, int i
                        position_y /* [istart:particle_number] */,             \
                        position_z /* [istart:particle_number] */ )
     #pragma omp teams distribute parallel for
-#elif defined(SMILEI_OPENACC_MODE)
+#elif defined(SMILEI_ACCELERATOR_GPU_OACC)
     const int istart_offset   = istart - ipart_buffer_offset;
     const int particle_number = iend - istart;
 
@@ -117,10 +117,11 @@ void PusherHigueraCary::operator()( Particles &particles, SmileiMPI *smpi, int i
 
         // beta**2
         const double beta2 = Tx*Tx + Ty*Ty + Tz*Tz;
+        const double Tum = Tx*umx + Ty*umy + Tz*umz;
 
         // Equivalent of 1/\gamma_{new} in the paper
         const double local_invgf = 1./std::sqrt( 0.5*( gfm2 - beta2 +
-                                     std::sqrt( (gfm2 - beta2)*(gfm2 - beta2) + 4.0*( beta2 + std::pow( Tx*umx + Ty*umy + Tz*umz, 2 ) ) ) ) );
+                                     std::sqrt( (gfm2 - beta2)*(gfm2 - beta2) + 4.0*( beta2 + Tum * Tum ) ) ) );
 
         // Rotation in the magnetic field
         Tx    *= local_invgf;

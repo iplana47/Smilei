@@ -17,10 +17,10 @@ public:
     ~ProjectorAM2OrderV();
     
     //! Project global current densities (EMfields->Jl_/Jr_/Jt_)
-    void currents(ElectroMagnAM *emAM, Particles &particles, unsigned int istart, unsigned int iend, double *invgf, int *iold, double *deltaold, std::complex<double> *array_eitheta_old, int npart_total, int ipart_ref = 0 );
+    void currents(ElectroMagnAM *emAM, Particles &particles, unsigned int istart, unsigned int iend, double *invgf, int *iold, double *deltaold, std::complex<double> *array_eitheta_old, int npart_total, int ipart_ref = 0, int ispec =0 );
 
     //! Project global current densities (EMfields->Jl_/Jr_/Jt_/rho), diagFields timestep
-    void currentsAndDensity(ElectroMagnAM *emAM, Particles &particles, unsigned int istart, unsigned int iend, double *invgf, int *iold, double *deltaold, std::complex<double> *array_eitheta_old, int npart_total, int ipart_ref = 0 );
+    void currentsAndDensity(ElectroMagnAM *emAM, Particles &particles, unsigned int istart, unsigned int iend, double *invgf, int *iold, double *deltaold, std::complex<double> *array_eitheta_old, int npart_total, int ipart_ref = 0, int ispec = 0 );
 
     //! Project global current charge (EMfields->rho_), frozen & diagFields timestep
     void basicForComplex( std::complex<double> *rhoj, Particles &particles, unsigned int ipart, unsigned int type, int imode ) override final;
@@ -38,12 +38,6 @@ public:
     //!Wrapper
     void currentsAndDensityWrapper( ElectroMagn *EMfields, Particles &particles, SmileiMPI *smpi, int istart, int iend, int ithread, bool diag_flag, bool is_spectral, int ispec, int icell,  int ipart_ref ) override final;
     
-    //!Wrapper for projection on buffers
-    void currentsAndDensityWrapperOnBuffers( double *, double *, double *, double *, int, Particles &, SmileiMPI *, int, int, int, bool, bool, int, int = 0, int = 0 ) override final {};
-
-    //!Wrapper for projection on AM buffers
-    void currentsAndDensityWrapperOnAMBuffers( ElectroMagn *, std::complex<double> *, std::complex<double> *, std::complex<double> *, std::complex<double> *, int, int, Particles &, SmileiMPI *, int, int, int, bool, int = 0 ) override final {};
-
     // Project susceptibility
     void susceptibility( ElectroMagn *EMfields, Particles &particles, double species_mass, SmileiMPI *smpi, int istart, int iend,  int ithread, int icell, int ipart_ref ) override final;
     
@@ -255,7 +249,6 @@ private:
         //mode 0
         std::complex<double> crt_p= charge_weight[ipart]*( momentum_z[ipart]* real(e_bar_m1[ipart]) - momentum_y[ipart]*imag(e_bar_m1[ipart]) ) * invgf[ipart];
         std::complex<double> e_delta = 0.5;
-        std::complex<double> e_delta_inv = 0.5;
         std::complex<double> e_bar = 1.;
 
 
@@ -263,19 +256,18 @@ private:
             if (imode > 0){
                 e_delta *= e_delta_m1[ipart];
                 e_bar *= e_bar_m1[ipart];
-                e_delta_inv =1./e_delta - 1.;
                 crt_p = charge_weight[ipart]*Icpx*e_bar * one_ov_dt * 2. * r_bar[ipart] /( double )imode ;
             }
 
             //j=0 case
             UNROLL_S(5)
             for( unsigned int i=0 ; i<5 ; i++ ) {
-                bJ [200*imode + (i*5 )*vecSize + ipart] += crt_p*(Sr1[0]*Sl1[i]*e_delta_inv );
+                bJ [200*imode + (i*5 )*vecSize + ipart] -= crt_p*(Sr1[0]*Sl1[i]*( e_delta-1. ) );
             }
             //i=0 case
             UNROLL_S(4)
             for( unsigned int j=1 ; j<5 ; j++ ) {
-                bJ [200*imode + (j)*vecSize + ipart] += crt_p*(Sr1[j]*Sl1[0]*e_delta_inv );
+                bJ [200*imode + (j)*vecSize + ipart] -= crt_p*(Sr1[j]*Sl1[0]*( e_delta-1. ) );
             }
 
 
@@ -283,7 +275,7 @@ private:
             for( unsigned int i=1 ; i<5 ; i++ ) {
                 UNROLL_S(4)
                 for ( unsigned int j=1; j<5 ; j++ ) {
-                    bJ [200*imode + (i*5+j )*vecSize + ipart] += crt_p*(Sr1[j]*Sl1[i]*e_delta_inv - Sr0_buff_vect[(j-1)*vecSize + ipart]*Sl0_buff_vect[(i-1)*vecSize + ipart]*( e_delta-1. ));
+                    bJ [200*imode + (i*5+j )*vecSize + ipart] -= crt_p*(Sr1[j]*Sl1[i]*( e_delta-1. ) - Sr0_buff_vect[(j-1)*vecSize + ipart]*Sl0_buff_vect[(i-1)*vecSize + ipart]*(std::conj(e_delta) - 1.));
                 }
             }
 

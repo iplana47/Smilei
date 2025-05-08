@@ -20,7 +20,7 @@
 #include <iomanip>
 #include <string>
 #include <omp.h>
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
 #include <openacc.h>
 #endif
 
@@ -44,7 +44,7 @@ using namespace std;
 //                                                   MAIN CODE
 // ---------------------------------------------------------------------------------------------------------------------
 
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
     #ifdef _OPENACC
     void initialization_openacc()
     {
@@ -58,14 +58,18 @@ using namespace std;
            set by Slurm, as MPI_Comm_rank cannot be used here because this routine
            is used BEFORE the initialisation of MPI*/
         local_rank_env = getenv("SLURM_LOCALID");
-
-        if (local_rank_env) {
-            local_rank = atoi(local_rank_env);
+        // Second try on a PBS cluster
+        if( ! local_rank_env ) {
+            local_rank_env = getenv("PMI_LOCAL_RANK");
+        }
+        
+        if( local_rank_env ) {
+            local_rank = atoi( local_rank_env );
             // Define the GPU to use via OpenACC
-            acc_set_device_num(local_rank, acc_get_device_type());
+            acc_set_device_num( local_rank, acc_get_device_type() );
         } else {
-            printf("Error : impossible to determine the local rank of MPI process.\n");
-            exit(1);
+            printf( "Error : impossible to determine the local rank of MPI process.\n" );
+            exit( 1 );
         }
     }
     #endif
@@ -80,7 +84,7 @@ int main( int argc, char *argv[] )
     // -------------------------
 
     // Create the OpenACC environment
-#ifdef SMILEI_OPENACC_MODE
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
     initialization_openacc();
 #endif
 
@@ -124,7 +128,7 @@ int main( int argc, char *argv[] )
         // oblivious to the program (only one, the one by default).
         // This could be a missed but very advanced optimization for some
         // kernels/exchange.
-        ERROR( "Simlei needs only one accelerator (GPU). Look for HIP_VISIBLE_DEVICES or 'gpu-bind=closest' in your SLURM script or use a custom binding script." );
+        ERROR( "Smilei needs only one accelerator (GPU). Look for HIP_VISIBLE_DEVICES or 'gpu-bind=closest' in your SLURM script or use a custom binding script." );
     } else {
         // ::omp_set_default_device(0);
     }
@@ -248,7 +252,7 @@ int main( int argc, char *argv[] )
 
         checkpoint.restartAll( vecPatches, region, &smpi, params );
 
-#if !defined( SMILEI_ACCELERATOR_MODE )
+#if !defined( SMILEI_ACCELERATOR_GPU )
         // CPU only, its too early to sort on GPU
         vecPatches.initialParticleSorting( params );
 #endif
@@ -271,7 +275,7 @@ int main( int argc, char *argv[] )
 
         PatchesFactory::createVector( vecPatches, params, &smpi, openPMD, &radiation_tables_, 0 );
 
-#if !(defined( SMILEI_ACCELERATOR_MODE ))
+#if !(defined( SMILEI_ACCELERATOR_GPU ))
         // CPU only, its too early to sort on GPU
         vecPatches.initialParticleSorting( params );
 #endif
@@ -407,7 +411,7 @@ int main( int argc, char *argv[] )
         }
     }
 
-#if defined( SMILEI_ACCELERATOR_MODE )
+#if defined( SMILEI_ACCELERATOR_GPU )
     TITLE( "GPU allocation and copy of the fields and particles" );
     // Allocate particle and field arrays
     // Also copy particle array content on device
@@ -423,12 +427,11 @@ int main( int argc, char *argv[] )
 
     if( !params.restart ) {
         TITLE( "Running diags at time t = 0" );
-#ifdef _OMPTASKS
-        vecPatches.runAllDiagsTasks( params, &smpi, 0, timers, simWindow );
-#else
-        vecPatches.runAllDiags( params, &smpi, 0, timers, simWindow );
-#endif
-        
+        #pragma omp parallel shared( smpi, params, vecPatches, simWindow )
+        {
+            vecPatches.runAllDiags( params, &smpi, 0, timers, simWindow );
+        }
+        vecPatches.rebootDiagTimers();
     }
 
     TITLE( "Species creation summary" );
@@ -478,21 +481,18 @@ int main( int argc, char *argv[] )
 
     unsigned int itime=checkpoint.this_run_start_step+1;
     while( ( itime <= params.n_time ) && ( !checkpoint.exit_asap ) ) {
-
+        
+        // calculate new times
+        // -------------------
+        time_prim += params.timestep;
+        time_dual += params.timestep;
+        if( params.keep_python_running_ ) {
+            PyTools::setIteration( itime ); // sets python variable "Main.iteration" for users
+        }
+        
         #pragma omp parallel shared (time_dual,smpi,params, vecPatches, region, simWindow, checkpoint, itime)
         {
-
-            // calculate new times
-            // -------------------
-            #pragma omp single
-            {
-                time_prim += params.timestep;
-                time_dual += params.timestep;
-                if( params.keep_python_running_ ) {
-                    PyTools::setIteration( itime ); // sets python variable "Main.iteration" for users
-                }
-            }
-
+            
             // Patch reconfiguration
             if( params.has_adaptive_vectorization && params.adaptive_vecto_time_selection->theTimeIsNow( itime ) ) {
                 vecPatches.reconfiguration( params, timers, itime );
@@ -524,7 +524,9 @@ int main( int argc, char *argv[] )
             if( params.Laser_Envelope_model ) {
                 vecPatches.runEnvelopeModule( params, &smpi, simWindow, time_dual, timers, itime );
             } // end condition if Laser Envelope Model is used
-
+            
+            vecPatches.initExchParticles( params, &smpi, simWindow, time_dual, timers, itime );
+            
             // Sum densities
             vecPatches.sumDensities( params, time_dual, timers, itime, simWindow, &smpi );
 
@@ -632,8 +634,7 @@ int main( int argc, char *argv[] )
         #pragma omp parallel shared (time_dual,smpi,params, vecPatches, region, simWindow, checkpoint, itime)
         {
             // finalize particle exchanges and sort particles
-            vecPatches.finalizeAndSortParticles( params, &smpi, simWindow,
-                                                 time_dual, timers, itime );
+            vecPatches.finalizeExchParticlesAndSort( params, &smpi, simWindow, time_dual, timers, itime );
 
             // Particle merging
             vecPatches.mergeParticles(params, time_dual,timers, itime );
@@ -652,7 +653,7 @@ int main( int argc, char *argv[] )
                     // Standard fields operations (maxwell + comms + boundary conditions) are completed
                     // apply prescribed fields can be considered if requested
                     if( vecPatches(0)->EMfields->prescribedFields.size() ) {
-                        #pragma omp single
+                        #pragma omp master
                         vecPatches.applyPrescribedFields( time_prim );
                         #pragma omp barrier
                     }
@@ -660,11 +661,7 @@ int main( int argc, char *argv[] )
             }
 
             // Call the various diagnostics
-#ifdef _OMPTASKS
-            vecPatches.runAllDiagsTasks( params, &smpi, itime, timers, simWindow );
-#else
             vecPatches.runAllDiags( params, &smpi, itime, timers, simWindow );
-#endif
 
             // Move window
             vecPatches.moveWindow( params, &smpi, region, simWindow, time_dual, timers, itime );
@@ -688,7 +685,7 @@ int main( int argc, char *argv[] )
         } //End omp parallel region
 
         if( params.has_load_balancing && params.load_balancing_time_selection->theTimeIsNow( itime ) ) {
-// #if defined( SMILEI_ACCELERATOR_MODE )
+// #if defined( SMILEI_ACCELERATOR_GPU )
 //             ERROR( "Load balancing not tested on GPU !" );
 // #endif
             count_dlb++;
@@ -780,7 +777,7 @@ int main( int argc, char *argv[] )
         region.clean();
     }
     
-#if defined( SMILEI_ACCELERATOR_MODE )
+#if defined( SMILEI_ACCELERATOR_GPU )
     vecPatches.cleanDataOnDevice( params, &smpi, &radiation_tables_, &multiphoton_Breit_Wheeler_tables_ );
 #endif
     
@@ -797,7 +794,6 @@ int main( int argc, char *argv[] )
 // ---------------------------------------------------------------------------------------------------------------------
 //                                               END MAIN CODE
 // ---------------------------------------------------------------------------------------------------------------------
-
 
 int executeTestMode( VectorPatch &vecPatches,
                      Region &region,

@@ -191,8 +191,6 @@ public:
     //! Fridman filtering parameter [real between 0 and 1]
     double Friedman_theta;
 
-    // mark if OpenMP tasks are used or not
-    bool omptasks;
     //! Clusters width
     //unsigned int cluster_width_;
     int cluster_width_;
@@ -388,7 +386,7 @@ public:
     //!
     bool isGPUParticleBinningAvailable() const;
 
-#if defined( SMILEI_ACCELERATOR_GPU_OMP ) || defined( SMILEI_OPENACC_MODE )
+#if defined( SMILEI_ACCELERATOR_GPU_OMP ) || defined( SMILEI_ACCELERATOR_GPU_OACC )
 
     //! Given dimension_id in [0, 3), return for dimension_id == :
     //! 1: the 1D value (not implemented)
@@ -409,7 +407,7 @@ public:
     //#if defined( SMILEI_ACCELERATOR_GPU_OMP )
         switch( dimension_id ) {
             case 1:
-                return -1;
+                return 4; // check for optimal value
             case 2:
                 return 4;
             case 3:
