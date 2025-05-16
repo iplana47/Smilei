@@ -258,6 +258,7 @@ void SimWindow::shift( VectorPatch &vecPatches, SmileiMPI *smpi, Params &params,
                             }
                         }
                         mypatch->EMfields->envelope->EnvBoundCond = EnvelopeBC_Factory::create( params, mypatch );
+                        mypatch->EMfields->envelope->keep_injecting_laser_envelope = false;
                     }
 
                     mypatch->EMfields->laserDisabled();
@@ -319,6 +320,7 @@ void SimWindow::shift( VectorPatch &vecPatches, SmileiMPI *smpi, Params &params,
                             }
                         }
                         mypatch->EMfields->envelope->EnvBoundCond = EnvelopeBC_Factory::create( params, mypatch );
+                        mypatch->EMfields->envelope->keep_injecting_laser_envelope = false;
                     }
 
                     mypatch->EMfields->laserDisabled();
@@ -338,6 +340,7 @@ void SimWindow::shift( VectorPatch &vecPatches, SmileiMPI *smpi, Params &params,
                             }
                         }
                         mypatch->EMfields->envelope->EnvBoundCond = EnvelopeBC_Factory::create( params, mypatch );
+                        mypatch->EMfields->envelope->keep_injecting_laser_envelope = false;
                     }
 
                     mypatch->EMfields->laserDisabled();
@@ -426,6 +429,7 @@ void SimWindow::shift( VectorPatch &vecPatches, SmileiMPI *smpi, Params &params,
                 if (!params.multiple_decomposition){
                     mypatch->EMfields->emBoundCond[0]->apply(mypatch->EMfields, time_dual, mypatch);
                     if (mypatch->EMfields->envelope) mypatch->EMfields->envelope->EnvBoundCond[0]->apply(mypatch->EMfields->envelope, mypatch->EMfields, mypatch);
+                    if (mypatch->EMfields->envelope) mypatch->EMfields->envelope->keep_injecting_laser_envelope = false;
                 }
              }
     }

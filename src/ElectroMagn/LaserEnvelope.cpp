@@ -63,6 +63,9 @@ LaserEnvelope::LaserEnvelope( Params &params, Patch *patch ) :
     if ( (envelope_type != "from_xmin") && (envelope_type != "inside_window") ){
         ERROR("Unknown envelope_type - only 'inside_window' and 'from_xmin' are available. ");
     }
+    if (envelope_type=="from_xmin"){
+        keep_injecting_laser_envelope = true;
+    }
 
     // Read laser ellipticity
     PyTools::extract( "polarization_phi", polarization_phi, "LaserEnvelope" );
@@ -138,7 +141,8 @@ LaserEnvelope::LaserEnvelope( LaserEnvelope *envelope, Patch *patch, Params &par
     i1_2k0_over_2dl( envelope->i1_2k0_over_2dl ),
     one_plus_ik0dt( envelope->one_plus_ik0dt ),
     one_plus_ik0dt_ov_one_plus_k0sq_dtsq( envelope->one_plus_ik0dt_ov_one_plus_k0sq_dtsq ),
-    delta(envelope->delta)
+    delta(envelope->delta),
+    keep_injecting_laser_envelope(envelope->keep_injecting_laser_envelope)
 {
     if( n_moved ==0 ) {
         profile_ = new Profile( envelope->profile_ );

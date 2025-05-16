@@ -1146,10 +1146,13 @@ void VectorPatch::solveEnvelope( Params &params, SimWindow *simWindow, int, doub
 void VectorPatch::injectEnvelopeFromXminIfNeeded( Params &params, double time_dual )
 {
 
-    if ( ( ( *this )( 0 )->EMfields->envelope!=NULL ) && (( *this )( 0 )->EMfields->envelope->envelope_type=="from_xmin") ) {
+    if (  (( *this )( 0 )->EMfields->envelope!=NULL ) 
+       && (( *this )( 0 )->EMfields->envelope->envelope_type=="from_xmin") 
+       && (( *this )( 0 )->EMfields->envelope->keep_injecting_laser_envelope) ) 
+    {
         #pragma omp for schedule(static)
         for( unsigned int ipatch=0 ; ipatch<this->size() ; ipatch++ ) {
-            // Apply boundary conditions for envelope and |A| to inject the laser
+            // Apply boundary conditions for envelope A to inject the laser
             ( *this )( ipatch )->EMfields->envelope->injectEnvelopeFromXmin( ( *this )( ipatch ), params, time_dual );
         }
     }
@@ -4327,9 +4330,6 @@ void VectorPatch::runEnvelopeModule( Params &params,
         SimWindow *simWindow,
         double time_dual, Timers &timers, int itime )
 {
-  
-    // if the envelope initialization method is "from_xmin", act on the Xmin boundary conditions to inject the envelope
-    injectEnvelopeFromXminIfNeeded(params, time_dual);
     
     // interpolate envelope for susceptibility deposition, project susceptibility for envelope equation, momentum advance
     ponderomotiveUpdateSusceptibilityAndMomentum( params, smpi, simWindow, time_dual, timers, itime );
@@ -4339,6 +4339,9 @@ void VectorPatch::runEnvelopeModule( Params &params,
 
     // solve envelope equation and comm envelope
     solveEnvelope( params, simWindow, itime, time_dual, timers, smpi );
+    
+    // if the envelope initialization method is "from_xmin", act on the Xmin boundary conditions to inject the envelope
+    injectEnvelopeFromXminIfNeeded(params, time_dual);
 
     // interp updated envelope for position advance, update positions and currents for Maxwell's equations
     ponderomotiveUpdatePositionAndCurrents( params, smpi, simWindow, time_dual, timers, itime );

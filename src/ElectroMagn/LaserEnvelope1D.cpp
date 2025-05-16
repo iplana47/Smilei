@@ -91,7 +91,7 @@ void LaserEnvelope1D::initEnvelopeInsideTheWindow( Patch *patch, ElectroMagn *EM
     // position[0]: x coordinate
     // t: time coordinate --> x/c for the envelope initialization
     
-    position[0]           = cell_length[0]*( ( double )( patch->getCellStartingGlobalIndex( 0 ) )+( A1D->isDual( 0 )?-0.5:0. ) );
+    position[0]           = cell_length[0]*( ( double )( patch->getCellStartingGlobalIndex( 0 ) )+( A_->isDual( 0 )?-0.5:0. ) + 1 );
     t                     = position[0];          // x-ct     , t=0
     t_previous_timestep   = position[0]+timestep; // x-c(t-dt), t=0
     

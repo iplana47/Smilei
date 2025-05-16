@@ -184,7 +184,7 @@ void LaserEnvelopeAM::injectEnvelopeFromXmin( Patch *patch, Params &params, doub
     double t_previous_timestep    = time_dual-timestep; // x-c(t-dt), t=0
 
     vector<double> position( 2, 0 );
-    position[0]                   = 0.;
+    position[0] = cell_length[0]*( ( double )( patch->getCellStartingGlobalIndex( 0 ) )+( A_->isDual( 0 )?-0.5:0. ) + 1 );
     double pos1 = cell_length[1]*( ( double )( patch->getCellStartingGlobalIndex( 1 ) )+( A_->isDual( 1 )?-0.5:0. ) );
 
     // oversize

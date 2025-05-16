@@ -155,22 +155,23 @@ void LaserEnvelope2D::injectEnvelopeFromXmin( Patch *patch, Params &params, doub
     double t_previous_timestep    = time_dual-timestep; // x-c(t-dt), t=0
 
     vector<double> position( 2, 0 );
-    position[0]                   = 0.;
+    position[0] = cell_length[0]*( ( double )( patch->getCellStartingGlobalIndex( 0 ) )+( A_->isDual( 0 )?-0.5:0. ) + 1 );
     double pos1 = cell_length[1]*( ( double )( patch->getCellStartingGlobalIndex( 1 ) )+( A_->isDual( 1 )?-0.5:0. ) );
     
     // oversize
     int oversize_                 = params.oversize[0];
-    
-    
+
     bool inject_envelope_from_this_patch = ( patch->isBoundary(0) ) && (  patch->isXmin() );
+
     // Impose the envelope value for x=0 at time t and t-dt 
     if ( inject_envelope_from_this_patch ){
         position[1] = pos1;
-        for( unsigned int j=0 ; j<A_->dims_[1] ; j++ ) {    
+        for( unsigned int j=0 ; j<A_->dims_[1] ; j++ ) { 
             ( *A2D  )( oversize_-1, j ) += profile_->complexValueAt( position, t );
             ( *A02D )( oversize_-1, j ) += profile_->complexValueAt( position, t_previous_timestep );
             position[1] += cell_length[1];
         }
+        
         if (envelope_solver=="explicit_reduced_dispersion"){
             position[0] = -cell_length[0];
             position[1] = pos1;
@@ -179,7 +180,7 @@ void LaserEnvelope2D::injectEnvelopeFromXmin( Patch *patch, Params &params, doub
                 ( *A02D )( oversize_-2, j ) += profile_->complexValueAt( position, t_previous_timestep );
                 position[1] += cell_length[1];
             }
-        }    
+        }   
     }
       
 }

@@ -41,8 +41,10 @@ public:
     double ellipticity_factor; // 1 for linear polarization, 2 for circular polarization.
     // This coefficient is used for the ponderomotive potential Phi = ellipticity_factor*|A|^2/2.
 
-    std:: string envelope_solver  = "explicit"; // default value
-    std:: string envelope_type = "inside_window"; // default value
+    std:: string envelope_solver       = "explicit";      // default value for the solver for the envelope equation 
+    
+    std:: string envelope_type         = "inside_window"; // default value
+    bool keep_injecting_laser_envelope = false;           // true only if envelope_type="from_xmin" and window is not moving
     
     Field *A_;         // envelope value at timestep n
     Field *A0_;        // envelope value at timestep n-1
