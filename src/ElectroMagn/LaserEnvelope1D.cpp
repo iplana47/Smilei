@@ -91,7 +91,7 @@ void LaserEnvelope1D::initEnvelopeInsideTheWindow( Patch *patch, ElectroMagn *EM
     // position[0]: x coordinate
     // t: time coordinate --> x/c for the envelope initialization
     
-    position[0]           = cell_length[0]*( ( double )( patch->getCellStartingGlobalIndex( 0 ) )+( A_->isDual( 0 )?-0.5:0. ) + 1 );
+    position[0]           = cell_length[0]*( ( double )( patch->getCellStartingGlobalIndex( 0 ) )+( A1D->isDual( 0 )?-0.5:0. ) );
     t                     = position[0];          // x-ct     , t=0
     t_previous_timestep   = position[0]+timestep; // x-c(t-dt), t=0
     
@@ -139,7 +139,7 @@ void LaserEnvelope1D::injectEnvelopeFromXmin( Patch *patch, Params &params, doub
     double t_previous_timestep    = time_dual-timestep; // x-c(t-dt), t=0
   
     vector<double> position( 1, 0 );
-    position[0]                   = 0.;
+    position[0]                   = cell_length[0]*( ( double )( patch->getCellStartingGlobalIndex( 0 ) )+( A_->isDual( 0 )?-0.5:0. ) + 1 );
     
     // oversize
     int oversize_                 = params.oversize[0];
