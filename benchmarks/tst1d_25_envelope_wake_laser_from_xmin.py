@@ -6,8 +6,8 @@ nx = 192
 Lx = nx * dx
 npatch_x = 32
 laser_fwhm = 20. 
-center_laser = 2.*laser_fwhm # the temporal center here is the same as waist position, but in principle they can differ
-time_start_moving_window =  Lx-2.*laser_fwhm
+center_laser = 2.*laser_fwhm 
+time_start_moving_window =  Lx
 
 
 Main(
@@ -64,13 +64,12 @@ Species(
     ],
 )
 
-LaserEnvelopePlanar1D( # linear regime of LWFA
-    a0              = 0.1,     
+LaserEnvelopePlanar1D( 
+    box_side        = "xmin",
+    a0              = 0.1,  # linear regime of LWFA
     time_envelope   = tgaussian(center=center_laser, fwhm=laser_fwhm),
-    envelope_solver = 'explicit_reduced_dispersion',
-     Envelope_boundary_conditions = [ ["reflective", "reflective"],
-     ],
-     envelope_type  = "from_xmin",
+    envelope_solver = 'explicit',
+    Envelope_boundary_conditions = [ ["reflective", "reflective"],],
 )
 
 
