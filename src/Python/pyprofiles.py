@@ -485,7 +485,7 @@ def LaserPlanar1D( box_side="xmin", a0=1., omega=1.,
     )
 
 def LaserEnvelopePlanar1D( a0=1., omega=1., time_envelope=tconstant(),
-        envelope_solver = "explicit",envelope_type = "inside_window",Envelope_boundary_conditions = [["reflective"]],
+        envelope_solver = "explicit",box_side = "inside",Envelope_boundary_conditions = [["reflective"]],
         polarization_phi = 0.,ellipticity = 0.):
     from numpy import vectorize, sqrt
 
@@ -498,7 +498,7 @@ def LaserEnvelopePlanar1D( a0=1., omega=1., time_envelope=tconstant(),
         omega                        = omega,
         envelope_profile             = space_time_envelope,
         envelope_solver              = envelope_solver,
-        envelope_type      = envelope_type,
+        box_side      = box_side,
         Envelope_boundary_conditions = Envelope_boundary_conditions,
         polarization_phi             = polarization_phi,
         ellipticity                  = ellipticity
@@ -570,7 +570,7 @@ def LaserGaussian2D( box_side="xmin", a0=1., omega=1., focus=None, waist=3., inc
     )
 
 def LaserEnvelopeGaussian2D( a0=1., omega=1., focus=None, waist=3., time_envelope=tconstant(),
-        envelope_solver = "explicit",envelope_type = "inside_window",Envelope_boundary_conditions = [["reflective"]],
+        envelope_solver = "explicit",box_side = "inside",Envelope_boundary_conditions = [["reflective"]],
         polarization_phi = 0.,ellipticity = 0.):
     import cmath
     from numpy import exp, sqrt, arctan, vectorize
@@ -593,7 +593,7 @@ def LaserEnvelopeGaussian2D( a0=1., omega=1., focus=None, waist=3., time_envelop
         omega                        = omega,
         envelope_profile             = gaussian_beam_with_temporal_profile,
         envelope_solver              = envelope_solver,
-        envelope_type      = envelope_type,
+        box_side      = box_side,
         Envelope_boundary_conditions = Envelope_boundary_conditions,
         polarization_phi             = polarization_phi,
         ellipticity                  = ellipticity
@@ -668,7 +668,7 @@ def LaserGaussian3D( box_side="xmin", a0=1., omega=1., focus=None, waist=3., inc
     )
 
 def LaserEnvelopeGaussian3D( a0=1., omega=1., focus=None, waist=3., time_envelope=tconstant(),
-        envelope_solver = "explicit",Envelope_boundary_conditions = [["reflective"]], envelope_type = "inside_window",
+        envelope_solver = "explicit",Envelope_boundary_conditions = [["reflective"]], box_side = "inside",
         polarization_phi = 0.,ellipticity = 0.):
     import cmath
     from numpy import exp, sqrt, arctan, vectorize
@@ -691,7 +691,7 @@ def LaserEnvelopeGaussian3D( a0=1., omega=1., focus=None, waist=3., time_envelop
         omega                        = omega,
         envelope_profile             = gaussian_beam_with_temporal_profile,
         envelope_solver              = envelope_solver,
-        envelope_type      = envelope_type,
+        box_side      = box_side,
         Envelope_boundary_conditions = Envelope_boundary_conditions,
         polarization_phi             = polarization_phi,
         ellipticity                  = ellipticity
@@ -732,7 +732,7 @@ def LaserGaussianAM( box_side="xmin", a0=1., omega=1., focus=None, waist=3.,
 
 
 def LaserEnvelopeGaussianAM( a0=1., omega=1., focus=None, waist=3., time_envelope=tconstant(),
-        envelope_solver = "explicit",envelope_type = "inside_window",Envelope_boundary_conditions = [["reflective"]],
+        envelope_solver = "explicit",box_side = "inside",Envelope_boundary_conditions = [["reflective"]],
         Env_pml_sigma_parameters = [[0.90,2],[10.0,2],[10.0,2]],
         Env_pml_kappa_parameters = [[1.00,1.00,2],[1.00,1.00,2],[1.00,1.00,2]],
         Env_pml_alpha_parameters = [[0.90,0.90,1],[0.75,0.75,1],[0.75,0.75,1]],
@@ -762,7 +762,7 @@ def LaserEnvelopeGaussianAM( a0=1., omega=1., focus=None, waist=3., time_envelop
         omega                        = omega,
         envelope_profile             = gaussian_beam_with_temporal_profile,
         envelope_solver              = envelope_solver,
-        envelope_type      = envelope_type,
+        box_side      = box_side,
         Envelope_boundary_conditions = Envelope_boundary_conditions,
         Env_pml_sigma_parameters     = Env_pml_sigma_parameters,
         Env_pml_kappa_parameters     = Env_pml_kappa_parameters,

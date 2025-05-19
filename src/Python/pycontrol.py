@@ -182,7 +182,7 @@ def _keep_python_running():
             return True
     # Verify if the envelope is injected from the xmin border through a space-temporal profile
     if len(LaserEnvelope)>0:
-        if LaserEnvelope.envelope_type=="from_xmin":
+        if LaserEnvelope.box_side=="xmin":
             return True
     # else False
     return False

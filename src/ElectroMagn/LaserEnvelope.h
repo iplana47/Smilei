@@ -35,16 +35,16 @@ public:
     const std::vector<double> cell_length;
     const double timestep;
 
-    double omega; // frequency of the laser
-    double polarization_phi;
-    double ellipticity; // 0 for linear polarization, 1 for circular polarization
-    double ellipticity_factor; // 1 for linear polarization, 2 for circular polarization.
+    double omega;                                         // frequency of the laser
+    double polarization_phi;                              // polarization angle
+    double ellipticity;                                   // 0 for linear polarization, 1 for circular polarization
     // This coefficient is used for the ponderomotive potential Phi = ellipticity_factor*|A|^2/2.
+    double ellipticity_factor;                            // 1 for linear polarization, 2 for circular polarization.
 
     std:: string envelope_solver       = "explicit";      // default value for the solver for the envelope equation 
     
-    std:: string envelope_type         = "inside_window"; // default value
-    bool keep_injecting_laser_envelope = false;           // true only if envelope_type="from_xmin" and window is not moving
+    std:: string box_side              = "inside";        // default value; accepted values: "inside", "xmin"
+    bool keep_injecting_laser_envelope = false;           // true only if box_side="xmin" and window is not yet moving
     
     Field *A_;         // envelope value at timestep n
     Field *A0_;        // envelope value at timestep n-1

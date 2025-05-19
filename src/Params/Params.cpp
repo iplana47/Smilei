@@ -451,8 +451,8 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
                            LINK_NAMELIST + std::string("#laser-envelope-model"));
         }
         
-        PyTools::extract( "envelope_type", envelope_type, "LaserEnvelope" );
-        if ( (envelope_type != "inside_window") && (envelope_type != "from_xmin") ){
+        PyTools::extract( "box_side", box_side, "LaserEnvelope" );
+        if ( (box_side != "inside") && (box_side != "xmin") ){
             ERROR_NAMELIST("Unknown envelope_solver - only 'inside_window' and 'from_xmin' are available. ",
                            LINK_NAMELIST + std::string("#laser-envelope-model"));
         }
@@ -1422,7 +1422,7 @@ void Params::print_init()
         info << "\tpolarization angle      : " << envelope_polarization_phi << endl;
         info << "\t\tellipticity             : " << envelope_ellipticity << endl;
         info << "\t\tEnvelope solver         : " << envelope_solver << endl;
-        info << "\t\tEnvelope initialization : " << envelope_type << endl;
+        info << "\t\tEnvelope initialization : " << box_side << endl;
         MESSAGE( 1, info.str() );
         for( unsigned int i=0 ; i<grid_length.size() ; i++ ) {
             MESSAGE( 1, "\tdimension " << i );

@@ -38,6 +38,7 @@ Changes made in the repository (not released)
   * Remove experimental support for task parallelization.
   * Low dispersion Maxwell solver ``"Terzani"`` from `this article <https://doi.org/10.1016/j.cpc.2019.04.007>`_ in ``"AMcylindrical"`` geometry.
   * Tunnel ionization supports fullPPT model and 2 BSI models.
+  * LaserEnvelope model: now the laser pulse can be initialized either inside the window (default mode) or from the ``xmin`` border setting the ``box_side`` variable.
 
 * **Bug fixes**:
 
@@ -97,10 +98,6 @@ Release 5.1
   * New argument ``timestep_indices`` as an alternative to ``timesteps``.
   * Changed coordinate reference for 2D probe in 3D or AM geometry
     (zero is the box origin projected orthogonally on the probe plane).
-    
-* LaserEnvelope model:
-
-  * Now the laser pulse can be initialized either inside the window (default mode) or from the ``xmin`` border setting the ``envelope_type`` variable.
 
 * **Documentation**:
 

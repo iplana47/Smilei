@@ -1147,7 +1147,7 @@ void VectorPatch::injectEnvelopeFromXminIfNeeded( Params &params, double time_du
 {
 
     if (  (( *this )( 0 )->EMfields->envelope!=NULL ) 
-       && (( *this )( 0 )->EMfields->envelope->envelope_type=="from_xmin") 
+       && (( *this )( 0 )->EMfields->envelope->box_side=="xmin") 
        && (( *this )( 0 )->EMfields->envelope->keep_injecting_laser_envelope) ) 
     {
         #pragma omp for schedule(static)
@@ -4340,7 +4340,7 @@ void VectorPatch::runEnvelopeModule( Params &params,
     // solve envelope equation and comm envelope
     solveEnvelope( params, simWindow, itime, time_dual, timers, smpi );
     
-    // if the envelope initialization method is "from_xmin", act on the Xmin boundary conditions to inject the envelope
+    // if the envelope initialization method is "xmin", act on the Xmin boundary conditions to inject the envelope
     injectEnvelopeFromXminIfNeeded(params, time_dual);
 
     // interp updated envelope for position advance, update positions and currents for Maxwell's equations
@@ -4428,7 +4428,7 @@ void VectorPatch::initNewEnvelope( Params & )
 {
     if( ( *this )( 0 )->EMfields->envelope!=NULL ) {
       
-        if (( *this )( 0 )->EMfields->envelope->envelope_type == "inside_window"){
+        if (( *this )( 0 )->EMfields->envelope->box_side == "inside"){
             // for all patches, init new envelope inside the window from input namelist parameters
             for( unsigned int ipatch=0 ; ipatch<this->size() ; ipatch++ ) {
                 ( *this )( ipatch )->EMfields->envelope->initEnvelopeInsideTheWindow( ( *this )( ipatch ), ( *this )( ipatch )->EMfields );

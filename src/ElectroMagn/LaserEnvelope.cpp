@@ -59,11 +59,11 @@ LaserEnvelope::LaserEnvelope( Params &params, Patch *patch ) :
     }
 
     // Read initialization method for the laser envelope
-    PyTools::extract( "envelope_type", envelope_type, "LaserEnvelope" );
-    if ( (envelope_type != "from_xmin") && (envelope_type != "inside_window") ){
-        ERROR("Unknown envelope_type - only 'inside_window' and 'from_xmin' are available. ");
+    PyTools::extract( "box_side", box_side, "LaserEnvelope" );
+    if ( (box_side != "xmin") && (box_side != "inside") ){
+        ERROR("Unknown box_side - only 'inside_window' and 'from_xmin' are available. ");
     }
-    if (envelope_type=="from_xmin"){
+    if (box_side=="xmin"){
         keep_injecting_laser_envelope = true;
     }
 
@@ -122,7 +122,7 @@ LaserEnvelope::LaserEnvelope( LaserEnvelope *envelope, Patch *patch, Params &par
     ellipticity(envelope->ellipticity),
     ellipticity_factor(envelope->ellipticity_factor),
     envelope_solver(envelope->envelope_solver),
-    envelope_type(envelope->envelope_type),
+    box_side(envelope->box_side),
     one_ov_2dt(envelope->one_ov_2dt),
     dt_sq(envelope->dt_sq),
     one_ov_dx_sq(envelope->one_ov_dx_sq),
