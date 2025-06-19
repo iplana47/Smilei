@@ -1,5 +1,4 @@
 ############################# Laser envelope propagation in vacuum
-############################# Laser envelope propagation in vacuum
 import math 
 import numpy as np
 import scipy.constants
@@ -25,20 +24,20 @@ mm                         = 1.e-3/c_over_omega0       # 1 mm in normalized unit
 fs                         = 1.e-15*omega0             # 1 femtosecond in normalized units
 
 ##### mesh resolution and simulation window size
-dy                         = 2*um                    # resolution along y
-ny                         = 40                       # number of mesh points along y
+dy                         = 2*um                      # resolution along y
+ny                         = 40                        # number of mesh points along y
 Ly                         = ny * dy                   # size of the simulation window along y
 
 dz                         = dy                        # resolution along z
 nz                         = ny                        # number of mesh points along z
 Lz                         = nz*dz                     # size of the simulation window along z
 
-dx                         = 0.1*um                   # longitudinal mesh resolution
+dx                         = 0.1*um                    # longitudinal mesh resolution
 nx                         = 256                       # number of mesh points in the longitudinal direction
 Lx                         = nx * dx                   # longitudinal size of the simulation window
 
 ##### Total simulation time
-dt                         = 0.8*dx/c_normalized      # integration timestep    
+dt                         = 0.8*dx/c_normalized       # integration timestep    
 
 Main(
     geometry               = "3Dcartesian",
@@ -118,24 +117,29 @@ def LG_x_min(p,l,y,z):
     # multiply the terms depending on x, r by the azimuthal variation
     return prefactor * radial_component * Gouy_phase * curved_phase * complex_exponential
 
-# to avoid calculating the LG mode at each timestep, 
-# we pre-compute its value at x=0
-y_mesh = np.arange(0,ny)*dy
-z_mesh = np.arange(0,nz)*dz
+# to avoid calculating the LG mode at each timestep , 
+# we pre-compute its value at x=0 at the grid points
+y_array        = np.linspace(-2*dy, (ny+2)*dy, ny+2*2+1) # Assumes primal and 2 ghost cells per direction
+z_array        = np.linspace(-2*dz, (nz+2)*dz, nz+2*2+1) # Assumes primal and 2 ghost cells per direction
 
-LG_at_xmin = np.zeros(shape=(ny,nz),dtype=complex)
-for j in range(0,ny):
-    for k in range(0,nz):
-        LG_at_xmin[j,k] = LG_x_min(p,l,y_mesh[j],z_mesh[k])
+y_mesh, z_mesh = np.meshgrid(y_array, z_array)
+
+LG_at_xmin     = LG_x_min(p,l,y_mesh,z_mesh)
+
+# free memory
+y_array        = None
+z_array        = None
+y_mesh         = None
+z_mesh         = None
 
 # The envelope profile will be the multiplication 
-# of the pre-computed interpolated transverse profile and the time envelope
+# of the pre-computed transverse profile and the time envelope
 def envelope_profile(x, y, z, t):
     y = np.asarray(y)
     z = np.asarray(z)
     # Compute nearest grid indices
-    j = np.clip(np.round(y / dy).astype(int), 0, ny - 1)
-    k = np.clip(np.round(z / dz).astype(int), 0, nz - 1)
+    j = np.clip(np.round((y+2*dy) / dy).astype(int), 0, ny + 4)
+    k = np.clip(np.round((z+2*dz) / dz).astype(int), 0, nz + 4)
     # Sample the HG field at x=0 from the pre-saved array, multiply by the time envelope
     return LG_at_xmin[j, k] * time_envelope(t)
 

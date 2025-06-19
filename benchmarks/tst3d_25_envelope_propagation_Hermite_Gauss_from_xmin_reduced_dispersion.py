@@ -37,7 +37,7 @@ nx                         = 256                       # number of mesh points i
 Lx                         = nx * dx                   # longitudinal size of the simulation window
 
 ##### Total simulation time
-dt                         = 0.8*dx/c_normalized      # integration timestep    
+dt                         = 0.8*dx/c_normalized       # integration timestep    
 
 Main(
     geometry               = "3Dcartesian",
@@ -113,7 +113,7 @@ def HG_x_min_one_direction(HG_order,y,transverse_axis):
     return field
 
 # to avoid calculating the HG mode at each timestep, 
-# we pre-compute its value at x=0
+# we pre-compute its value at x=0 at the grid points
 y_array        = np.linspace(-2*dy, (ny+2)*dy, ny+2*2+1) # Assumes primal and 2 ghost cells per direction
 z_array        = np.linspace(-2*dz, (nz+2)*dz, nz+2*2+1) # Assumes primal and 2 ghost cells per direction
 
@@ -128,7 +128,7 @@ y_mesh         = None
 z_mesh         = None
 
 # The envelope profile will be the multiplication 
-# of the pre-computed interpolated transverse profile and the time envelope
+# of the pre-computed transverse profile and the time envelope
 def envelope_profile(x, y, z, t):
     y = np.asarray(y)
     z = np.asarray(z)
