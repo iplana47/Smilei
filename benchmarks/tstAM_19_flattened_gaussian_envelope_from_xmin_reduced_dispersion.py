@@ -92,7 +92,7 @@ Main(
 a0                                 = 1.5                             # normalized field
 N                                  = 10                              # order of the Flattened Gaussian beam
 waist_0                            = 41*um                           # laser waist of the fundamental LG mode
-focus                              = [0.1*Lx]                       # laser focus, [x] position
+focus                              = [0.1*Lx]                        # laser focus, [x] position
 omega                              = omega0/omega0                   # normalized laser frequency (=1 since its frequency omega0 is also the normalizing frequency)
 
 laser_fwhm                         = 90*fs                           # fwhm duration of the field
