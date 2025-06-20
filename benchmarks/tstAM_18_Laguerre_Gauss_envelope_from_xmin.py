@@ -87,8 +87,8 @@ Main(
 ######################### Define the laser pulse
 
 ### laser parameters
-waist_0                            = 41*um                           # laser waist
-focus                              = [0.]                            # laser focus, [x,r] position
+waist_0                            = 41*um                           # laser waist of the fundamental LG mode
+focus                              = [0.]                            # laser focus, [x] position
 omega                              = omega0/omega0                   # normalized laser frequency (=1 since its frequency omega0 is also the normalizing frequency)
 
 laser_fwhm                         = 90*fs                           # fwhm duration of the field
