@@ -1,0 +1,25 @@
+import os, re, numpy as np, math, h5py
+import happi
+
+S = happi.Open(["./restart*"], verbose=False)
+
+
+# COMPARE THE Env_E_abs Probe in polarization plane
+Env_E   = S.Probe(1, "Env_E_abs",timestep_indices=-1).getData()[0][::4,::4]
+Validate("Env_E_abs field at last iteration", Env_E, 0.01)
+
+# COMPARE THE Ey Probe in polarization plane
+Ey      = S.Probe(1, "Ey",timestep_indices=-1).getData()[0][::4,::4]
+Validate("Ey field at last iteration", Ey, 0.01)
+
+# COMPARE THE Ex Probe in polarization plane
+Ex      = S.Probe(1, "Ex",timestep_indices=-1).getData()[0][::4,::4]
+Validate("Ex field at last iteration", Ex, 0.01)
+
+# COMPARE THE BzBTIS3 Probe in polarization plane
+BzBTIS3 = S.Probe(1, "BzBTIS3",timestep_indices=-1).getData()[0][::4,::4]
+Validate("BzBTIS3 field at last iteration", BzBTIS3, 0.01)
+
+
+
+
