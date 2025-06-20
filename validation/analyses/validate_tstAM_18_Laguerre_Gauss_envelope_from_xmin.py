@@ -3,13 +3,11 @@ import happi
 
 S = happi.Open(["./restart*"], verbose=False)
 
+# COMPARE THE Env_E_abs Probe in polarization plane
+Env_E   = S.Probe(1, "Env_E_abs",timestep_indices=-1).getData()[0][::4,::4]
+Validate("Env_E_abs field at last iteration", Env_E, 0.01)
 
-# COMPARE THE Envelope FIELD, absolute value
-Env_A_abs = S.Field(0, "Env_A_abs", theta=0, timesteps=300.).getData()[0]
-Validate("Env_A_abs field at iteration 300", Env_A_abs, 0.01)
-
-# 1-D PROBE IN AM
-Env_A_abs = S.Probe.Probe0.Env_A_abs(timesteps=300).getData()[0]
-Validate("1-D probe Env_A_abs at iteration 300", Env_A_abs, 0.01)
-
+# COMPARE THE Env_A_abs Probe in polarization plane
+Env_A   = S.Probe(1, "Env_A_abs",timestep_indices=-1).getData()[0][::4,::4]
+Validate("Env_E_abs field at last iteration", Env_A, 0.01)
 
