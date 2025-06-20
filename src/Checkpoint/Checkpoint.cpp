@@ -184,28 +184,31 @@ Checkpoint::~Checkpoint() {}
 
 void Checkpoint::dump( VectorPatch &vecPatches, Region &region, unsigned int itime, SmileiMPI *smpi, SimWindow *simWindow, Params &params )
 {
-    bool dump_now = false;
+    bool dump_from_time = false;
     
     // Find out whether we should make a checkpoint due to dump_minutes
     if( dump_minutes != 0. ) {
         // master checks whenever we passed the time limit
         if( smpi->isMaster() &&  MPI_Wtime() - time_reference > dump_minutes * 60. ) {
-            dump_now = true;
+            dump_from_time = true;
         }
         // Broadcast the result
-        MPI_Bcast( &dump_now, 1, MPI_CXX_BOOL, 0, smpi->world() );
+        MPI_Bcast( &dump_from_time, 1, MPI_CXX_BOOL, 0, smpi->world() );
     }
     
     // Dump if at requested timestep
-    dump_now = dump_now || ( dump_step != 0 && ( ( itime-this_run_start_step ) % dump_step == 0 ) );
+    bool dump_from_step = dump_step != 0 && ( ( itime-this_run_start_step ) % dump_step == 0 );
     
-    if( signal_received != 0 || dump_now ) {
+    if( signal_received != 0 || dump_from_time || dump_from_step ) {
         dumpAll( vecPatches, region, itime,  smpi, simWindow, params );
         if( exit_after_dump || ( ( signal_received!=0 ) && ( signal_received != SIGUSR2 ) ) ) {
             exit_asap = true;
         }
         signal_received = 0;
-        time_reference = MPI_Wtime();
+        
+        if( dump_from_time ) {
+            time_reference = MPI_Wtime();
+        }
     }
 }
 
