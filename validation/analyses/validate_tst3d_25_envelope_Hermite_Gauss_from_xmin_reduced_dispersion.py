@@ -4,12 +4,19 @@ import happi
 S = happi.Open(["./restart*"], verbose=False)
 
 # COMPARE THE Envelope FIELD, absolute value
-Env_A_abs = S.Field.Field0.Env_A_abs(subset={"z":S.namelist.Main.grid_length[2]/2 }, timesteps=300.).getData()[0]
-Validate("Env_A_abs field at iteration 300", Env_A_abs, 0.01)
+Env_A_abs = S.Field.Field0.Env_A_abs(subset={"z":S.namelist.Main.grid_length[2]/2 }, timestep_indices=-1).getData()[0][::4,::4]
+Validate("Env_A_abs field at last iteration", Env_A_abs, 0.01)
+
+Env_E_abs = S.Field.Field0.Env_E_abs(subset={"z":S.namelist.Main.grid_length[2]/2 }, timestep_indices=-1).getData()[0][::4,::4]
+Validate("Env_E_abs field at last iteration", Env_E_abs, 0.01)
 
 # 1-D PROBE IN 3D
-Env_A_abs = S.Probe.Probe0.Env_A_abs(timesteps=300).getData()[0]
-Validate("1-D probe Env_A_abs at iteration 300", Env_A_abs, 0.01)
+Env_A_abs = S.Probe.Probe0.Env_A_abs(timestep_indices=-1).getData()[0]
+Validate("1-D probe Env_A_abs at last iteration", Env_A_abs, 0.01)
+
+Env_E_abs = S.Probe.Probe0.Env_E_abs(timestep_indices=-1).getData()[0]
+Validate("1-D probe Env_E_abs at last iteration", Env_E_abs, 0.01)
+
 
 # TEST THE GRID PARAMETERS
 with h5py.File("./restart000/Fields0.h5", "r") as f:
