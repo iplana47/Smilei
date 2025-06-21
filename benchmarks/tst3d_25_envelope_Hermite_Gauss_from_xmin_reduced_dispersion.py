@@ -24,16 +24,16 @@ mm                         = 1.e-3/c_over_omega0       # 1 mm in normalized unit
 fs                         = 1.e-15*omega0             # 1 femtosecond in normalized units
 
 ##### mesh resolution and simulation window size
-dy                         = 2*um                      # resolution along y
-ny                         = 40                        # number of mesh points along y
+dy                         = 4*um                      # resolution along y
+ny                         = 24                        # number of mesh points along y
 Ly                         = ny * dy                   # size of the simulation window along y
 
 dz                         = dy                        # resolution along z
 nz                         = ny                        # number of mesh points along z
 Lz                         = nz*dz                     # size of the simulation window along z
 
-dx                         = 0.1*um                    # longitudinal mesh resolution
-nx                         = 256                       # number of mesh points in the longitudinal direction
+dx                         = 0.2*um                    # longitudinal mesh resolution
+nx                         = 128                       # number of mesh points in the longitudinal direction
 Lx                         = nx * dx                   # longitudinal size of the simulation window
 
 ##### Total simulation time
@@ -45,12 +45,12 @@ Main(
     interpolation_order    = 2,
 
     timestep               = dt,
-    simulation_time        = 1000.*dt,
+    simulation_time        = 201.*dt,
 
     cell_length            = [ dx,  dy, dz],
     grid_length            = [ Lx,  Ly, Lz],
 
-    number_of_patches      = [16,4,4],
+    number_of_patches      = [8,4,4],
     
     EM_boundary_conditions = [ ["silver-muller"] ],
 
@@ -69,7 +69,7 @@ time_envelope              = tgaussian(center=center_laser, fwhm=laser_fwhm)
 focus                      = [center_laser, Ly/2., Lz/2.]
 omega                      = omega0/omega0
 
-waist_0                    = 16*um # this would be the waist of the fundamental mode m=0,n=0
+waist_0                    = 20*um # this would be the waist of the fundamental mode m=0,n=0
 
 # Order m,n of the HG mode along y and z respectively.
 # They must be integers greater or equal to zero.
