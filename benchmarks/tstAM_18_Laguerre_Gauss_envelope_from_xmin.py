@@ -151,7 +151,12 @@ def envelope_profile(x, r, t):
     j = np.clip(np.round((r+2*dr) / dr).astype(int), 0, nr + 4)
     # Sample the HG field at x=0 from the pre-saved array, multiply by the time envelope
     return LG_at_xmin[j] * time_envelope(t)
-    
+
+# This envelope solver is suggested only for short distances
+# since its numerical dispersion is significantly higher
+# than the solver "explicit_reduced_dispersion".
+# Choosing a finer mesh mitigates the numerical artifacts,
+# but for better accuracy the solver "explicit_reduced_dispersion" is preferable.
 LaserEnvelope(
     omega            = omega,
     envelope_solver  = 'explicit',
