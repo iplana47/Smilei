@@ -128,7 +128,6 @@ inline void IonizationTunnel<Model>::operator()(Particles *particles, unsigned i
     double TotalIonizPot, E, invE, factorJion, ran_p, Mult, D_sum, P_sum, Pint_tunnel;
     vector<double> IonizRate_tunnel(atomic_number_), Dnom_tunnel(atomic_number_);
     LocalFields Jion;
-    double factorJion_0 = au_to_mec2 * EC_to_au * EC_to_au * invdt;
 
     int nparts = Epart->size() / 3;
     double *Ex = &((*Epart)[0 * nparts]);
@@ -157,7 +156,6 @@ inline void IonizationTunnel<Model>::operator()(Particles *particles, unsigned i
         // --------------------------------
 
         invE = 1. / E;
-        factorJion = factorJion_0 * invE * invE;
         ran_p = patch->rand_->uniform();
         IonizRate_tunnel[Z] = ionizationRate(Z, E);
 
@@ -218,6 +216,16 @@ inline void IonizationTunnel<Model>::operator()(Particles *particles, unsigned i
         // Compute ionization current
         if (patch->EMfields->Jx_ != NULL) {  // For the moment ionization current is
                                              // not accounted for in AM geometry
+            double TotalIonizPotNew = 0.0;
+            for (unsigned int i=0; i<k_times; i++) {
+                TotalIonizPotNew += Potential[Z+i];
+            }
+            if (TotalIonizPotNew != TotalIonizPot) {
+                ERROR( "TotalIonizPotNew not equal to TotalIonizPot. This is super sad and making me depressed :( ." );
+            }
+
+            double factorJion_0 = au_to_mec2 * EC_to_au * EC_to_au * invdt;
+            factorJion = factorJion_0 * invE * invE;
             factorJion *= TotalIonizPot;
             Jion.x = factorJion * *(Ex + ipart);
             Jion.y = factorJion * *(Ey + ipart);
