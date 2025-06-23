@@ -48,6 +48,8 @@ Changes made in the repository (not released)
   * Happi's ``average`` argument would sometimes be missing the last bin.
   * 1D projector on GPU without diagnostics.
   * Fix a bug which would give false results when ionization was activated with vectorization and frozen species.
+  * Fix a bug raising segmentation fault when ionization and vectorization were used in 3D.
+  * Fix a bug that prevented numpy to be activated for profiles with 2 space parameters and time.
   * OpenPMD compatibility: fixed units of density and weight.
   * ``LaserGaussian3D`` was giving wrong amplitude with large incidence angle.
   * Fix bug in ``Screen`` with a cylindrical shape.
