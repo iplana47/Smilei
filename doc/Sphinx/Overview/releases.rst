@@ -38,7 +38,6 @@ Changes made in the repository (not released)
   * Remove experimental support for task parallelization.
   * Low dispersion Maxwell solver ``"Terzani"`` from `this article <https://doi.org/10.1016/j.cpc.2019.04.007>`_ in ``"AMcylindrical"`` geometry.
   * Tunnel ionization supports fullPPT model and 2 BSI models.
-  * LaserEnvelope model: now the laser pulse can be initialized either inside the window (default mode) or from the ``xmin`` border setting the ``box_side`` variable.
 
 * **Bug fixes**:
 
@@ -53,6 +52,9 @@ Changes made in the repository (not released)
   * ``LaserGaussian3D`` was giving wrong amplitude with large incidence angle.
   * Fix bug in ``Screen`` with a cylindrical shape.
 
+* **Experimental**
+
+  * LaserEnvelope model: now the laser pulse can be initialized either inside the window (default mode) or from the ``xmin`` border setting the ``box_side`` variable and using a ``Profile`` with transverse coordinates and time.
 
 ----
 

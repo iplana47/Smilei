@@ -1844,13 +1844,13 @@ Thus, space-time profiles with variation scales larger than this length should b
 Following is the generic laser envelope creator ::
 
     LaserEnvelope(
-        omega          = 1.,
-        envelope_solver = 'explicit',
+        omega            = 1.,
+        envelope_solver  = 'explicit',
+        box_side         = "inside",
         envelope_profile = envelope_profile,
         Envelope_boundary_conditions = [["reflective"]]
         polarization_phi = 0.,
         ellipticity      = 0.
-        box_side = "inside"
     )
 
 
@@ -1859,19 +1859,35 @@ Following is the generic laser envelope creator ::
    :default: ``1.``
 
    The laser angular frequency.
+   
+.. py:data:: box_side
+
+   :default: ``"inside"``
+
+   The way the laser envelope is integrated in the simulation. Currently only ``"inside"`` and ``"xmin"`` are supported.
+   ``"inside"``: the laser envelope is added only at the start of the simulation. In this case, the temporal coordinate of the laser envelope profile is
+   interpreted as the coordinate along the ``x`` axis. If the laser puse length is short enough, it can entirely fit inside the simulation window.
+   ``"xmin"``: the laser is progressively injected in the window from the left window border in the ``x`` direction. The time coordinate
+   in the laser envelope profile is treated as in a ``Laser`` block. See also the parameter ``envelope_profile``. 
 
 .. py:data:: envelope_profile
 
    :type: a *python* function or a :doc:`python profile <profiles>`
    :default: None
 
-   The laser space-time profile, so if the geometry is ``3Dcartesian`` a function of 4 arguments (3 for space, 1 for time) is necessary.
-   See the parameter ``box_side`` for the meaning of the time argument. 
+   The complex laser envelope profile.
+   If the parameter ``box_side`` is ``"inside"``, the profile arguments are all the coordinates and time.
+   If the parameter ``box_side`` is ``"xmin"``, the profile arguments are all the transverse coordinates at plane ``x=0`` and time,
+   as in a ``Laser`` block with ``box_side="xmin"``.
+   For example, if the geometry is ``"3Dcartesian"``, a complex-valued function of 4 arguments (3 for space, 1 for time) is necessary if ``box_side="inside"``.
+   Instead, if ``box_side="xmin"``, the needed profile is a complex-valued function of 3 arguments (2 for the transverse coordinates, 1 for time).
+   See also the parameter ``box_side``. 
    It is recommended to initialize the laser envelope in vacuum, separated from the plasma, to avoid unphysical
    results.
-   Envelopes with variation scales near to the laser wavelength do not
-   satisfy the assumptions of the envelope model (see :doc:`/Understand/laser_envelope`),
-   yielding inaccurate results.
+   Envelopes with variation scales in space and time close to the laser wavelength do not
+   satisfy the assumptions of the envelope model (see :doc:`/Understand/laser_envelope`):
+   their simulation yieldss inaccurate results. 
+   Since at the moment the paraxial hypothesis is used when ``box_side="xmin"``, the requested ``envelope_profile`` should satisfy this hypothesis.
 
 .. py:data:: envelope_solver
 
@@ -1904,16 +1920,6 @@ Following is the generic laser envelope creator ::
   :default: 0.
 
   The polarization ellipticity: 0 for linear and 1 for circular. For the moment, only these two polarizations are available.
-  
-.. py:data:: box_side
-
-  :default: ``"inside"``
-
-  The way the laser envelope is integrated in the simulation. Currently only ``"inside"`` and ``"xmin"`` are supported.
-  ``"inside"``: the laser envelope is added only at the start of the simulation. In this case, the temporal coordinate of the laser envelope profile is
-  interpreted as the coordinate along the ``x`` axis. If the laser puse length is short enough, it can entirely fit inside the simulation window.
-  ``"xmin"``: the laser is progressively injected in the window from the left window border in the ``x`` direction. The time coordinate
-  in the laser envelope profile is treated as in a ``Laser`` block.
 
 
 .. rubric:: 2. Defining a 1D laser envelope
