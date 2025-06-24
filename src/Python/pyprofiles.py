@@ -489,16 +489,25 @@ def LaserEnvelopePlanar1D( a0=1., omega=1., time_envelope=tconstant(),
         polarization_phi = 0.,ellipticity = 0.):
     from numpy import vectorize, sqrt
 
-    def space_time_envelope(x,t):
+    def spatial_envelope1D(x):
         polarization_amplitude_factor = 1/sqrt(1.+ellipticity**2)
-        return (a0*polarization_amplitude_factor) * complex( vectorize(time_envelope)(t) )
+        return (a0*polarization_amplitude_factor)
+    
+    if (box_side=="inside"):
+        def envelope_profile(x,t):
+            return spatial_envelope1D(x)*complex( vectorize(time_envelope)(t) )
+    elif (box_side=="xmin"):
+        def envelope_profile(t):
+            return spatial_envelope1D(0)*complex( vectorize(time_envelope)(t) )
+    else:
+        print("LaserEnvelope error: box_side must be either 'inside' or 'xmin'. ")
 
     # Create Laser Envelope
     LaserEnvelope(
         omega                        = omega,
-        envelope_profile             = space_time_envelope,
+        envelope_profile             = envelope_profile,
         envelope_solver              = envelope_solver,
-        box_side      = box_side,
+        box_side                     = box_side,
         Envelope_boundary_conditions = Envelope_boundary_conditions,
         polarization_phi             = polarization_phi,
         ellipticity                  = ellipticity
@@ -576,7 +585,7 @@ def LaserEnvelopeGaussian2D( a0=1., omega=1., focus=None, waist=3., time_envelop
     from numpy import exp, sqrt, arctan, vectorize
     assert len(focus)==2, "LaserEnvelopeGaussian2D: focus must be a list of length 2."
 
-    def gaussian_beam_with_temporal_profile(x,y,t):
+    def gaussian_beam2D(x,y):
         polarization_amplitude_factor = 1/sqrt(1.+ellipticity**2)
         Zr = omega * waist**2/2.
         w  = sqrt(1./(1.+   ( (x-focus[0])/Zr  )**2 ) )
@@ -585,13 +594,21 @@ def LaserEnvelopeGaussian2D( a0=1., omega=1., focus=None, waist=3., time_envelop
         exponential_with_total_phase = exp(1j*(phase-arctan( (x-focus[0])/Zr )))
         invWaist2 = (w/waist)**2
         spatial_amplitude = a0 *polarization_amplitude_factor * sqrt(w) * exp( -invWaist2*(y-focus[1])**2)
-        space_time_envelope = spatial_amplitude * vectorize(time_envelope)(t)
-        return space_time_envelope * exponential_with_total_phase
+        return spatial_amplitude * exponential_with_total_phase
+        
+    if (box_side=="inside"):
+        def envelope_profile(x,y,t):
+            return gaussian_beam2D(x,y)*vectorize(time_envelope)(t)
+    elif (box_side=="xmin"):
+        def envelope_profile(y,t):
+            return gaussian_beam2D(0,y)*vectorize(time_envelope)(t)
+    else:
+        print("LaserEnvelope error: box_side must be either 'inside' or 'xmin'. ")
 
     # Create Laser Envelope
     LaserEnvelope(
         omega                        = omega,
-        envelope_profile             = gaussian_beam_with_temporal_profile,
+        envelope_profile             = envelope_profile,
         envelope_solver              = envelope_solver,
         box_side      = box_side,
         Envelope_boundary_conditions = Envelope_boundary_conditions,
@@ -674,7 +691,7 @@ def LaserEnvelopeGaussian3D( a0=1., omega=1., focus=None, waist=3., time_envelop
     from numpy import exp, sqrt, arctan, vectorize
     assert len(focus)==3, "LaserEnvelopeGaussian3D: focus must be a list of length 3."
     
-    def gaussian_beam_with_temporal_profile(x,y,z,t):
+    def gaussian_beam3D(x,y,z):
         polarization_amplitude_factor = 1/sqrt(1.+ellipticity**2)
         Zr = omega * waist**2/2.
         w  = sqrt(1./(1.+   ( (x-focus[0])/Zr  )**2 ) )
@@ -683,15 +700,23 @@ def LaserEnvelopeGaussian3D( a0=1., omega=1., focus=None, waist=3., time_envelop
         exponential_with_total_phase = exp(1j*(phase-arctan( (x-focus[0])/Zr )))
         invWaist2 = (w/waist)**2
         spatial_amplitude = a0*polarization_amplitude_factor* w * exp( -invWaist2*(  (y-focus[1])**2 + (z-focus[2])**2 )  )
-        space_time_envelope = spatial_amplitude * vectorize(time_envelope)(t)
-        return space_time_envelope * exponential_with_total_phase
+        return spatial_amplitude * exponential_with_total_phase
+    
+    if (box_side=="inside"):
+        def envelope_profile(x,y,z,t):
+            return gaussian_beam3D(x,y,z)*vectorize(time_envelope)(t)
+    elif (box_side=="xmin"):
+        def envelope_profile(y,z,t):
+            return gaussian_beam3D(0,y,z)*vectorize(time_envelope)(t)
+    else:
+        print("LaserEnvelope error: box_side must be either 'inside' or 'xmin'. ")
 
     # Create Laser Envelope
     LaserEnvelope(
         omega                        = omega,
-        envelope_profile             = gaussian_beam_with_temporal_profile,
+        envelope_profile             = envelope_profile,
         envelope_solver              = envelope_solver,
-        box_side      = box_side,
+        box_side                     = box_side,
         Envelope_boundary_conditions = Envelope_boundary_conditions,
         polarization_phi             = polarization_phi,
         ellipticity                  = ellipticity
@@ -745,7 +770,7 @@ def LaserEnvelopeGaussianAM( a0=1., omega=1., focus=None, waist=3., time_envelop
     elif (len(focus)==2):
         print("WARNING: deprecated focus in LaserEnvelopeGaussianAM should be a list of length 1")
 
-    def gaussian_beam_with_temporal_profile(x,r,t):
+    def gaussian_beamAM(x,r):
         polarization_amplitude_factor = 1/sqrt(1.+ellipticity**2)
         Zr = omega * waist**2/2.
         w  = sqrt(1./(1.+   ( (x-focus[0])/Zr  )**2 ) )
@@ -754,15 +779,23 @@ def LaserEnvelopeGaussianAM( a0=1., omega=1., focus=None, waist=3., time_envelop
         exponential_with_total_phase = exp(1j*(phase-arctan( (x-focus[0])/Zr )))
         invWaist2 = (w/waist)**2
         spatial_amplitude = a0 * polarization_amplitude_factor * w * exp( -invWaist2*(  r**2  ) )
-        space_time_envelope = spatial_amplitude * vectorize(time_envelope)(t)
-        return space_time_envelope * exponential_with_total_phase
-
+        return spatial_amplitude  * exponential_with_total_phase
+        
+    if (box_side=="inside"):
+        def envelope_profile(x,r,t):
+            return gaussian_beamAM(x,r)*vectorize(time_envelope)(t)
+    elif (box_side=="xmin"):
+        def envelope_profile(x,r,t):
+            return gaussian_beamAM(0,r)*vectorize(time_envelope)(t)
+    else:
+        print("LaserEnvelope error: box_side must be either 'inside' or 'xmin'. ")
+            
     # Create Laser Envelope
     LaserEnvelope(
         omega                        = omega,
-        envelope_profile             = gaussian_beam_with_temporal_profile,
+        envelope_profile             = envelope_profile,
         envelope_solver              = envelope_solver,
-        box_side      = box_side,
+        box_side                     = box_side,
         Envelope_boundary_conditions = Envelope_boundary_conditions,
         Env_pml_sigma_parameters     = Env_pml_sigma_parameters,
         Env_pml_kappa_parameters     = Env_pml_kappa_parameters,
