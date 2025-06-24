@@ -8,6 +8,8 @@ import numpy as np
 import scipy.constants
 from scipy.special import binom
 
+envelope_box_side                  = "xmin" 
+
 ##### Physical constants
 lambda0                            = 0.8e-6                    # laser wavelength, m
 c                                  = scipy.constants.c         # lightspeed, m/s
@@ -96,11 +98,13 @@ focus                              = [0.1*Lx]                        # laser foc
 omega                              = omega0/omega0                   # normalized laser frequency (=1 since its frequency omega0 is also the normalizing frequency)
 
 laser_fwhm                         = 90*fs                           # fwhm duration of the field
-center_laser                       = 1.8*laser_fwhm                  # the time at which the laser peak enters the window from xmin
+# if envelope_box_side=="xmin", center_laser is the time at which the laser peak enters the window from xmin
+# if envelope_box_side=="inside", center_laser*c is the longitudinal position of the envelope peak at t=0
+center_laser                       = 1.8*laser_fwhm if envelope_box_side=="xmin" else Lx-1.8*laser_fwhm
 time_envelope                      = tgaussian(center=center_laser, fwhm=laser_fwhm)
 
 
-def FGB_x_min(N,r): 
+def FGB_x_min(N,x,r): 
     # Flattened Gaussian Beam (FGB) laser profile,
     # defined by the PALLAS team 
     # for the article P. Drobniak et al, PRAB 2023 (https://doi.org/10.1103/PhysRevAccelBeams.26.091302). 
@@ -152,27 +156,31 @@ def FGB_x_min(N,r):
 # we pre-compute its value at x=0 at the grid points
 r_mesh         = np.linspace(-2*dr, (nr+2)*dr, nr+2*2+1) # Assumes primal and 2 ghost cells per direction
 
-FGB_at_xmin    = FGB_x_min(N,r_mesh)
+FGB_at_xmin    = FGB_x_min(N,0,r_mesh)
 
 # free memory
 r_mesh         = None
 
 # The envelope profile will be the multiplication 
 # of the pre-computed transverse profile and the time envelope
-def envelope_profile(x, r, t):
+def envelope_profile(r, t):
     # Compute nearest grid indices
     j = np.clip(np.round((r+2*dr) / dr).astype(int), 0, nr + 4)
     # Sample the HG field at x=0 from the pre-saved array, multiply by the time envelope
     return FGB_at_xmin[j] * time_envelope(t)
     
+    
+def envelope_profile_inside(x,r,t):
+    return FGB_x_min(N,x,r) * time_envelope(t)
+    
 LaserEnvelope(
     omega            = omega,
     envelope_solver  = 'explicit_reduced_dispersion',
-    envelope_profile = envelope_profile,
+    envelope_profile = envelope_profile if envelope_box_side=="xmin" else envelope_profile_inside,
     Envelope_boundary_conditions = [["reflective"]],
     polarization_phi = 0.,
     ellipticity      = 0.,
-    box_side         = "xmin"
+    box_side         = envelope_box_side
 )
 
 ########################## Define the plasma
@@ -218,7 +226,7 @@ Species(
 
 ######################### Define a moving window
 MovingWindow(
-    time_start                     = Lx,     # window starts  moving at the start of the simulation
+    time_start                     = Lx if envelope_box_side=="xmin" else 0.,     
     velocity_x                     = c_normalized,
 )
 

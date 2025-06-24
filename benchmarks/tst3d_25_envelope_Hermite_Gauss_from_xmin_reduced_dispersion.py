@@ -129,7 +129,7 @@ z_mesh         = None
 
 # The envelope profile will be the multiplication 
 # of the pre-computed transverse profile and the time envelope
-def envelope_profile(x, y, z, t):
+def envelope_profile(y, z, t):
     # Compute nearest grid indices
     j = np.clip(np.round((y+2*dy) / dy).astype(int), 0, ny + 4)
     k = np.clip(np.round((z+2*dz) / dz).astype(int), 0, nz + 4)

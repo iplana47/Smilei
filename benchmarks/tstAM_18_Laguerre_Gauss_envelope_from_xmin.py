@@ -146,7 +146,7 @@ r_mesh         = None
 
 # The envelope profile will be the multiplication 
 # of the pre-computed transverse profile and the time envelope
-def envelope_profile(x, r, t):
+def envelope_profile(r, t):
     # Compute nearest grid indices
     j = np.clip(np.round((r+2*dr) / dr).astype(int), 0, nr + 4)
     # Sample the HG field at x=0 from the pre-saved array, multiply by the time envelope
@@ -196,8 +196,6 @@ DiagProbe(
     number                         = [nx                   , int(2*nr)],
     fields                         = list_fields_diagnostic
 )
-
-
 
 ######################### Load balancing (for parallelization)                                                                                                                                                     
 LoadBalancing(
