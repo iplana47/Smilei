@@ -90,8 +90,6 @@ void LaserEnvelope1D::initEnvelopeInsideTheWindow( Patch *patch, ElectroMagn *EM
     
     // position[0]: x coordinate
     // t: time coordinate --> x/c for the envelope initialization
-    
-    position[0]           = cell_length[0]*( ( double )( patch->getCellStartingGlobalIndex( 0 ) )+( A1D->isDual( 0 )?-0.5:0. ) );
     t                     = position[0];          // x-ct     , t=0
     t_previous_timestep   = position[0]+timestep; // x-c(t-dt), t=0
     
@@ -137,9 +135,6 @@ void LaserEnvelope1D::injectEnvelopeFromXmin( Patch *patch, Params &params, doub
     
     double t                      = time_dual;          // x-ct     , t=0
     double t_previous_timestep    = time_dual-timestep; // x-c(t-dt), t=0
-  
-    vector<double> position( 1, 0 );
-    position[0]                   = cell_length[0]*( ( double )( patch->getCellStartingGlobalIndex( 0 ) )+( A_->isDual( 0 )?-0.5:0. ) + 1 );
     
     // oversize
     int oversize_                 = params.oversize[0];
@@ -148,13 +143,19 @@ void LaserEnvelope1D::injectEnvelopeFromXmin( Patch *patch, Params &params, doub
     
     // Impose the envelope value for x=0 at time t and t-dt 
     if ( inject_envelope_from_this_patch ){    
-        ( *A1D  )( oversize_-1 ) += profile_->complexValueAt( position, t );
-        ( *A01D )( oversize_-1 ) += profile_->complexValueAt( position, t_previous_timestep );
+        ( *A1D  )( oversize_-1 ) += profile_->complexValueAt( t);
+        ( *A01D )( oversize_-1 ) += profile_->complexValueAt( t_previous_timestep );
+        
         if (envelope_solver=="explicit_reduced_dispersion"){
-            position[0]               = -cell_length[0];
-            ( *A1D  )( oversize_-2 ) += profile_->complexValueAt( position, t );
-            ( *A01D )( oversize_-2 ) += profile_->complexValueAt( position, t_previous_timestep );
-        }
+            // This solver needs another point on the x direction, for one timesteps, as initial condition 
+            // This point will be found by locally solving the paraxial wave equation
+            
+            // // from A^n_i and A^(n-1)_i, find A^n_{i-1}
+          
+            // // A^n_{i-1} = A^n_i because the laplacian is zero
+            ( *A1D  )( oversize_-2 )  = ( *A1D  )( oversize_-1 );
+            
+        }  // end if envelope_solver=="explicit_reduced_dispersion"
     }
     
 }

@@ -51,6 +51,13 @@ public:
         ERROR("Profile `"<<getInfo()<<"` is not available");
         return 0.; // virtual => will be redefined
     };
+    
+    //! Gets the complex value of a function from a double.
+    virtual std::complex<double> complexValueAt( double )
+    {
+        ERROR("Profile `"<<getInfo()<<"` is not available");
+        return 0.; // virtual => will be redefined
+    };
 
     //! Provide information about the function
     virtual std::string getInfo()
@@ -103,6 +110,7 @@ public:
     double valueAt( double ); // time
     double valueAt( std::vector<double>, double ); // time (space discarded)
     double valueAt( std::vector<double> ); // space
+    std::complex<double> complexValueAt( double ); //  time
 #ifdef SMILEI_USE_NUMPY
     PyArrayObject *valueAt( std::vector<PyArrayObject *> ); // numpy
     PyArrayObject *valueAt( std::vector<PyArrayObject *>, double ); // numpy + time

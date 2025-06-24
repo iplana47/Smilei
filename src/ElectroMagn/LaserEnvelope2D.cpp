@@ -154,8 +154,7 @@ void LaserEnvelope2D::injectEnvelopeFromXmin( Patch *patch, Params &params, doub
     double t                      = time_dual;          // x-ct     , t=0
     double t_previous_timestep    = time_dual-timestep; // x-c(t-dt), t=0
 
-    vector<double> position( 2, 0 );
-    position[0] = cell_length[0]*( ( double )( patch->getCellStartingGlobalIndex( 0 ) )+( A_->isDual( 0 )?-0.5:0. ) + 1 );
+    vector<double> position( 1, 0 );
     double pos1 = cell_length[1]*( ( double )( patch->getCellStartingGlobalIndex( 1 ) )+( A_->isDual( 1 )?-0.5:0. ) );
     
     // oversize
@@ -165,22 +164,26 @@ void LaserEnvelope2D::injectEnvelopeFromXmin( Patch *patch, Params &params, doub
 
     // Impose the envelope value for x=0 at time t and t-dt 
     if ( inject_envelope_from_this_patch ){
-        position[1] = pos1;
+        position[0] = pos1;
         for( unsigned int j=0 ; j<A_->dims_[1] ; j++ ) { 
             ( *A2D  )( oversize_-1, j ) += profile_->complexValueAt( position, t );
             ( *A02D )( oversize_-1, j ) += profile_->complexValueAt( position, t_previous_timestep );
-            position[1] += cell_length[1];
+            position[0] += cell_length[1];
         }
         
         if (envelope_solver=="explicit_reduced_dispersion"){
-            position[0] = -cell_length[0];
-            position[1] = pos1;
-            for( unsigned int j=0 ; j<A_->dims_[1] ; j++ ) {    
-                ( *A2D  )( oversize_-2, j ) += profile_->complexValueAt( position, t );
-                ( *A02D )( oversize_-2, j ) += profile_->complexValueAt( position, t_previous_timestep );
-                position[1] += cell_length[1];
-            }
-        }   
+            // This solver needs another point on the x direction, for one timesteps, as initial condition 
+            // This point will be found by locally solving the paraxial wave equation
+            
+            // // from A^n_i and A^(n-1)_i, find A^n_{i-1}
+            for( unsigned int j=1 ; j<A_->dims_[1]-1 ; j++ ) {
+                // // A^n_{i-1} = A^n_i
+                ( *A2D  )( oversize_-2, j )  = ( *A2D  )( oversize_-1, j );
+                // A^n_{i-1}+=dl/(2i) * (\nabla^2_\perp A)|^n_i
+                ( *A2D  )( oversize_-2, j ) += (cell_length[0]/2./i1) *( ( *A2D  )( oversize_-1, j-1 )-2.*( *A2D )( oversize_-1, j )+( *A2D )( oversize_-1, j+1 ) )*one_ov_dy_sq; // y part
+            } // end j loop
+            
+        }  // end if envelope_solver=="explicit_reduced_dispersion"
     }
       
 }

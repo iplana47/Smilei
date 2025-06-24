@@ -35,6 +35,11 @@ public:
     {
         return function_->valueAt( time );
     };
+    //! Get the complex value of the profile at some location (temporal)
+    inline std::complex<double> complexValueAt( double time )
+    {
+        return function_->complexValueAt( time );
+    };
     //! Get the value of the profile at some location (spatio-temporal)
     inline double valueAt( std::vector<double> coordinates, double time )
     {

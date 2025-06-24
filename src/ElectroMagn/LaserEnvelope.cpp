@@ -23,6 +23,15 @@ LaserEnvelope::LaserEnvelope( Params &params, Patch *patch ) :
     
 {
 
+    // Read initialization method for the laser envelope
+    PyTools::extract( "box_side", box_side, "LaserEnvelope" );
+    if ( (box_side != "xmin") && (box_side != "inside") ){
+        ERROR("Unknown box_side - only 'inside_window' and 'from_xmin' are available. ");
+    }
+    if (box_side=="xmin"){
+        keep_injecting_laser_envelope = true;
+    }
+  
     // Read envelope profile
     PyObject *profile = NULL;
     if( !PyTools::extract_pyProfile( "envelope_profile", profile, "LaserEnvelope" ) ) {
@@ -34,7 +43,11 @@ LaserEnvelope::LaserEnvelope( Params &params, Patch *patch ) :
         try_numpy = true; // use numpy for quicker initialisation in 3D
     }
     
-    profile_ = new Profile( profile, params.nDim_field+1, "envelope", params, try_numpy );
+    if (box_side=="inside"){
+        profile_ = new Profile( profile, params.nDim_field+1, "envelope", params, try_numpy );
+    } else { // box_side=="xmin"
+        profile_ = new Profile( profile, params.nDim_field  , "envelope", params, try_numpy );
+    }
     // params.Laser_Envelope_model = true;
     
     ostringstream name( "" );
@@ -56,15 +69,6 @@ LaserEnvelope::LaserEnvelope( Params &params, Patch *patch ) :
     }
     if (envelope_solver == "explicit_reduced_dispersion"){
         WARNING("CFL: The maximum stable timestep of the 'explicit_reduced_dispersion' envelope solver may be lower than the one of the 'explicit' solver.")
-    }
-
-    // Read initialization method for the laser envelope
-    PyTools::extract( "box_side", box_side, "LaserEnvelope" );
-    if ( (box_side != "xmin") && (box_side != "inside") ){
-        ERROR("Unknown box_side - only 'inside_window' and 'from_xmin' are available. ");
-    }
-    if (box_side=="xmin"){
-        keep_injecting_laser_envelope = true;
     }
 
     // Read laser ellipticity
