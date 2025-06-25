@@ -1401,6 +1401,7 @@ int Particles::eraseLeavingParticles()
 int Particles::addParticles( Particles* particles_to_inject )
 {
     ERROR( "Device only feature, should not have come here! On CPU it's done in sortParticles." );
+    return 0;
 }
 
 void Particles::importAndSortParticles( Particles */*particles_to_inject*/ )
@@ -1451,7 +1452,7 @@ void Particles::prepareInterpolatedFields( vector<vector<double>> &pold, size_t 
     }
 }
 
-void Particles::copyInterpolatedFields( double *Ebuffer, double *Bbuffer, vector<vector<double>> &pold, size_t start, size_t n, size_t buffer_size, double mass ) {
+void Particles::copyInterpolatedFields( double *Ebuffer, double *Bbuffer, vector<vector<double>> &pold, size_t start, size_t n, size_t buffer_size, double dt ) {
     vector<double*> buffers = { 
         Ebuffer, Ebuffer + buffer_size, Ebuffer + 2*buffer_size, // Ex, Ey, Ez
         Bbuffer, Bbuffer + buffer_size, Bbuffer + 2*buffer_size  // Bx, By, Bz
@@ -1466,10 +1467,12 @@ void Particles::copyInterpolatedFields( double *Ebuffer, double *Bbuffer, vector
                 double *px_old = pold[0].data(), *py_old = pold[1].data(), *pz_old = pold[2].data();
                 double * p = Momentum[i-6].data();
                 double * p_old = pold[i-6].data();
+                double * E = buffers[i-6];
+                short * q = Charge.data();
                 for( size_t ip = 0; ip < n; ip++ ) {
                     const double g = sqrt( 1.0 + px[ip]*px[ip] + py[ip]*py[ip] + pz[ip]*pz[ip] );
                     const double g_old = sqrt( 1.0 + px_old[ip]*px_old[ip] + py_old[ip]*py_old[ip] + pz_old[ip]*pz_old[ip] );
-                    interpolated_fields_->F_[i][start+ip] += mass * ( p[ip] - p_old[ip] ) * ( p[ip] + p_old[ip] ) / ( g + g_old );
+                    interpolated_fields_->F_[i][start+ip] += dt * q[ip] * E[ip] * ( p[ip] + p_old[ip] ) / ( g + g_old );
                 }
             }
         }

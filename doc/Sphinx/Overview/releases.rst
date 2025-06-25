@@ -41,15 +41,17 @@ Changes made in the repository (not released)
 
 * **Bug fixes**:
 
+  * Fixed ``Wx``, ``Wy`` and ``Wz`` in ``keep_interpolated_fields``:
+    they now correctly represent the work done by each component of the electric field.
   * Tunnel ionization was wrong in some cases for high atomic numbers.
   * Custom functions in ``ParticleBinning`` crashed with python 3.12.
   * Species-specific diagnostics in AM geometry with vectorization.
   * Frozen particles in AM geometry with adaptive vectorization.
   * Happi's ``average`` argument would sometimes be missing the last bin.
   * 1D projector on GPU without diagnostics.
-  * Fix a bug which would give false results when ionization was activated with vectorization and frozen species.
-  * Fix a bug raising segmentation fault when ionization and vectorization were used in 3D.
-  * Fix a bug that prevented numpy to be activated for profiles with 2 space parameters and time.
+  * Fixed false results when ionization was activated with vectorization and frozen species.
+  * Fixed segmentation fault when ionization and vectorization were used in 3D.
+  * Fixed numpy for profiles with 2 space parameters and time.
   * OpenPMD compatibility: fixed units of density and weight.
   * ``LaserGaussian3D`` was giving wrong amplitude with large incidence angle.
   * Fix bug in ``Screen`` with a cylindrical shape.
