@@ -748,13 +748,10 @@ void SyncVectorPatch::finalizeexchangeJ( Params &, VectorPatch &vecPatches )
 
 void SyncVectorPatch::exchangeB( Params &, VectorPatch &vecPatches, int imode, SmileiMPI *smpi )
 {
-    cout << "exchange Bl" << endl;
     SyncVectorPatch::exchangeAlongAllDirections<complex<double>,cField>( vecPatches.listBl_[imode], vecPatches, smpi );
     SyncVectorPatch::finalizeExchangeAlongAllDirections( vecPatches.listBl_[imode], vecPatches );
-    cout << "exchange Br" << endl;
     SyncVectorPatch::exchangeAlongAllDirections<complex<double>,cField>( vecPatches.listBr_[imode], vecPatches, smpi );
     SyncVectorPatch::finalizeExchangeAlongAllDirections( vecPatches.listBr_[imode], vecPatches );
-    cout << "exchange Bt" << endl;
     SyncVectorPatch::exchangeAlongAllDirections<complex<double>,cField>( vecPatches.listBt_[imode], vecPatches, smpi );
     SyncVectorPatch::finalizeExchangeAlongAllDirections( vecPatches.listBt_[imode], vecPatches );
 }
@@ -987,7 +984,6 @@ void SyncVectorPatch::templateGenerator()
 template<typename T, typename F>
 void SyncVectorPatch::exchangeAlongAllDirections( std::vector<Field *> fields, VectorPatch &vecPatches, SmileiMPI *smpi )
 {
-    cout << "exchange function" << endl;
     unsigned int  oversize[3];
     oversize[0] = vecPatches( 0 )->EMfields->oversize[0];
     oversize[1] = vecPatches( 0 )->EMfields->oversize[1];
@@ -1086,7 +1082,6 @@ void SyncVectorPatch::exchangeAlongAllDirections( std::vector<Field *> fields, V
 // MPI_Wait for all communications initialised in exchangeAlongAllDirections
 void SyncVectorPatch::finalizeExchangeAlongAllDirections( std::vector<Field *> fields, VectorPatch &vecPatches )
 {
-    cout << "final exchange function" << endl;
     unsigned oversize[3];
     oversize[0] = vecPatches( 0 )->EMfields->oversize[0];
     oversize[1] = vecPatches( 0 )->EMfields->oversize[1];

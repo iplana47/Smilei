@@ -1005,129 +1005,6 @@ void VectorPatch::solveMaxwell( Params &params, SimWindow *simWindow, int itime,
         }
     }
 
-    //Check patch conformity before MA
-    const unsigned int nl_p = ( *this )( 0 )->EMfields->dimPrim[0];
-    const unsigned int nl_d = ( *this )( 0 )->EMfields->dimDual[0];
-    const unsigned int nr_p = ( *this )( 0 )->EMfields->dimPrim[1];
-    const unsigned int nr_d = ( *this )( 0 )->EMfields->dimDual[1];
-
-    if (params.geometry == "AMcylindrical"){
-        cField2D *el0 = ( static_cast<ElectroMagnAM *>(( *this )( 0 )->EMfields) )->El_[1]; //patch 0, mode 1
-        cField2D *el1 = ( static_cast<ElectroMagnAM *>(( *this )( 1 )->EMfields) )->El_[1]; //patch 1, mode 1
-        cField2D *er0 = ( static_cast<ElectroMagnAM *>(( *this )( 0 )->EMfields) )->Er_[1]; //patch 0, mode 1
-        cField2D *er1 = ( static_cast<ElectroMagnAM *>(( *this )( 1 )->EMfields) )->Er_[1]; //patch 1, mode 1
-        cField2D *et0 = ( static_cast<ElectroMagnAM *>(( *this )( 0 )->EMfields) )->Et_[1]; //patch 0, mode 1
-        cField2D *et1 = ( static_cast<ElectroMagnAM *>(( *this )( 1 )->EMfields) )->Et_[1]; //patch 1, mode 1
-        cField2D *bt0 = ( static_cast<ElectroMagnAM *>(( *this )( 0 )->EMfields) )->Bt_[1]; //patch 0, mode 1
-        cField2D *bt1 = ( static_cast<ElectroMagnAM *>(( *this )( 1 )->EMfields) )->Bt_[1]; //patch 1, mode 1
-        cField2D *bl0 = ( static_cast<ElectroMagnAM *>(( *this )( 0 )->EMfields) )->Bl_[1]; //patch 0, mode 1
-        cField2D *bl1 = ( static_cast<ElectroMagnAM *>(( *this )( 1 )->EMfields) )->Bl_[1]; //patch 1, mode 1
-        cField2D *br0 = ( static_cast<ElectroMagnAM *>(( *this )( 0 )->EMfields) )->Br_[1]; //patch 0, mode 1
-        cField2D *br1 = ( static_cast<ElectroMagnAM *>(( *this )( 1 )->EMfields) )->Br_[1]; //patch 1, mode 1
-        for (unsigned int i=0 ; i<6; i++){
-            for (unsigned int j=0 ; j<nr_p; j++){
-                if( ( *el1 )( i, j ) != ( *el0 )( nl_d - 6 +i, j ) ){
-                    cout << "El differs  before MA at i = " << i << " and j = "<< j << endl;
-                }
-            }
-        }
-        for (unsigned int i=0 ; i<5; i++){
-            for (unsigned int j=0 ; j<nr_d; j++){
-                if( ( *er1 )( i, j ) != ( *er0 )( nl_p - 5 +i, j ) ){
-                    cout << "Er differs  before MA at i = " << i << " and j = "<< j << endl;
-                }
-            }
-        }
-        for (unsigned int i=0 ; i<5; i++){
-            for (unsigned int j=0 ; j<nr_p; j++){
-                if( ( *et1 )( i, j ) != ( *et0 )( nl_p - 5 +i, j ) ){
-                    cout << "Et differs  before MA at i = " << i << " and j = "<< j << endl;
-                }
-            }
-        }
-
-        for (unsigned int i=0 ; i<6; i++){
-            for (unsigned int j=0 ; j<nr_d; j++){
-                if( ( *bt1 )( i, j ) != ( *bt0 )( nl_d - 6 +i, j ) ){
-                    cout << "Bt differs  before MA at i = " << i << " and j = "<< j << endl;
-                }
-            }
-        }
-        for (unsigned int i=0 ; i<6; i++){
-            for (unsigned int j=0 ; j<nr_p; j++){
-                if( ( *br1 )( i, j ) != ( *br0 )( nl_d - 6 +i, j ) ){
-                    cout << "Br differs  before MA at i = " << i << " and j = "<< j << endl;
-                }
-            }
-        }
-
-        for (unsigned int i=0 ; i<5; i++){
-            for (unsigned int j=0 ; j<nr_d; j++){
-                if( ( *bl1 )( i, j ) != ( *bl0 )( nl_p - 5 +i, j ) ){
-                    cout << "Bl differs  before MA at i = " << i << " and j = "<< j << endl;
-                }
-            }
-        }
-    } else { // Cartesian cases 2D
-        Field2D *ex0 =  static_cast<Field2D *>((( *this )( 0 )->EMfields) ->Ex_); //patch 0
-        Field2D *ex1 =  static_cast<Field2D *>((( *this )( 1 )->EMfields) ->Ex_); //patch 1
-        Field2D *ey0 =  static_cast<Field2D *>((( *this )( 0 )->EMfields) ->Ey_); //patch 0
-        Field2D *ey1 =  static_cast<Field2D *>((( *this )( 1 )->EMfields) ->Ey_); //patch 1
-        Field2D *ez0 =  static_cast<Field2D *>((( *this )( 0 )->EMfields) ->Ez_); //patch 0
-        Field2D *ez1 =  static_cast<Field2D *>((( *this )( 1 )->EMfields) ->Ez_); //patch 1
-        Field2D *bz0 =  static_cast<Field2D *>((( *this )( 0 )->EMfields) ->Bz_); //patch 0
-        Field2D *bz1 =  static_cast<Field2D *>((( *this )( 1 )->EMfields) ->Bz_); //patch 1
-        Field2D *bx0 =  static_cast<Field2D *>((( *this )( 0 )->EMfields) ->Bx_); //patch 0
-        Field2D *bx1 =  static_cast<Field2D *>((( *this )( 1 )->EMfields) ->Bx_); //patch 1
-        Field2D *by0 =  static_cast<Field2D *>((( *this )( 0 )->EMfields) ->By_); //patch 0
-        Field2D *by1 =  static_cast<Field2D *>((( *this )( 1 )->EMfields) ->By_); //patch 1
-        for (unsigned int i=0 ; i<6; i++){
-            for (unsigned int j=0 ; j<nr_p; j++){
-                if( ( *ex1 )( i, j ) != ( *ex0 )( nl_d - 6 +i, j ) ){
-                    cout << "Ex differs  before MA at i = " << i << " and j = "<< j << endl;
-                }
-            }
-        }
-        for (unsigned int i=0 ; i<5; i++){
-            for (unsigned int j=0 ; j<nr_d; j++){
-                if( ( *ey1 )( i, j ) != ( *ey0 )( nl_p - 5 +i, j ) ){
-                    cout << "Ey differs  before MA at i = " << i << " and j = "<< j << endl;
-                }
-            }
-        }
-        for (unsigned int i=0 ; i<5; i++){
-            for (unsigned int j=0 ; j<nr_p; j++){
-                if( ( *ez1 )( i, j ) != ( *ez0 )( nl_p - 5 +i, j ) ){
-                    cout << "Ez differs  before MA at i = " << i << " and j = "<< j << endl;
-                }
-            }
-        }
-
-        for (unsigned int i=0 ; i<6; i++){
-            for (unsigned int j=0 ; j<nr_d; j++){
-                if( ( *bz1 )( i, j ) != ( *bz0 )( nl_d - 6 +i, j ) ){
-                    cout << "Bz differs  before MA at i = " << i << " and j = "<< j << endl;
-                }
-            }
-        }
-        for (unsigned int i=0 ; i<6; i++){
-            for (unsigned int j=0 ; j<nr_p; j++){
-                if( ( *by1 )( i, j ) != ( *by0 )( nl_d - 6 +i, j ) ){
-                    cout << "By differs  before MA at i = " << i << " and j = "<< j << endl;
-                }
-            }
-        }
-
-        for (unsigned int i=0 ; i<5; i++){
-            for (unsigned int j=0 ; j<nr_d; j++){
-                if( ( *bx1 )( i, j ) != ( *bx0 )( nl_p - 5 +i, j ) ){
-                    cout << "Bx differs  before MA at i = " << i << " and j = "<< j << endl;
-                }
-            }
-        }
-
-    }
-
     #pragma omp for schedule(static)
     for( unsigned int ipatch=0 ; ipatch<this->size() ; ipatch++ ) {
         if( !params.is_spectral ) {
@@ -1137,172 +1014,29 @@ void VectorPatch::solveMaxwell( Params &params, SimWindow *simWindow, int itime,
         }
         // Computes Ex_, Ey_, Ez_ on all points.
         // E is already synchronized because J has been synchronized before.
-        cout << "Solve MA patch " << ipatch << endl;
         ( *( *this )( ipatch )->EMfields->MaxwellAmpereSolver_ )( ( *this )( ipatch )->EMfields );
     }
-
-        //for (unsigned int i=0 ; i<6; i++){
-        //    for (unsigned int j=0 ; j<nr_p; j++){
-        //        if( ( *el1 )( i, j ) != ( *el0 )( nl_d - 6 +i, j ) ){
-        //            cout << "El differs  after MA at i = " << i << " and j = "<< j << endl;
-        //        }
-        //    }
-        //}
-        //for (unsigned int i=0 ; i<5; i++){
-        //    for (unsigned int j=0 ; j<nr_d; j++){
-        //        if( ( *er1 )( i, j ) != ( *er0 )( nl_p - 5 +i, j ) ){
-        //            cout << "Er differs  after MA at i = " << i << " and j = "<< j << endl;
-        //        }
-        //    }
-        //}
-        //for (unsigned int i=0 ; i<5; i++){
-        //    for (unsigned int j=0 ; j<nr_p; j++){
-        //        if( ( *et1 )( i, j ) != ( *et0 )( nl_p - 5 +i, j ) ){
-        //            cout << "Et differs  after MA at i = " << i << " and j = "<< j << endl;
-        //        }
-        //    }
-        //}
-
-        //for (unsigned int i=0 ; i<6; i++){
-        //    for (unsigned int j=0 ; j<nr_d; j++){
-        //        if( ( *bt1 )( i, j ) != ( *bt0 )( nl_d - 6 +i, j ) ){
-        //            cout << "Bt differs  after MA at i = " << i << " and j = "<< j << endl;
-        //        }
-        //    }
-        //}
-        //for (unsigned int i=0 ; i<6; i++){
-        //    for (unsigned int j=0 ; j<nr_p; j++){
-        //        if( ( *br1 )( i, j ) != ( *br0 )( nl_d - 6 +i, j ) ){
-        //            cout << "Br differs  after MA at i = " << i << " and j = "<< j << endl;
-        //        }
-        //    }
-        //}
-
-        //for (unsigned int i=0 ; i<5; i++){
-        //    for (unsigned int j=0 ; j<nr_d; j++){
-        //        if( ( *bl1 )( i, j ) != ( *bl0 )( nl_p - 5 +i, j ) ){
-        //            cout << "Bl differs  after MA at i = " << i << " and j = "<< j << endl;
-        //        }
-        //    }
-        //}
-
 
     #pragma omp for schedule(static)
     for( unsigned int ipatch=0 ; ipatch<this->size() ; ipatch++ ) {
         // Computes Bx_, By_, Bz_ at time n+1 on interior points.
-        cout << "Solve MF patch " << ipatch << endl;
         ( *( *this )( ipatch )->EMfields->MaxwellFaradaySolver_ )( ( *this )( ipatch )->EMfields );
     }
-
-    //for (unsigned int i=0 ; i<6; i++){
-    //    for (unsigned int j=0 ; j<nr_p; j++){
-    //        if( ( *el1 )( i, j ) != ( *el0 )( nl_d - 6 +i, j ) ){
-    //            cout << "El differs  after MF at i = " << i << " and j = "<< j << endl;
-    //        }
-    //    }
-    //}
-    //for (unsigned int i=0 ; i<5; i++){
-    //    for (unsigned int j=0 ; j<nr_d; j++){
-    //        if( ( *er1 )( i, j ) != ( *er0 )( nl_p - 5 +i, j ) ){
-    //            cout << "Er differs  after MF at i = " << i << " and j = "<< j << endl;
-    //        }
-    //    }
-    //}
-    //for (unsigned int i=0 ; i<5; i++){
-    //    for (unsigned int j=0 ; j<nr_p; j++){
-    //        if( ( *et1 )( i, j ) != ( *et0 )( nl_p - 5 +i, j ) ){
-    //            cout << "Et differs  after MF at i = " << i << " and j = "<< j << endl;
-    //        }
-    //    }
-    //}
-
-    //for (unsigned int i=0 ; i<6; i++){
-    //    for (unsigned int j=0 ; j<nr_d; j++){
-    //        if( ( *bt1 )( i, j ) != ( *bt0 )( nl_d - 6 +i, j ) ){
-    //            cout << "Bt differs  after MF at i = " << i << " and j = "<< j << endl;
-    //        }
-    //    }
-    //}
-    //for (unsigned int i=0 ; i<6; i++){
-    //    for (unsigned int j=0 ; j<nr_p; j++){
-    //        if( ( *br1 )( i, j ) != ( *br0 )( nl_d - 6 +i, j ) ){
-    //            cout << "Br differs  after MF at i = " << i << " and j = "<< j << endl;
-    //        }
-    //    }
-    //}
-
-    //for (unsigned int i=0 ; i<5; i++){
-    //    for (unsigned int j=0 ; j<nr_d; j++){
-    //        if( ( *bl1 )( i, j ) != ( *bl0 )( nl_p - 5 +i, j ) ){
-    //            cout << "Bl differs  after MF at i = " << i << " and j = "<< j << endl;
-    //        }
-    //    }
-    //}
-
-
-
     //Synchronize B fields between patches.
-    timers.maxwell.update( params.printNow( itime ) );
-
-
-    timers.syncField.restart();
-    if( params.geometry != "AMcylindrical" ) {
-        if( params.is_spectral ) SyncVectorPatch::exchangeE( params, ( *this ), smpi );
-        SyncVectorPatch::exchangeB( params, ( *this ), smpi );
-    } else {
-        for( unsigned int imode = 0 ; imode < static_cast<ElectroMagnAM *>( patches_[0]->EMfields )->El_.size() ; imode++ ) {
-            if( params.is_spectral ) SyncVectorPatch::exchangeE( params, ( *this ), imode, smpi );
-            cout << "exchange B mode " << imode << endl;
-            SyncVectorPatch::exchangeB( params, ( *this ), imode, smpi );
-        }
-    }
-    timers.syncField.update( params.printNow( itime ) );
-
-
-        //for (unsigned int i=0 ; i<6; i++){
-        //    for (unsigned int j=0 ; j<nr_p; j++){
-        //        if( ( *el1 )( i, j ) != ( *el0 )( nl_d - 6 +i, j ) ){
-        //            cout << "El differs  after exchangeB at i = " << i << " and j = "<< j << endl;
-        //        }
-        //    }
-        //}
-        //for (unsigned int i=0 ; i<5; i++){
-        //    for (unsigned int j=0 ; j<nr_d; j++){
-        //        if( ( *er1 )( i, j ) != ( *er0 )( nl_p - 5 +i, j ) ){
-        //            cout << "Er differs  after exchangeB at i = " << i << " and j = "<< j << endl;
-        //        }
-        //    }
-        //}
-        //for (unsigned int i=0 ; i<5; i++){
-        //    for (unsigned int j=0 ; j<nr_p; j++){
-        //        if( ( *et1 )( i, j ) != ( *et0 )( nl_p - 5 +i, j ) ){
-        //            cout << "Et differs  after exchangeB at i = " << i << " and j = "<< j << endl;
-        //        }
-        //    }
-        //}
-
-        //for (unsigned int i=0 ; i<6; i++){
-        //    for (unsigned int j=0 ; j<nr_d; j++){
-        //        if( ( *bt1 )( i, j ) != ( *bt0 )( nl_d - 6 +i, j ) ){
-        //            cout << "Bt differs  after exchangeB at i = " << i << " and j = "<< j << endl;
-        //        }
-        //    }
-        //}
-        //for (unsigned int i=0 ; i<6; i++){
-        //    for (unsigned int j=0 ; j<nr_p; j++){
-        //        if( ( *br1 )( i, j ) != ( *br0 )( nl_d - 6 +i, j ) ){
-        //            cout << "Br differs  after exchangeB at i = " << i << " and j = "<< j << endl;
-        //        }
-        //    }
-        //}
-
-        //for (unsigned int i=0 ; i<5; i++){
-        //    for (unsigned int j=0 ; j<nr_d; j++){
-        //        if( ( *bl1 )( i, j ) != ( *bl0 )( nl_p - 5 +i, j ) ){
-        //            cout << "Bl differs  after exchangeB at i = " << i << " and j = "<< j << endl;
-        //        }
-        //    }
-        //}
+//    timers.maxwell.update( params.printNow( itime ) );
+//
+//
+//    timers.syncField.restart();
+//    if( params.geometry != "AMcylindrical" ) {
+//        if( params.is_spectral ) SyncVectorPatch::exchangeE( params, ( *this ), smpi );
+//        SyncVectorPatch::exchangeB( params, ( *this ), smpi );
+//    } else {
+//        for( unsigned int imode = 0 ; imode < static_cast<ElectroMagnAM *>( patches_[0]->EMfields )->El_.size() ; imode++ ) {
+//            if( params.is_spectral ) SyncVectorPatch::exchangeE( params, ( *this ), imode, smpi );
+//            SyncVectorPatch::exchangeB( params, ( *this ), imode, smpi );
+//        }
+//    }
+//    timers.syncField.update( params.printNow( itime ) );
 
 
     if ( (params.multiple_decomposition) && ( itime!=0 ) && ( time_dual > params.time_fields_frozen ) ) { // multiple_decomposition = true -> is_spectral = true
@@ -1411,11 +1145,11 @@ void VectorPatch::finalizeSyncAndBCFields( Params &params, SmileiMPI *smpi, SimW
         double time_dual, Timers &timers, int itime )
 {
     if ( (!params.multiple_decomposition) && ( itime!=0 ) && ( time_dual > params.time_fields_frozen ) ) { // multiple_decomposition = true -> is_spectral = true
-        if( params.geometry != "AMcylindrical" ) {
-            timers.syncField.restart();
-            SyncVectorPatch::finalizeexchangeB( params, ( *this ) );
-            timers.syncField.update( params.printNow( itime ) );
-        }
+        //if( params.geometry != "AMcylindrical" ) {
+        //    timers.syncField.restart();
+        //    SyncVectorPatch::finalizeexchangeB( params, ( *this ) );
+        //    timers.syncField.update( params.printNow( itime ) );
+        //}
 
         timers.maxwellBC.restart();
         SMILEI_PY_SAVE_MASTER_THREAD
@@ -1428,26 +1162,28 @@ void VectorPatch::finalizeSyncAndBCFields( Params &params, SmileiMPI *smpi, SimW
         }
         SMILEI_PY_RESTORE_MASTER_THREAD
 
-        //exchange B after BC
-        //if( params.geometry != "AMcylindrical" ) {
-        //    if( params.is_spectral ) SyncVectorPatch::exchangeE( params, ( *this ), smpi );
-        //    SyncVectorPatch::exchangeB( params, ( *this ), smpi );
-        //} else {
-        //    for( unsigned int imode = 0 ; imode < static_cast<ElectroMagnAM *>( patches_[0]->EMfields )->El_.size() ; imode++ ) {
-        //        if( params.is_spectral ) SyncVectorPatch::exchangeE( params, ( *this ), imode, smpi );
-        //        cout << "exchange B mode a second time " << imode << endl;
-        //        SyncVectorPatch::exchangeB( params, ( *this ), imode, smpi );
-        //    }
-        //}
-        //if( params.geometry != "AMcylindrical" ) {
-        //    timers.syncField.restart();
-        //    SyncVectorPatch::finalizeexchangeB( params, ( *this ) );
-        //    timers.syncField.update( params.printNow( itime ) );
-        //}
+        timers.maxwell.update( params.printNow( itime ) );
 
 
+        // Sync B field now after BC
+        timers.syncField.restart();
+        if( params.geometry != "AMcylindrical" ) {
+            if( params.is_spectral ) SyncVectorPatch::exchangeE( params, ( *this ), smpi );
+            SyncVectorPatch::exchangeB( params, ( *this ), smpi );
+        } else {
+            for( unsigned int imode = 0 ; imode < static_cast<ElectroMagnAM *>( patches_[0]->EMfields )->El_.size() ; imode++ ) {
+                if( params.is_spectral ) SyncVectorPatch::exchangeE( params, ( *this ), imode, smpi );
+                SyncVectorPatch::exchangeB( params, ( *this ), imode, smpi );
+            }
+        }
+        if( params.geometry != "AMcylindrical" ) {
+            SyncVectorPatch::finalizeexchangeB( params, ( *this ) );
+        }
 
         SyncVectorPatch::exchangeForPML( params, (*this), smpi );
+
+        timers.syncField.update( params.printNow( itime ) );
+
 
         #pragma omp for schedule(static)
         for( unsigned int ipatch=0 ; ipatch<this->size() ; ipatch++ ) {

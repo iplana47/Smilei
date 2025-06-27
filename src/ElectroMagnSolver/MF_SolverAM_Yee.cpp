@@ -61,37 +61,6 @@ void MF_SolverAM_Yee::operator()( ElectroMagn *fields )
                                    +Icpx*dt*( double )imode/( ( double )( j_glob+j )*dr )*( *El )( i, j ) ;
             }
         }
-
-        //if (imode == 1  ){
-        //    int iminel, iminbt, iminer;
-        //    int jj = nr_d - 10;
-        //    if (( static_cast<ElectroMagnAM *>( fields ) )->isXmin ){
-        //        iminel = nl_d - 6;
-        //        iminbt = nl_d - 6;
-        //        iminer = nl_p - 5;
-        //    } else {
-        //        iminer = 0;
-        //        iminel = 0;
-        //        iminbt = 0;
-        //    }
-        //    cout << "before MF Er = " ;
-        //    for( unsigned int i=iminer ; i<iminer+5 ; i++ ) {    
-        //        cout<< setprecision(8) << ( *Er )( i, jj ) << " " ;
-        //    }
-        //    cout << endl;
-
-        //    cout << "before MF El = " ;
-        //    for( unsigned int i=iminel ; i<iminel+6 ; i++ ) {    
-        //        cout<< setprecision(8) << ( *El )( i, jj ) << " " ;
-        //    }
-        //    cout << endl;
-        //    cout << "before MF Bt = " ;
-        //    for( unsigned int i=iminbt ; i<iminbt+6 ; i++ ) {    
-        //        cout << setprecision(8) << ( *Bt )( i, jj ) << " " ;
-        //    }
-        //    cout << endl;
-        //}
-
         // Magnetic field Bt^(d,d)
         for( unsigned int i=1 ; i<nl_d-1 ; i++ ) {
             #pragma omp simd
@@ -100,28 +69,6 @@ void MF_SolverAM_Yee::operator()( ElectroMagn *fields )
                                    -dt_ov_dl * ( ( *Er )( i, j ) - ( *Er )( i-1, j ) );
             }
         }
-
-        //if (imode == 1  ){
-        //    int iminer, iminbt;
-        //    int jj = nr_d - 10;
-        //    if (( static_cast<ElectroMagnAM *>( fields ) )->isXmin ){
-        //        iminer = nl_p - 5;
-        //        iminbt = nl_d - 6;
-        //    } else {
-        //        iminer = 0;
-        //        iminbt = 0;
-        //    }
-        //    //cout << "before MA Er = " ;
-        //    //for( unsigned int i=iminer ; i<iminer+5 ; i++ ) {    
-        //    //    cout << ( *Er )( i, jj ) << " " ;
-        //    //}
-        //    //cout << endl;
-        //    cout << "after MF Bt = " ;
-        //    for( unsigned int i=iminbt ; i<iminbt+6 ; i++ ) {    
-        //        cout << setprecision(8) << ( *Bt )( i, jj ) << " " ;
-        //    }
-        //    cout << endl;
-        //}
 
         // On axis conditions
         if( isYmin ) {
