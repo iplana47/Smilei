@@ -34,6 +34,29 @@ void MA_SolverAM_norm::operator()( ElectroMagn *fields )
         cField2D *Jt = ( static_cast<ElectroMagnAM *>( fields ) )->Jt_[imode];
         int j_glob    = ( static_cast<ElectroMagnAM *>( fields ) )->j_glob_;
         bool isYmin = ( static_cast<ElectroMagnAM *>( fields ) )->isYmin;
+
+        //if (imode == 1  ){
+        //    int iminer, iminbt;
+        //    int jj = nr_d - 10;
+        //    if (( static_cast<ElectroMagnAM *>( fields ) )->isXmin ){
+        //        iminer = nl_p - 5;
+        //        iminbt = nl_d - 6;
+        //    } else {
+        //        iminer = 0;
+        //        iminbt = 0;
+        //    }
+        //    //cout << "before MA Er = " ;
+        //    //for( unsigned int i=iminer ; i<iminer+5 ; i++ ) {    
+        //    //    cout << ( *Er )( i, jj ) << " " ;
+        //    //}
+        //    //cout << endl;
+        //    cout << "before MA Bt = " ;
+        //    for( unsigned int i=iminbt ; i<iminbt+6 ; i++ ) {    
+        //        cout << setprecision(8) << ( *Bt )( i, jj ) << " " ;
+        //    }
+        //    cout << endl;
+
+        //}
         
         // Electric field Elr^(d,p)
         for( unsigned int i=0 ; i<nl_d ; i++ ) {
@@ -51,6 +74,29 @@ void MA_SolverAM_norm::operator()( ElectroMagn *fields )
                                    
             }
         }
+
+        //if (imode == 1  ){
+        //    int iminer, iminbt;
+        //    int jj = nr_d - 10;
+        //    if (( static_cast<ElectroMagnAM *>( fields ) )->isXmin ){
+        //        iminer = nl_p - 5;
+        //        iminbt = nl_d - 6;
+        //    } else {
+        //        iminer = 0;
+        //        iminbt = 0;
+        //    }
+        //    cout << " after MA Er = " ;
+        //    for( unsigned int i=iminer ; i<iminer+5 ; i++ ) {    
+        //        cout << ( *Er )( i, jj ) << " " ;
+        //    }
+        //    cout << endl;
+        //    cout << " after MA Bt = " ;
+        //    for( unsigned int i=iminbt ; i<iminbt+6 ; i++ ) {    
+        //        cout << setprecision(8) << ( *Bt )( i, jj ) << " " ;
+        //    }
+        //    cout << endl;
+        //}
+
         for( unsigned int i=0 ;  i<nl_p ; i++ ) {
             for( unsigned int j=isYmin*3 ; j<nr_p ; j++ ) {
                 ( *Et )( i, j ) += -dt*( *Jt )( i, j )
