@@ -22,9 +22,7 @@ public:
     virtual ~Ionization();
 
     //! Overloading of () operator
-    virtual void operator()(Particles *, unsigned int, unsigned int, std::vector<std::vector<double> *>, Patch *, Projector *, int = 0) {};
-    //! method for envelope ionization
-    virtual void envelopeIonization( Particles *, unsigned int, unsigned int, std::vector<double> *, std::vector<double> *, std::vector<double> *, std::vector<double> *, Patch *, Projector *, int = 0, int = 0 ){};
+    virtual void operator()(Particles *, unsigned int, unsigned int, std::vector<std::vector<double> *>, Patch *, Projector *) {};
 
     Particles new_electrons;
     

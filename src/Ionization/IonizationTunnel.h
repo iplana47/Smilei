@@ -39,16 +39,15 @@ class IonizationTunnel : public Ionization
    public:
     inline IonizationTunnel(Params &params, Species *species);
 
-    inline void operator()(Particles *, unsigned int, unsigned int, vector<vector<double>*>, Patch *, Projector *,
-                           int ipart_ref = 0) override;
+    void operator()(Particles *, unsigned int, unsigned int, vector<vector<double>*>, Patch *, Projector *) override;
 
    protected:
-    inline void computeIonizationCurrents(unsigned int ipart, int Z, unsigned int k_times, ElectricFields E, Patch *patch, Projector *Proj, Particles *particles);
-    inline void createNewElectrons(unsigned int ipart, unsigned int k_times, Particles *particles);
-    inline ElectricFields calculateElectricFields(vector<vector<double>*> Epart, unsigned int ipart);
+    virtual inline void computeIonizationCurrents(unsigned int ipart, int Z, unsigned int k_times, ElectricFields E, Patch *patch, Projector *Proj, Particles *particles);
+    virtual inline void createNewElectrons(unsigned int ipart, unsigned int k_times, Particles *particles, Patch *, ElectricFields);
+    virtual inline ElectricFields calculateElectricFields(vector<vector<double>*> Epart, unsigned int ipart);
+    virtual inline double ionizationRate(const int Z, ElectricFields E);
 
    private:
-    inline double ionizationRate(const int Z, ElectricFields E);
 
     static constexpr double one_third = 1. / 3.;
     unsigned int atomic_number_;
@@ -137,7 +136,7 @@ IonizationTunnel<Model>::IonizationTunnel(Params &params, Species *species) : Io
 
 template <int Model>
 inline void IonizationTunnel<Model>::operator()(Particles *particles, unsigned int ipart_min, unsigned int ipart_max,
-                                                vector<vector<double>*> Epart, Patch *patch, Projector *Proj, int ipart_ref)
+                                                vector<vector<double>*> Epart, Patch *patch, Projector *Proj)
 {
     unsigned int Z, Zp1, newZ, k_times;
     double ran_p, Mult, D_sum, P_sum, Pint_tunnel;
@@ -258,7 +257,7 @@ inline void IonizationTunnel<Model>::computeIonizationCurrents(unsigned int ipar
 }
 
 template<int Model>
-inline void IonizationTunnel<Model>::createNewElectrons(unsigned int ipart, unsigned int k_times, Particles *particles)
+inline void IonizationTunnel<Model>::createNewElectrons(unsigned int ipart, unsigned int k_times, Particles *particles, Patch *, ElectricFields)
 {
     if (k_times != 0) {
         new_electrons.createParticle();

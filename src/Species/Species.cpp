@@ -2075,12 +2075,13 @@ void Species::ponderomotiveUpdateSusceptibilityAndMomentum( double time_dual,
 #endif
 
                 smpi->traceEventIfDiagTracing(diag_PartEventTracing, Tools::getOMPThreadNum(),0,5);
-                vector<double> *Epart = &( smpi->dynamics_Epart[ithread] );
+                vector<double> *Epartxyz = &( smpi->dynamics_Epart[ithread] );
                 vector<double> *EnvEabs_part = &( smpi->dynamics_EnvEabs_part[ithread] );
                 vector<double> *EnvExabs_part = &( smpi->dynamics_EnvExabs_part[ithread] );
                 vector<double> *Phipart = &( smpi->dynamics_PHIpart[ithread] );
+                vector<vector<double>*> Epart = { Epartxyz, EnvEabs_part, EnvExabs_part, Phipart };
                 Interp->envelopeFieldForIonization( EMfields, *particles, smpi, &( particles->first_index[ibin] ), &( particles->last_index[ibin] ), ithread );
-                Ionize->envelopeIonization( particles, particles->first_index[ibin], particles->last_index[ibin], Epart, EnvEabs_part, EnvExabs_part, Phipart, patch, Proj );
+                ( *Ionize )( particles, particles->first_index[ibin], particles->last_index[ibin], Epart, patch, Proj );
                 smpi->traceEventIfDiagTracing(diag_PartEventTracing, Tools::getOMPThreadNum(),1,5);
 
 #ifdef  __DETAILED_TIMERS

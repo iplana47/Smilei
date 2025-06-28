@@ -1179,15 +1179,17 @@ void SpeciesV::ponderomotiveUpdateSusceptibilityAndMomentum( double time_dual,
 #ifdef  __DETAILED_TIMERS
                 timer = MPI_Wtime();
 #endif
-                vector<double> *Epart = &( smpi->dynamics_Epart[ithread] );
+                vector<double> *Epartxyz = &( smpi->dynamics_Epart[ithread] );
                 vector<double> *EnvEabs_part  = &( smpi->dynamics_EnvEabs_part[ithread] );
                 vector<double> *EnvExabs_part = &( smpi->dynamics_EnvExabs_part[ithread] );
                 vector<double> *Phipart = &( smpi->dynamics_PHIpart[ithread] );
 
+                vector<vector<double>*> Epart = { Epartxyz, EnvEabs_part, EnvExabs_part, Phipart };
+
                 smpi->traceEventIfDiagTracing(diag_PartEventTracing, ithread,0,5);
                 for( unsigned int scell = 0 ; scell < packsize_ ; scell++ ) {
                     Interp->envelopeFieldForIonization( EMfields, *particles, smpi, &( particles->first_index[ipack*packsize_+scell] ), &( particles->last_index[ipack*packsize_+scell] ), ithread );
-                    Ionize->envelopeIonization( particles, particles->first_index[ipack*packsize_+scell], particles->last_index[ipack*packsize_+scell], Epart, EnvEabs_part, EnvExabs_part, Phipart, patch, Proj );
+                    ( *Ionize )( particles, particles->first_index[ipack*packsize_+scell], particles->last_index[ipack*packsize_+scell], Epart, patch, Proj );
                 }
                 smpi->traceEventIfDiagTracing(diag_PartEventTracing, ithread,1,5);
 

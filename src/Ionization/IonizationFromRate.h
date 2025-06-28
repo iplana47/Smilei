@@ -19,7 +19,7 @@ public:
     IonizationFromRate( Params &params, Species *species );
 
     //! apply the FromRate Ionization model to the species
-    void operator()( Particles *, unsigned int, unsigned int, std::vector<std::vector<double> *>, Patch *, Projector *, int ipart_ref = 0 ) override;
+    void operator()( Particles *, unsigned int, unsigned int, std::vector<std::vector<double> *>, Patch *, Projector *) override;
 
 private:
 
