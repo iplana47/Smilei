@@ -43,7 +43,7 @@ class IonizationTunnel : public Ionization
 
    protected:
     virtual inline void computeIonizationCurrents(unsigned int ipart, int Z, unsigned int k_times, ElectricFields E, Patch *patch, Projector *Proj, Particles *particles);
-    virtual inline void createNewElectrons(unsigned int ipart, unsigned int k_times, Particles *particles, Patch *, ElectricFields);
+    virtual inline void createNewElectrons(unsigned int ipart, unsigned int k_times, unsigned int Z, Particles *particles, Patch *, ElectricFields);
     virtual inline ElectricFields calculateElectricFields(vector<vector<double>*> Epart, unsigned int ipart);
     virtual inline double ionizationRate(const int Z, ElectricFields E);
 
@@ -214,7 +214,7 @@ inline void IonizationTunnel<Model>::operator()(Particles *particles, unsigned i
         }  // END Multiple ionization routine
 
         computeIonizationCurrents(ipart, Z, k_times, E, patch, Proj, particles);
-        createNewElectrons(ipart, k_times, particles);
+        createNewElectrons(ipart, k_times, Z, particles, patch, E);
 
     }  // Loop on particles
 }
@@ -257,7 +257,7 @@ inline void IonizationTunnel<Model>::computeIonizationCurrents(unsigned int ipar
 }
 
 template<int Model>
-inline void IonizationTunnel<Model>::createNewElectrons(unsigned int ipart, unsigned int k_times, Particles *particles, Patch *, ElectricFields)
+inline void IonizationTunnel<Model>::createNewElectrons(unsigned int ipart, unsigned int k_times, unsigned int Z, Particles *particles, Patch *, ElectricFields)
 {
     if (k_times != 0) {
         new_electrons.createParticle();

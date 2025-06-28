@@ -8,12 +8,6 @@
 
 using namespace std;
 
-struct EnvelopeElectricFields : ElectricFields {
-    double env;
-    double x_env;
-    double Phi_env;
-};
-
 
 IonizationTunnelEnvelopeAveraged::IonizationTunnelEnvelopeAveraged( Params &params, Species *species ) : IonizationTunnel<0>( params, species )
 {
@@ -85,7 +79,7 @@ inline void IonizationTunnelEnvelopeAveraged::computeIonizationCurrents(unsigned
     // ---- Ionization ion current cannot be computed with the envelope ionization model
 }
 
-inline void IonizationTunnelEnvelopeAveraged::createNewElectrons(unsigned int ipart, unsigned int k_times, Particles *particles, Patch *patch, EnvelopeElectricFields E)
+inline void IonizationTunnelEnvelopeAveraged::createNewElectrons(unsigned int ipart, unsigned int k_times, unsigned int Z, Particles *particles, Patch *patch, EnvelopeElectricFields E)
 {
     double Aabs, p_perp; 
     if( k_times !=0 ) {

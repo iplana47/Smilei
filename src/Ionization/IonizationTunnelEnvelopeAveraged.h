@@ -8,6 +8,11 @@
 #include "IonizationTunnel.h"
 #include "Tools.h"
 
+struct EnvelopeElectricFields : ElectricFields {
+    double env;
+    double x_env;
+    double Phi_env;
+};
 
 class Particles;
 
@@ -23,7 +28,7 @@ public:
 
 protected:
     inline void computeIonizationCurrents(unsigned int ipart, int Z, unsigned int k_times, ElectricFields E, Patch *patch, Projector *Proj, Particles *particles) override;
-    inline void createNewElectrons(unsigned int ipart, unsigned int k_times, Particles *particles, Patch *patch, ElectricFields E) override;
+    inline void createNewElectrons(unsigned int ipart, unsigned int k_times, unsigned int Z, Particles *particles, Patch *patch, EnvelopeElectricFields E);
     inline ElectricFields calculateElectricFields(vector<vector<double>*> Epart, unsigned int ipart) override;
     inline double ionizationRate(const int Z, ElectricFields E) override;
 
@@ -35,6 +40,5 @@ private:
     double one_third;
     std::vector<double> alpha_tunnel, beta_tunnel, gamma_tunnel,Ip_times2_to_minus3ov4;
 };
-
 
 #endif
