@@ -53,7 +53,7 @@ void EnvelopeBCAM_refl::apply( LaserEnvelope *envelope, ElectroMagn *, Patch *pa
         
         for( unsigned int i=oversize_; i>0; i-- ) {
             for( unsigned int j=0 ; j<ny_p ; j++ ) {
-                ( *A2Dcyl )( i-1, j ) = 0. ; // (*A2D)(i,j,k);
+                ( *A2Dcyl )  ( i-1, j ) = 0. ; // (*A2D)(i,j,k);
                 ( *Phi2Dcyl )( i-1, j ) = 0. ; // std::abs((*A2D)  (i,j)) * std::abs((*A2D)  (i,j)) * 0.5;
             }//j
         }//i
@@ -64,7 +64,7 @@ void EnvelopeBCAM_refl::apply( LaserEnvelope *envelope, ElectroMagn *, Patch *pa
         
         for( unsigned int i=nx_p-oversize_; i<nx_p; i++ ) {
             for( unsigned int j=0 ; j<ny_p ; j++ ) {
-                ( *A2Dcyl )( i, j ) = 0. ; //(*A2D)(i-1,j);
+                ( *A2Dcyl )  ( i, j ) = 0. ; //(*A2D)(i-1,j);
                 ( *Phi2Dcyl )( i, j ) = 0. ; //std::abs((*A2D)  (i-1,j)) * std::abs((*A2D)  (i-1,j)) * 0.5;
             }//j
         }//i
@@ -75,7 +75,7 @@ void EnvelopeBCAM_refl::apply( LaserEnvelope *envelope, ElectroMagn *, Patch *pa
         
         for( unsigned int i=0; i<nx_p; i++ ) {
             for( unsigned int j=ny_p-oversize_; j<ny_p ; j++ ) {
-                ( *A2Dcyl )( i, j ) = 0. ; // (*A2D)(i,j-1);
+                ( *A2Dcyl )  ( i, j ) = 0. ; // (*A2D)(i,j-1);
                 ( *Phi2Dcyl )( i, j ) = 0. ; // std::abs((*A2D)  (i,j-1)) * std::abs((*A2D)  (i,j-1)) * 0.5;
             }//j
         }//i

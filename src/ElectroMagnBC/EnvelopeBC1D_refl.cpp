@@ -44,10 +44,9 @@ void EnvelopeBC1D_refl::apply( LaserEnvelope *envelope, ElectroMagn *, Patch *pa
     if( i_boundary_ == 0 && patch->isXmin() ) {
     
         // FORCE CONSTANT ENVELOPE FIELD ON BORDER
-        
         for( unsigned int i=oversize_; i>0; i-- ) {
-            ( *A1D )( i-1 ) = 0. ;  // (*A1D)(i,j,k);
-            ( *Phi1D )( i-1 ) = 0. ; // std::abs((*A1D)  (i)) * std::abs((*A1D)  (i)) * 0.5;
+            ( *A1D )  ( i-1 ) = 0. ;  // (*A1D)(i,j,k);
+            ( *Phi1D )( i-1 ) = 0. ;  // std::abs((*A1D)  (i)) * std::abs((*A1D)  (i)) * 0.5;
         }//i
         
     } else if( i_boundary_ == 1 && patch->isXmax() ) {
@@ -55,8 +54,8 @@ void EnvelopeBC1D_refl::apply( LaserEnvelope *envelope, ElectroMagn *, Patch *pa
         // FORCE CONSTANT ENVELOPE FIELD ON BORDER
         
         for( unsigned int i=nx_p-oversize_; i<nx_p; i++ ) {
-            ( *A1D )( i ) = 0. ;  //(*A1D)(i-1,j);
-            ( *Phi1D )( i ) = 0. ; //std::abs((*A1D)  (i-1)) * std::abs((*A1D)  (i-1)) * 0.5;
+            ( *A1D )  ( i ) = 0. ;  //(*A1D)(i-1,j);
+            ( *Phi1D )( i ) = 0. ;  //std::abs((*A1D)  (i-1)) * std::abs((*A1D)  (i-1)) * 0.5;
         }//i
         
     }
