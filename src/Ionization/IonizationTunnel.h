@@ -32,6 +32,9 @@ class IonizationTunnel : public Ionization
     inline void operator()(Particles *, unsigned int, unsigned int, std::vector<double> *, Patch *, Projector *,
                            int ipart_ref = 0) override;
 
+   protected:
+    inline void computeIonizationCurrents(unsigned int ipart, int Z, unsigned int k_times, double invE, double* Ex, double* Ey, double* Ez, Patch *patch, Projector *Proj, Particles *particles);
+
    private:
     inline double ionizationRate(const int Z, const double E);
 
@@ -125,9 +128,8 @@ inline void IonizationTunnel<Model>::operator()(Particles *particles, unsigned i
                                                 vector<double> *Epart, Patch *patch, Projector *Proj, int ipart_ref)
 {
     unsigned int Z, Zp1, newZ, k_times;
-    double TotalIonizPot, E, invE, factorJion, ran_p, Mult, D_sum, P_sum, Pint_tunnel;
+    double E, invE, ran_p, Mult, D_sum, P_sum, Pint_tunnel;
     vector<double> IonizRate_tunnel(atomic_number_), Dnom_tunnel(atomic_number_);
-    LocalFields Jion;
 
     int nparts = Epart->size() / 3;
     double *Ex = &((*Epart)[0 * nparts]);
@@ -159,9 +161,6 @@ inline void IonizationTunnel<Model>::operator()(Particles *particles, unsigned i
         ran_p = patch->rand_->uniform();
         IonizRate_tunnel[Z] = ionizationRate(Z, E);
 
-        // Total ionization potential (used to compute the ionization current)
-        TotalIonizPot = 0.0;
-
         // k_times will give the nb of ionization events
         k_times = 0;
         Zp1 = Z + 1;
@@ -170,7 +169,6 @@ inline void IonizationTunnel<Model>::operator()(Particles *particles, unsigned i
             // if ionization of the last electron: single ionization
             // -----------------------------------------------------
             if (ran_p < 1.0 - exp(-IonizRate_tunnel[Z] * dt)) {
-                TotalIonizPot += Potential[Z];
                 k_times = 1;
             }
 
@@ -202,38 +200,16 @@ inline void IonizationTunnel<Model>::operator()(Particles *particles, unsigned i
                 P_sum = P_sum + Dnom_tunnel[k_times + 1] * exp(-IonizRate_tunnel[newZ] * dt);
                 Pint_tunnel = Pint_tunnel + P_sum * Mult;
 
-                TotalIonizPot += Potential[Z + k_times];
                 k_times++;
             }  // END while
 
             // final ionization (of last electron)
             if (((1.0 - Pint_tunnel) > ran_p) && (k_times == atomic_number_ - Zp1)) {
-                TotalIonizPot += Potential[atomic_number_ - 1];
                 k_times++;
             }
         }  // END Multiple ionization routine
 
-        // Compute ionization current
-        if (patch->EMfields->Jx_ != NULL) {  // For the moment ionization current is
-                                             // not accounted for in AM geometry
-            double TotalIonizPotNew = 0.0;
-            for (unsigned int i=0; i<k_times; i++) {
-                TotalIonizPotNew += Potential[Z+i];
-            }
-            if (TotalIonizPotNew != TotalIonizPot) {
-                ERROR( "TotalIonizPotNew not equal to TotalIonizPot. This is super sad and making me depressed :( ." );
-            }
-
-            double factorJion_0 = au_to_mec2 * EC_to_au * EC_to_au * invdt;
-            factorJion = factorJion_0 * invE * invE;
-            factorJion *= TotalIonizPot;
-            Jion.x = factorJion * *(Ex + ipart);
-            Jion.y = factorJion * *(Ey + ipart);
-            Jion.z = factorJion * *(Ez + ipart);
-
-            Proj->ionizationCurrents(patch->EMfields->Jx_, patch->EMfields->Jy_, patch->EMfields->Jz_, *particles, ipart, Jion);
-        }
-
+        computeIonizationCurrents(ipart, Z, k_times, invE, Ex, Ey, Ez, patch, Proj, particles);
         // Creation of the new electrons
         // (variable weights are used)
         // -----------------------------
@@ -260,6 +236,29 @@ inline void IonizationTunnel<Model>::operator()(Particles *particles, unsigned i
 
     }  // Loop on particles
 }
+
+template<int Model>
+inline void IonizationTunnel<Model>::computeIonizationCurrents(unsigned int ipart, int Z, unsigned int k_times, double invE, double* Ex, double* Ey, double* Ez, Patch *patch, Projector *Proj, Particles* particles) {
+    if (patch->EMfields->Jx_ != NULL) {  // For the moment ionization current is
+                                         // not accounted for in AM geometry
+        double TotalIonizPot = 0.0;
+        for (unsigned int i=0; i<k_times; i++) {
+            TotalIonizPot += Potential[Z+i];
+        }
+
+        double factorJion_0 = au_to_mec2 * EC_to_au * EC_to_au * invdt;
+        double factorJion = factorJion_0 * invE * invE;
+        factorJion *= TotalIonizPot;
+
+        LocalFields Jion;
+        Jion.x = factorJion * *(Ex + ipart);
+        Jion.y = factorJion * *(Ey + ipart);
+        Jion.z = factorJion * *(Ez + ipart);
+
+        Proj->ionizationCurrents(patch->EMfields->Jx_, patch->EMfields->Jy_, patch->EMfields->Jz_, *particles, ipart, Jion);
+    }
+}
+
 
 template <int Model>
 inline double IonizationTunnel<Model>::ionizationRate(const int Z, const double E)
