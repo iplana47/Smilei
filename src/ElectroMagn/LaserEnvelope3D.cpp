@@ -224,22 +224,32 @@ void LaserEnvelope3D::injectEnvelopeFromXmin( Patch *patch, Params &params, doub
         for( unsigned int j=0 ; j<A_->dims_[1] ; j++ ) {
             position[1] = pos2;
             for( unsigned int k=0 ; k<A_->dims_[2] ; k++ ) {
-                ( *A3D  )( oversize_-1, j, k ) += profile_->complexValueAt( position, t );
-                ( *A03D )( oversize_-1, j, k ) += profile_->complexValueAt( position, t_previous_timestep );
+                ( *A3D  )( oversize_-1, j, k ) = profile_->complexValueAt( position, t );
+                ( *A03D )( oversize_-1, j, k ) = profile_->complexValueAt( position, t_previous_timestep );
                 position[1] += cell_length[2];
             } // end j loop
             position[0] += cell_length[1];
         } // end k loop
         
         if (envelope_solver=="explicit_reduced_dispersion"){
-            // This solver needs another point on the x direction, for one timesteps, as initial condition 
-            // This point will be found by locally solving the paraxial wave equation
+            // This solver needs another point on the x direction, for one timestep, as initial condition. 
+            // This value will be found by locally solving the envelope wave equation.
+          
+            // Adapting the approach by C. Benedetti described in 
+            // F. Massimo et al., PPCF 2025 https://doi.org/10.1088/1361-6587/addc97,
+            // the second order derivatives in time and longitudinal coordinate are neglected
+            // under the paraxial and slowly varying envelope approximation.
+          
+            // The resulting envelope equation, that will be discretized with first order derivatives, is 
+            // \nabla^2_\perp A + 2*i*(dA/dx+dA/dt) = 0.
             
-            // // from A^n_i and A^(n-1)_i, find A^n_{i-1}
+            // from A^n_i and A^(n-1)_i, we find A^n_{i-1}
             for( unsigned int j=1 ; j<A_->dims_[1]-1 ; j++ ) {
                 for( unsigned int k=1 ; k<A_->dims_[2]-1 ; k++ ) {
                     // A^n_{i-1} = A^n_i 
                     ( *A3D  )( oversize_-2, j, k )  = ( *A3D  )( oversize_-1, j, k );
+                    // A^n_{i-1}+= dx/dt*(A^{n+1}_i-A^{n}_i), until here it is like an upwind scheme for the advection equation
+                    ( *A3D  )( oversize_-2, j, k ) += cell_length[0]/timestep* ( ( *A3D  )( oversize_-1, j  , k   )-   ( *A03D)( oversize_-1, j, k ));
                     // A^n_{i-1}+=dl/(2i) * (\nabla^2_\perp A)|^n_i
                     ( *A3D  )( oversize_-2, j, k ) += (cell_length[0]/2./i1) * ( ( *A3D  )( oversize_-1, j-1, k   )-2.*( *A3D )( oversize_-1, j, k )+( *A3D )( oversize_-1, j+1, k   ) )*one_ov_dy_sq; // y part
                     ( *A3D  )( oversize_-2, j, k ) += (cell_length[0]/2./i1) * ( ( *A3D  )( oversize_-1, j  , k-1 )-2.*( *A3D )( oversize_-1, j, k )+( *A3D )( oversize_-1, j  , k+1 ) )*one_ov_dz_sq; // z part

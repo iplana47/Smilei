@@ -184,7 +184,6 @@ void LaserEnvelopeAM::injectEnvelopeFromXmin( Patch *patch, Params &params, doub
     double t_previous_timestep    = time_dual-timestep; // x-c(t-dt), t=0
 
     vector<double>  position( 1, 0 );
-    vector<std::complex<double>> A_new( A_->dims_[1], 0 );
     //position[0] = cell_length[0]*( ( double )( patch->getCellStartingGlobalIndex( 0 ) )+( A_->isDual( 0 )?-0.5:0. ) + 1 );
     double pos1 = cell_length[1]*( ( double )( patch->getCellStartingGlobalIndex( 1 ) )+( A_->isDual( 1 )?-0.5:0. ) );
 
@@ -199,10 +198,8 @@ void LaserEnvelopeAM::injectEnvelopeFromXmin( Patch *patch, Params &params, doub
     if ( inject_envelope_from_this_patch ){
         position[0] = pos1;
         for( unsigned int j=0 ; j<A_->dims_[1] ; j++ ) { 
-            ( *A2D  )( oversize_-1, j ) += profile_->complexValueAt( position, t );
-            ( *A02D )( oversize_-1, j ) += profile_->complexValueAt( position, t_previous_timestep );
-            // A_new is A at t+dt and x position = 0
-            A_new[j]                     = profile_->complexValueAt( position, t+timestep );
+            ( *A2D  )( oversize_-1, j )  = profile_->complexValueAt( position, t );
+            ( *A02D )( oversize_-1, j )  = profile_->complexValueAt( position, t_previous_timestep );
             position[0] += cell_length[1];
         }
         
@@ -213,16 +210,26 @@ void LaserEnvelopeAM::injectEnvelopeFromXmin( Patch *patch, Params &params, doub
         }
         
         if (envelope_solver=="explicit_reduced_dispersion"){
-            // This solver needs another point on the x direction, for one timesteps, as initial condition 
-            // This point will be found by locally solving the paraxial wave equation
+            // This solver needs another point on the x direction, for one timestep, as initial condition. 
+            // This value will be found by locally solving the envelope wave equation.
+          
+            // Adapting the approach by C. Benedetti described in 
+            // F. Massimo et al., PPCF 2025 https://doi.org/10.1088/1361-6587/addc97,
+            // the second order derivatives in time and longitudinal coordinate are neglected
+            // under the paraxial and slowly varying envelope approximation.
+          
+            // The resulting envelope equation, that will be discretized with first order derivatives, is 
+            // \nabla^2_\perp A + 2*i*(dA/dl+dA/dt) = 0.
             
             int  j_glob = ( static_cast<ElectroMagnAM *>( patch->EMfields ) )->j_glob_;
             
-            // // from A^n_i and A^(n-1)_i, find A^n_{i-1}
+            // from A^n_i and A^(n-1)_i, we find A^n_{i-1}
             for( unsigned int j=std::max(3*isYmin,1) ; j<A_->dims_[1]-1 ; j++ ) { 
             
-                // // A^n_{i-1} = A^n_i
+                // A^n_{i-1} = A^n_i
                 ( *A2D  )( oversize_-2, j )  = ( *A2D  )( oversize_-1, j );
+                // A^n_{i-1}+= dl/dt*(A^{n+1}_i-A^{n}_i), until here it is like an upwind scheme for the advection equation
+                ( *A2D  )( oversize_-2, j ) += cell_length[0]/timestep*( ( *A2D  )( oversize_-1, j   )-   ( *A02D)( oversize_-1, j ));
                 // A^n_{i-1}+=dl/(2i) * (\nabla^2_\perp A)|^n_i
                 ( *A2D  )( oversize_-2, j ) += (cell_length[0]/2./i1) *( ( *A2D  )( oversize_-1, j-1 )-2.*( *A2D )( oversize_-1, j )+( *A2D )( oversize_-1, j+1 ) )*one_ov_dr_sq; // r part
                 ( *A2D  )( oversize_-2, j ) += (cell_length[0]/2./i1) *( ( *A2D  )( oversize_-1, j+1 )-   ( *A2D )( oversize_-1, j-1 ) ) * one_ov_2dr / ( ( double )( j_glob+j )*dr ); // r part 
