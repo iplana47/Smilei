@@ -11,6 +11,16 @@
 #include "Species.h"
 #include "Tools.h"
 
+struct ElectricFields {
+    double x;
+    double y;
+    double z;
+    double inv;
+    double abs;
+};
+
+
+
 class Particles;
 
 // std::string species->tunneling_model_ : choice of the tunneling model 
@@ -29,15 +39,16 @@ class IonizationTunnel : public Ionization
    public:
     inline IonizationTunnel(Params &params, Species *species);
 
-    inline void operator()(Particles *, unsigned int, unsigned int, std::vector<double> *, Patch *, Projector *,
+    inline void operator()(Particles *, unsigned int, unsigned int, vector<vector<double>*>, Patch *, Projector *,
                            int ipart_ref = 0) override;
 
    protected:
-    inline void computeIonizationCurrents(unsigned int ipart, int Z, unsigned int k_times, double invE, double* Ex, double* Ey, double* Ez, Patch *patch, Projector *Proj, Particles *particles);
+    inline void computeIonizationCurrents(unsigned int ipart, int Z, unsigned int k_times, ElectricFields E, Patch *patch, Projector *Proj, Particles *particles);
     inline void createNewElectrons(unsigned int ipart, unsigned int k_times, Particles *particles);
+    inline ElectricFields calculateElectricFields(vector<vector<double>*> Epart, unsigned int ipart);
 
    private:
-    inline double ionizationRate(const int Z, const double E);
+    inline double ionizationRate(const int Z, ElectricFields E);
 
     static constexpr double one_third = 1. / 3.;
     unsigned int atomic_number_;
@@ -126,16 +137,12 @@ IonizationTunnel<Model>::IonizationTunnel(Params &params, Species *species) : Io
 
 template <int Model>
 inline void IonizationTunnel<Model>::operator()(Particles *particles, unsigned int ipart_min, unsigned int ipart_max,
-                                                vector<double> *Epart, Patch *patch, Projector *Proj, int ipart_ref)
+                                                vector<vector<double>*> Epart, Patch *patch, Projector *Proj, int ipart_ref)
 {
     unsigned int Z, Zp1, newZ, k_times;
-    double E, invE, ran_p, Mult, D_sum, P_sum, Pint_tunnel;
+    double ran_p, Mult, D_sum, P_sum, Pint_tunnel;
     vector<double> IonizRate_tunnel(atomic_number_), Dnom_tunnel(atomic_number_);
-
-    int nparts = Epart->size() / 3;
-    double *Ex = &((*Epart)[0 * nparts]);
-    double *Ey = &((*Epart)[1 * nparts]);
-    double *Ez = &((*Epart)[2 * nparts]);
+    ElectricFields E;
 
     for (unsigned int ipart = ipart_min; ipart < ipart_max; ipart++) {
         // Current charge state of the ion
@@ -147,10 +154,8 @@ inline void IonizationTunnel<Model>::operator()(Particles *particles, unsigned i
         }
 
         // Absolute value of the electric field normalized in atomic units
-        E = EC_to_au * sqrt(*(Ex + ipart - ipart_ref) * *(Ex + ipart - ipart_ref) +
-                            *(Ey + ipart - ipart_ref) * *(Ey + ipart - ipart_ref) +
-                            *(Ez + ipart - ipart_ref) * *(Ez + ipart - ipart_ref));
-        if (E < 1e-10) {
+        E = calculateElectricFields(Epart, ipart);
+        if (E.abs < 1e-10) {
             continue;
         }
 
@@ -158,7 +163,6 @@ inline void IonizationTunnel<Model>::operator()(Particles *particles, unsigned i
         // Start of the Monte-Carlo routine
         // --------------------------------
 
-        invE = 1. / E;
         ran_p = patch->rand_->uniform();
         IonizRate_tunnel[Z] = ionizationRate(Z, E);
 
@@ -210,14 +214,28 @@ inline void IonizationTunnel<Model>::operator()(Particles *particles, unsigned i
             }
         }  // END Multiple ionization routine
 
-        computeIonizationCurrents(ipart, Z, k_times, invE, Ex, Ey, Ez, patch, Proj, particles);
+        computeIonizationCurrents(ipart, Z, k_times, E, patch, Proj, particles);
         createNewElectrons(ipart, k_times, particles);
 
     }  // Loop on particles
 }
 
 template<int Model>
-inline void IonizationTunnel<Model>::computeIonizationCurrents(unsigned int ipart, int Z, unsigned int k_times, double invE, double* Ex, double* Ey, double* Ez, Patch *patch, Projector *Proj, Particles* particles) 
+inline ElectricFields IonizationTunnel<Model>::calculateElectricFields(vector<vector<double>*> Epart, unsigned int ipart)
+{
+    ElectricFields E;
+    int nparts = Epart[0]->size() / 3;
+
+    E.x = (*Epart[0])[ipart];
+    E.y = (*Epart[0])[nparts+ipart];
+    E.z = (*Epart[0])[2*nparts+ipart];
+    E.abs = EC_to_au * sqrt(E.x*E.x + E.y*E.y + E.z*E.z);
+    E.inv = 1/E.abs;
+    return E;
+}
+
+template<int Model>
+inline void IonizationTunnel<Model>::computeIonizationCurrents(unsigned int ipart, int Z, unsigned int k_times, ElectricFields E, Patch *patch, Projector *Proj, Particles* particles) 
 {
     if (patch->EMfields->Jx_ != NULL) {  // For the moment ionization current is
                                          // not accounted for in AM geometry
@@ -227,13 +245,13 @@ inline void IonizationTunnel<Model>::computeIonizationCurrents(unsigned int ipar
         }
 
         double factorJion_0 = au_to_mec2 * EC_to_au * EC_to_au * invdt;
-        double factorJion = factorJion_0 * invE * invE;
+        double factorJion = factorJion_0 * E.inv * E.inv;
         factorJion *= TotalIonizPot;
 
         LocalFields Jion;
-        Jion.x = factorJion * *(Ex + ipart);
-        Jion.y = factorJion * *(Ey + ipart);
-        Jion.z = factorJion * *(Ez + ipart);
+        Jion.x = factorJion * E.x;
+        Jion.y = factorJion * E.y;
+        Jion.z = factorJion * E.z;
 
         Proj->ionizationCurrents(patch->EMfields->Jx_, patch->EMfields->Jy_, patch->EMfields->Jz_, *particles, ipart, Jion);
     }
@@ -265,30 +283,30 @@ inline void IonizationTunnel<Model>::createNewElectrons(unsigned int ipart, unsi
 
 
 template <int Model>
-inline double IonizationTunnel<Model>::ionizationRate(const int Z, const double E)
+inline double IonizationTunnel<Model>::ionizationRate(const int Z, ElectricFields E)
 {
-    double delta = gamma_tunnel[Z] / E;
+    double delta = gamma_tunnel[Z] / E.abs;
     return beta_tunnel[Z] * exp(-delta * one_third + alpha_tunnel[Z] * log(delta));
 }
 
 // Tong&Ling: 1
 template <>
-inline double IonizationTunnel<1>::ionizationRate(const int Z, const double E)
+inline double IonizationTunnel<1>::ionizationRate(const int Z, ElectricFields E)
 {
-    const double delta = gamma_tunnel[Z] / E;
-    return beta_tunnel[Z] * exp(-delta * one_third + alpha_tunnel[Z] * log(delta) - E * lambda_tunnel[Z]);
+    const double delta = gamma_tunnel[Z] / E.abs;
+    return beta_tunnel[Z] * exp(-delta * one_third + alpha_tunnel[Z] * log(delta) - E.abs * lambda_tunnel[Z]);
 }
 
 // BSI: 2
 template <>
-inline double IonizationTunnel<2>::ionizationRate(const int Z, const double E)
+inline double IonizationTunnel<2>::ionizationRate(const int Z, ElectricFields E)
 {
     constexpr double IH = 13.598434005136;
     double ratio_of_IPs = IH / IonizationTables::ionization_energy(atomic_number_, Z);
 
-    double BSI_rate_quadratic = 2.4 * (E * E) * ratio_of_IPs * ratio_of_IPs * au_to_w0;
-    double BSI_rate_linear = 0.8 * E * sqrt(ratio_of_IPs) * au_to_w0;
-    double delta = gamma_tunnel[Z] / E;
+    double BSI_rate_quadratic = 2.4 * (E.abs * E.abs) * ratio_of_IPs * ratio_of_IPs * au_to_w0;
+    double BSI_rate_linear = 0.8 * E.abs * sqrt(ratio_of_IPs) * au_to_w0;
+    double delta = gamma_tunnel[Z] / E.abs;
     double Tunnel_rate = beta_tunnel[Z] * exp(-delta / 3.0 + alpha_tunnel[Z] * log(delta));
 
     if (BSI_rate_quadratic >= BSI_rate_linear) {

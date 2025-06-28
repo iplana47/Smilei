@@ -597,7 +597,7 @@ void Species::dynamics( double time_dual,
 
                 patch->startFineTimer(4);
                 smpi->traceEventIfDiagTracing(diag_PartEventTracing, Tools::getOMPThreadNum(),0,5);
-                ( *Ionize )( particles, particles->first_index[ibin], particles->last_index[ibin], &smpi->dynamics_Epart[ithread], patch, Proj );
+                ( *Ionize )( particles, particles->first_index[ibin], particles->last_index[ibin], vector<vector<double>*>{&smpi->dynamics_Epart[ithread]}, patch, Proj );
 
                 smpi->traceEventIfDiagTracing(diag_PartEventTracing, Tools::getOMPThreadNum(),1,5);
                 patch->stopFineTimer(4);

@@ -24,7 +24,7 @@ IonizationFromRate::IonizationFromRate( Params &params, Species *species ) : Ion
 
 
 
-void IonizationFromRate::operator()( Particles *particles, unsigned int ipart_min, unsigned int ipart_max, vector<double> *, Patch *patch, Projector *, int )
+void IonizationFromRate::operator()( Particles *particles, unsigned int ipart_min, unsigned int ipart_max, vector<vector<double> *>, Patch *patch, Projector *, int )
 {
 
     //unsigned int Z, Zp1, newZ, k_times;

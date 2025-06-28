@@ -95,7 +95,7 @@ void SpeciesVAdaptive::scalarDynamics( double time_dual, unsigned int ispec,
 
         //Point to local thread dedicated buffers
         //Still needed for ionization
-        vector<double> *Epart = &( smpi->dynamics_Epart[ithread] );
+        vector<vector<double>*> Epart = {&( smpi->dynamics_Epart[ithread] ), };
 
         //Prepare for sorting
         for( unsigned int i=0; i<count.size(); i++ ) {
