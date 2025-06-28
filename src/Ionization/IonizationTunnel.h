@@ -34,6 +34,7 @@ class IonizationTunnel : public Ionization
 
    protected:
     inline void computeIonizationCurrents(unsigned int ipart, int Z, unsigned int k_times, double invE, double* Ex, double* Ey, double* Ez, Patch *patch, Projector *Proj, Particles *particles);
+    inline void createNewElectrons(unsigned int ipart, unsigned int k_times, Particles *particles);
 
    private:
     inline double ionizationRate(const int Z, const double E);
@@ -210,35 +211,14 @@ inline void IonizationTunnel<Model>::operator()(Particles *particles, unsigned i
         }  // END Multiple ionization routine
 
         computeIonizationCurrents(ipart, Z, k_times, invE, Ex, Ey, Ez, patch, Proj, particles);
-        // Creation of the new electrons
-        // (variable weights are used)
-        // -----------------------------
-
-        if (k_times != 0) {
-            new_electrons.createParticle();
-            int idNew = new_electrons.size() - 1;
-            for (unsigned int i = 0; i < new_electrons.dimension(); i++) {
-                new_electrons.position(i, idNew) = particles->position(i, ipart);
-            }
-            for (unsigned int i = 0; i < 3; i++) {
-                new_electrons.momentum(i, idNew) = particles->momentum(i, ipart) * ionized_species_invmass;
-            }
-            new_electrons.weight(idNew) = double(k_times) * particles->weight(ipart);
-            new_electrons.charge(idNew) = -1;
-
-            if (save_ion_charge_) {
-                ion_charge_.push_back(particles->charge(ipart));
-            }
-
-            // Increase the charge of the particle
-            particles->charge(ipart) += k_times;
-        }
+        createNewElectrons(ipart, k_times, particles);
 
     }  // Loop on particles
 }
 
 template<int Model>
-inline void IonizationTunnel<Model>::computeIonizationCurrents(unsigned int ipart, int Z, unsigned int k_times, double invE, double* Ex, double* Ey, double* Ez, Patch *patch, Projector *Proj, Particles* particles) {
+inline void IonizationTunnel<Model>::computeIonizationCurrents(unsigned int ipart, int Z, unsigned int k_times, double invE, double* Ex, double* Ey, double* Ez, Patch *patch, Projector *Proj, Particles* particles) 
+{
     if (patch->EMfields->Jx_ != NULL) {  // For the moment ionization current is
                                          // not accounted for in AM geometry
         double TotalIonizPot = 0.0;
@@ -256,6 +236,30 @@ inline void IonizationTunnel<Model>::computeIonizationCurrents(unsigned int ipar
         Jion.z = factorJion * *(Ez + ipart);
 
         Proj->ionizationCurrents(patch->EMfields->Jx_, patch->EMfields->Jy_, patch->EMfields->Jz_, *particles, ipart, Jion);
+    }
+}
+
+template<int Model>
+inline void IonizationTunnel<Model>::createNewElectrons(unsigned int ipart, unsigned int k_times, Particles *particles)
+{
+    if (k_times != 0) {
+        new_electrons.createParticle();
+        int idNew = new_electrons.size() - 1;
+        for (unsigned int i = 0; i < new_electrons.dimension(); i++) {
+            new_electrons.position(i, idNew) = particles->position(i, ipart);
+        }
+        for (unsigned int i = 0; i < 3; i++) {
+            new_electrons.momentum(i, idNew) = particles->momentum(i, ipart) * ionized_species_invmass;
+        }
+        new_electrons.weight(idNew) = double(k_times) * particles->weight(ipart);
+        new_electrons.charge(idNew) = -1;
+
+        if (save_ion_charge_) {
+            ion_charge_.push_back(particles->charge(ipart));
+        }
+
+        // Increase the charge of the particle
+        particles->charge(ipart) += k_times;
     }
 }
 
