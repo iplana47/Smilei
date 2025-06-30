@@ -76,12 +76,6 @@ waist_0                    = 20*um # this would be the waist of the fundamental 
 m                          = 1
 n                          = 0
 
-# The HG mode defined here has an amplitude 
-# that allows to have an integral equal to 1 on each transverse plane in vacuum.
-# This choice is useful for HG mode decomposition, 
-# but not very practical if you want to control the peak amplitude of the field.
-# Change the prefactor accordingly for the latter choice.
-
 # HG field of order HG_order at x=0 in one transverse direction
 # the full HG field will be the multiplication of this function
 # applied to two different transverse planes.
@@ -102,7 +96,11 @@ def HG_x_min_one_direction(HG_order,y,transverse_axis):
     curved_phase         = np.exp(1j*0.)  if x_SI==0 else np.exp(1j*(2.*np.pi/lambda0)*transverse_coord**2 / (2*R))
 
     # Compute the complex field using the partial HG mode formula 
-    prefactor            = (2/np.pi)**(1/4.)*1./np.sqrt( 2**HG_order * sp.gamma(HG_order+1) * w ) 
+    prefactor            = 1.
+    # If the following prefactor is decommented, 
+    # the integral of the intensity is equal to 1 on each transverse plane in vacuum.
+    # This choice is useful for HG mode decomposition.
+    # prefactor            = (2/np.pi)**(1/4.)*1./np.sqrt( 2**HG_order * sp.gamma(HG_order+1) * w ) 
         
     # remember that gamma(n+1) = n! when n is an integer
     transverse_component = sp.eval_hermite(HG_order, np.sqrt(2) * transverse_coord / w )     \

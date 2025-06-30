@@ -77,12 +77,6 @@ waist_0                    = 20*um # this would be the waist of the fundamental 
 p                          = 0
 l                          = 2
 
-# The LG mode defined here has an amplitude 
-# that allows to have an integral equal to 1 on each transverse plane in vacuum.
-# This choice is useful for LG mode decomposition, 
-# but not very practical if you want to control the peak amplitude of the field.
-# Change the prefactor accordingly for the latter choice.
-
 # LG field of order p,l at x=0 
 def LG_x_min(p,l,y,z):
     # all the coordinates in this function are converted in meters
@@ -100,7 +94,11 @@ def LG_x_min(p,l,y,z):
     curved_phase     = np.exp(1j*0.)  if x_SI==0 else np.exp(1j*(2.*np.pi/lambda0)*r**2 / (2*R))
         
     # Compute the complex field using the LG mode formula (only the part dependent on x and r)
-    prefactor        = 1./w* np.sqrt( 2 * sp.gamma(p+1) / (np.pi * (sp.gamma(p+ abs(l)+1)))   )
+    prefactor        = 1.
+    # If the following prefactor is decommented, 
+    # the integral of the intensity is equal to 1 on each transverse plane in vacuum.
+    # This choice is useful for LG mode decomposition.
+    # prefactor        = 1./w* np.sqrt( 2 * sp.gamma(p+1) / (np.pi * (sp.gamma(p+ abs(l)+1)))   )
             
     # remember that gamma(n+1) = n! when n is an integer
     radial_component = sp.eval_genlaguerre(p, abs(l), (2 * r**2 / w**2)) \
