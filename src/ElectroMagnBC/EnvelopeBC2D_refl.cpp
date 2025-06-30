@@ -75,7 +75,7 @@ void EnvelopeBC2D_refl::apply( LaserEnvelope *envelope, ElectroMagn *, Patch *pa
         
         for( unsigned int i=0; i<nx_p; i++ ) {
             for( unsigned int j=oversize_ ; j>0 ; j-- ) {
-                ( *A2D )  ( i, j-1 ) = 0. ; // (*A2D)(i,j,k);
+                ( *A2D   )( i, j-1 ) = 0. ; // (*A2D)(i,j,k);
                 ( *Phi2D )( i, j-1 ) = 0. ; // std::abs((*A2D)  (i,j)) * std::abs((*A2D)  (i,j)) * 0.5;
             }//j
         }//i
@@ -86,7 +86,7 @@ void EnvelopeBC2D_refl::apply( LaserEnvelope *envelope, ElectroMagn *, Patch *pa
         
         for( unsigned int i=0; i<nx_p; i++ ) {
             for( unsigned int j=ny_p-oversize_; j<ny_p ; j++ ) {
-                ( *A2D )  ( i, j ) = 0. ; // (*A2D)(i,j-1);
+                ( *A2D   )( i, j ) = 0. ; // (*A2D)(i,j-1);
                 ( *Phi2D )( i, j ) = 0. ; // std::abs((*A2D)  (i,j-1)) * std::abs((*A2D)  (i,j-1)) * 0.5;
             }//j
         }//i
