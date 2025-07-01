@@ -636,7 +636,7 @@ void SyncVectorPatch::sumAllComponents( std::vector<Field *> &fields, VectorPatc
 void SyncVectorPatch::exchangeE( Params &params, VectorPatch &vecPatches, SmileiMPI *smpi )
 {
     // full_B_exchange is true if (Buneman BC, Lehe, Bouchard or spectral solvers)
-    // E is exchange if spectral solver and/or at the end of initialisation of non-neutral plasma
+    // E is exchanged if spectral solver and/or at the end of initialisation of non-neutral plasma
 
     if( !params.full_B_exchange ) {
         SyncVectorPatch::exchangeAlongAllDirections<double,Field>( vecPatches.listEx_, vecPatches, smpi );
@@ -1320,61 +1320,64 @@ void SyncVectorPatch::exchangeSynchronizedPerDirection( std::vector<Field *> fie
         } // End for( ipatch )
     }
 
+    if( fields[0]->dims_.size()>1 ) {
+
     // Dimension 1
 #ifndef _NO_MPI_TM
     #pragma omp for schedule(static)
 #else
     #pragma omp single
 #endif
-    for( unsigned int ipatch=0 ; ipatch<fields.size() ; ipatch++ ) {
-        for (int iNeighbor=0 ; iNeighbor<2 ; iNeighbor++) {
-            if ( vecPatches( ipatch )->is_a_MPI_neighbor( 1, iNeighbor ) ) {
-                fields[ipatch]->create_sub_fields  ( 1, iNeighbor, oversize[1] );
-                fields[ipatch]->extract_fields_exch( 1, iNeighbor, oversize[1] );
+        for( unsigned int ipatch=0 ; ipatch<fields.size() ; ipatch++ ) {
+            for (int iNeighbor=0 ; iNeighbor<2 ; iNeighbor++) {
+                if ( vecPatches( ipatch )->is_a_MPI_neighbor( 1, iNeighbor ) ) {
+                    fields[ipatch]->create_sub_fields  ( 1, iNeighbor, oversize[1] );
+                    fields[ipatch]->extract_fields_exch( 1, iNeighbor, oversize[1] );
+                }
             }
+            if ( !dynamic_cast<cField*>( fields[ipatch] ) )
+                vecPatches( ipatch )->initExchange( fields[ipatch], 1, smpi );
+            else
+                vecPatches( ipatch )->initExchangeComplex( fields[ipatch], 1, smpi );
         }
-        if ( !dynamic_cast<cField*>( fields[ipatch] ) )
-            vecPatches( ipatch )->initExchange( fields[ipatch], 1, smpi );
-        else
-            vecPatches( ipatch )->initExchangeComplex( fields[ipatch], 1, smpi );
-    }
 
 #ifndef _NO_MPI_TM
     #pragma omp for schedule(static)
 #else
     #pragma omp single
 #endif
-    for( unsigned int ipatch=0 ; ipatch<fields.size() ; ipatch++ ) {
-        vecPatches( ipatch )->finalizeExchange( fields[ipatch], 1 );
+        for( unsigned int ipatch=0 ; ipatch<fields.size() ; ipatch++ ) {
+            vecPatches( ipatch )->finalizeExchange( fields[ipatch], 1 );
 
-        for (int iNeighbor=0 ; iNeighbor<2 ; iNeighbor++) {
-            if ( vecPatches( ipatch )->is_a_MPI_neighbor( 1, ( iNeighbor+1 )%2 ) ) {
-                fields[ipatch]->inject_fields_exch( 1, iNeighbor, oversize[1] );
-            }
-        }
-    }
-
-    #pragma omp for schedule(static) private(pt1,pt2)
-    for( unsigned int ipatch=0 ; ipatch<fields.size() ; ipatch++ ) {
-
-        gsp[1] = ( oversize[1] + 1 + fields[0]->isDual_[1] ); //Ghost size primal
-        if( vecPatches( ipatch )->MPI_me_ == vecPatches( ipatch )->MPI_neighbor_[1][0] ) {
-            field1 = static_cast<F *>( fields[vecPatches( ipatch )->neighbor_[1][0]-h0]  );
-            field2 = static_cast<F *>( fields[ipatch] );
-            pt1 = &( *field1 )( size[1]*nz_ );
-            pt2 = &( *field2 )( 0 );
-            for( unsigned int in = 0 ; in < nx_ ; in ++ ) {
-                //for (unsigned int in = oversize[0] ; in < nx_-oversize[0] ; in ++){ // <== This doesn't work. Why ??
-                unsigned int i = in * ny_*nz_;
-                for( unsigned int j = 0 ; j < oversize[1]*nz_ ; j++ ) {
-                    // Rewrite with memcpy ?
-                    pt2[i+j] = pt1[i+j] ;
-                    pt1[i+j+gsp[1]*nz_] = pt2[i+j+gsp[1]*nz_] ;
+            for (int iNeighbor=0 ; iNeighbor<2 ; iNeighbor++) {
+                if ( vecPatches( ipatch )->is_a_MPI_neighbor( 1, ( iNeighbor+1 )%2 ) ) {
+                    fields[ipatch]->inject_fields_exch( 1, iNeighbor, oversize[1] );
                 }
             }
-        } // End if ( MPI_me_ == MPI_neighbor_[1][0] )
+        }
 
-    } // End for( ipatch )
+        #pragma omp for schedule(static) private(pt1,pt2)
+        for( unsigned int ipatch=0 ; ipatch<fields.size() ; ipatch++ ) {
+
+            gsp[1] = ( oversize[1] + 1 + fields[0]->isDual_[1] ); //Ghost size primal
+            if( vecPatches( ipatch )->MPI_me_ == vecPatches( ipatch )->MPI_neighbor_[1][0] ) {
+                field1 = static_cast<F *>( fields[vecPatches( ipatch )->neighbor_[1][0]-h0]  );
+                field2 = static_cast<F *>( fields[ipatch] );
+                pt1 = &( *field1 )( size[1]*nz_ );
+                pt2 = &( *field2 )( 0 );
+                for( unsigned int in = 0 ; in < nx_ ; in ++ ) {
+                    //for (unsigned int in = oversize[0] ; in < nx_-oversize[0] ; in ++){ // <== This doesn't work. Why ??
+                    unsigned int i = in * ny_*nz_;
+                    for( unsigned int j = 0 ; j < oversize[1]*nz_ ; j++ ) {
+                        // Rewrite with memcpy ?
+                        pt2[i+j] = pt1[i+j] ;
+                        pt1[i+j+gsp[1]*nz_] = pt2[i+j+gsp[1]*nz_] ;
+                    }
+                }
+            } // End if ( MPI_me_ == MPI_neighbor_[1][0] )
+
+        } // End for( ipatch )
+    }
 
     // Dimension 0
 #ifndef _NO_MPI_TM
