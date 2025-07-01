@@ -785,7 +785,7 @@ def LaserEnvelopeGaussianAM( a0=1., omega=1., focus=None, waist=3., time_envelop
         def envelope_profile(x,r,t):
             return gaussian_beamAM(x,r)*vectorize(time_envelope)(t)
     elif (box_side=="xmin"):
-        def envelope_profile(x,r,t):
+        def envelope_profile(r,t):
             return gaussian_beamAM(0,r)*vectorize(time_envelope)(t)
     else:
         print("LaserEnvelope error: box_side must be either 'inside' or 'xmin'. ")
