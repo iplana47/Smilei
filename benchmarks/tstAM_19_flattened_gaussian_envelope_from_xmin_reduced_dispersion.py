@@ -104,7 +104,7 @@ center_laser                       = 1.8*laser_fwhm if envelope_box_side=="xmin"
 time_envelope                      = tgaussian(center=center_laser, fwhm=laser_fwhm)
 
 
-def FGB_x_min(N,x,r): 
+def FGB(N,x,r): 
     # Flattened Gaussian Beam (FGB) laser profile,
     # defined by the PALLAS team 
     # for the article P. Drobniak et al, PRAB 2023 (https://doi.org/10.1103/PhysRevAccelBeams.26.091302). 
@@ -115,7 +115,6 @@ def FGB_x_min(N,x,r):
     # for the definition of the FGB profile.
     
     N = int(round(N))               # order of the Flattened Gaussian Beam; N=0 is a Gaussian beam
-    x = 0                           # the profile is defined at xmin
     w_foc = waist_0 * np.sqrt(N+1)  # smilei units, with w0 the waist at focus of from order N = 0
     zr = 0.5 * (w_foc)**2           # smilei units, effective rayleigh length for FGB
     inv_zr = 1./zr
@@ -156,7 +155,7 @@ def FGB_x_min(N,x,r):
 # we pre-compute its value at x=0 at the grid points
 r_mesh         = np.linspace(-2*dr, (nr+2)*dr, nr+2*2+1) # Assumes primal and 2 ghost cells per direction
 
-FGB_at_xmin    = FGB_x_min(N,0,r_mesh)
+FGB_at_xmin    = FGB(N,0,r_mesh)
 
 # free memory
 r_mesh         = None
@@ -171,7 +170,7 @@ def envelope_profile(r, t):
     
     
 def envelope_profile_inside(x,r,t):
-    return FGB_x_min(N,x,r) * time_envelope(t)
+    return FGB(N,x,r) * time_envelope(t)
     
 LaserEnvelope(
     omega            = omega,
