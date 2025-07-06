@@ -1,5 +1,4 @@
 #include "IonizationTunnelEnvelopeAveraged.h"
-#include "IonizationTables.h"
 
 #include <cmath>
 
@@ -9,7 +8,7 @@
 using namespace std;
 
 
-IonizationTunnelEnvelopeAveraged::IonizationTunnelEnvelopeAveraged( Params &params, Species *species ) : IonizationTunnel<0>( params, species )
+IonizationTunnelEnvelopeAveraged::IonizationTunnelEnvelopeAveraged( Params &params, Species *species ) : IonizationTunnel( params, species )
 {
     DEBUG( "Creating the Tunnel Envelope Ionizaton Averaged class" );
 

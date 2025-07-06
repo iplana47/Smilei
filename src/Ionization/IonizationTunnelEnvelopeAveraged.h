@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "IonizationTunnel.h"
-#include "Tools.h"
 
 struct EnvelopeElectricFields : ElectricFields {
     double env;
@@ -17,7 +16,7 @@ struct EnvelopeElectricFields : ElectricFields {
 class Particles;
 
 //! calculate the particle tunnel ionization
-class IonizationTunnelEnvelopeAveraged : public IonizationTunnel<0>
+class IonizationTunnelEnvelopeAveraged : public IonizationTunnel
 {
 
 public:
