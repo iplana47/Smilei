@@ -425,11 +425,11 @@ void SimWindow::shift( VectorPatch &vecPatches, SmileiMPI *smpi, Params &params,
 #endif
     for( unsigned int ipatch = 0 ; ipatch < nPatches ; ipatch++ ) {
             mypatch = vecPatches.patches_[ipatch];
+            if (mypatch->EMfields->envelope) mypatch->EMfields->envelope->keep_injecting_laser_envelope = false;
             if( mypatch->isXmin() ) {
                 if (!params.multiple_decomposition){
                     mypatch->EMfields->emBoundCond[0]->apply(mypatch->EMfields, time_dual, mypatch);
                     if (mypatch->EMfields->envelope) mypatch->EMfields->envelope->EnvBoundCond[0]->apply(mypatch->EMfields->envelope, mypatch->EMfields, mypatch);
-                    if (mypatch->EMfields->envelope) mypatch->EMfields->envelope->keep_injecting_laser_envelope = false;
                 }
              }
     }
