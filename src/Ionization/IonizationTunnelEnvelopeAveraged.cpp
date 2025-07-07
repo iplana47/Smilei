@@ -29,7 +29,7 @@ IonizationTunnelEnvelopeAveraged::IonizationTunnelEnvelopeAveraged( Params &para
 }
 
 
-inline ElectricFields IonizationTunnelEnvelopeAveraged::calculateElectricFields(vector<vector<double>*> Epart, unsigned int ipart) {
+ElectricFields IonizationTunnelEnvelopeAveraged::calculateElectricFields(vector<vector<double>*> Epart, unsigned int ipart) {
     EnvelopeElectricFields E;
     int nparts = Epart[0]->size() / 3;
 
@@ -55,7 +55,7 @@ inline ElectricFields IonizationTunnelEnvelopeAveraged::calculateElectricFields(
     return E;
 }
 
-inline double IonizationTunnelEnvelopeAveraged::ionizationRate(const int Z, ElectricFields E)
+double IonizationTunnelEnvelopeAveraged::ionizationRate(const int Z, ElectricFields E)
 {
     double coeff_ellipticity_in_ionization_rate;
 
@@ -73,12 +73,12 @@ inline double IonizationTunnelEnvelopeAveraged::ionizationRate(const int Z, Elec
     return coeff_ellipticity_in_ionization_rate * ionizRate;
 }
 
-inline void IonizationTunnelEnvelopeAveraged::computeIonizationCurrents(unsigned int ipart, int Z, unsigned int k_times, ElectricFields E, Patch *patch, Projector *Proj, Particles* particles) 
+void IonizationTunnelEnvelopeAveraged::computeIonizationCurrents(unsigned int ipart, int Z, unsigned int k_times, ElectricFields E, Patch *patch, Projector *Proj, Particles* particles) 
 {
     // ---- Ionization ion current cannot be computed with the envelope ionization model
 }
 
-inline void IonizationTunnelEnvelopeAveraged::createNewElectrons(unsigned int ipart, unsigned int k_times, unsigned int Z, Particles *particles, Patch *patch, EnvelopeElectricFields E)
+void IonizationTunnelEnvelopeAveraged::createNewElectrons(unsigned int ipart, unsigned int k_times, unsigned int Z, Particles *particles, Patch *patch, EnvelopeElectricFields E)
 {
     double Aabs, p_perp; 
     if( k_times !=0 ) {

@@ -7,6 +7,8 @@
 #include "Params.h"
 #include "Species.h"
 #include "IonizationTunnel.h"
+#include "IonizationTunnelTL.h"
+#include "IonizationTunnelKAG.h"
 #include "Tools.h"
 
 //! this class create and associate the right ionization model to species
@@ -23,11 +25,11 @@ class IonizationFactory
             checkMaxCharge(species);
             checkNotLaserEnvelopeModel(params);
             if (bsi_model == "none") {
-                Ionize = new IonizationTunnel<0>( params, species ); // The original model included in Smilei
+                Ionize = new IonizationTunnel( params, species ); // The original model included in Smilei
             } else if (bsi_model == "Tong_Lin") {
-                Ionize = new IonizationTunnel<1>( params, species ); // Tong&Lin
+                Ionize = new IonizationTunnelTL( params, species ); // Tong&Lin
             } else if (bsi_model == "KAG") {
-                Ionize = new IonizationTunnel<2>( params, species ); // KAG
+                Ionize = new IonizationTunnelKAG( params, species ); // KAG
             }
             
         } else if( model == "tunnel_envelope_averaged" ) {
