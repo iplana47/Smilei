@@ -126,7 +126,7 @@ void IonizationTunnelEnvelopeAveraged::createNewElectrons(unsigned int ipart, un
                 // extract a random angle between 0 and 2pi, and assign p_perp = eA
                 double rand_times_2pi = patch->rand_->uniform_2pi(); // from uniform distribution between [0,2pi]
             
-                Aabs    = sqrt(2. * E.Phi_env+ipart );
+                Aabs    = sqrt(2. * E.Phi_env );
 
                 p_perp = Aabs;   // in circular polarization it corresponds to a0/sqrt(2)
                 new_electrons.momentum( 1, idNew ) += p_perp*cos(rand_times_2pi)/sqrt(2);
