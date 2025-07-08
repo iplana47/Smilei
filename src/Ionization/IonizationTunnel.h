@@ -25,10 +25,10 @@ class IonizationTunnel : public Ionization
     void operator()(Particles *, unsigned int, unsigned int, vector<vector<double>*>, Patch *, Projector *) override;
 
    protected:
-    virtual void computeIonizationCurrents(unsigned int ipart, int Z, unsigned int k_times, ElectricFields E, Patch *patch, Projector *Proj, Particles *particles);
-    virtual void createNewElectrons(unsigned int ipart, unsigned int k_times, unsigned int Z, Particles *particles, Patch *, ElectricFields);
+    virtual void computeIonizationCurrents(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields& E, Patch *patch, Projector *Proj, Particles *particles);
+    virtual void createNewElectrons(unsigned int ipart, unsigned int k_times, unsigned int Z, Particles *particles, Patch *, const ElectricFields&);
     virtual ElectricFields calculateElectricFields(vector<vector<double>*> Epart, unsigned int ipart);
-    virtual double ionizationRate(const int Z, ElectricFields E);
+    virtual double ionizationRate(unsigned int Z, const ElectricFields& E);
 
     static constexpr double one_third = 1. / 3.;
     unsigned int atomic_number_;

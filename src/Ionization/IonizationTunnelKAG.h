@@ -16,7 +16,7 @@ class IonizationTunnelKAG : public IonizationTunnel
     IonizationTunnelKAG(Params &params, Species *species) : IonizationTunnel(params, species) {};
 
    protected:
-    double ionizationRate(const int Z, ElectricFields E) override {
+    double ionizationRate(unsigned int Z, const ElectricFields& E) override {
         constexpr double IH = 13.598434005136;
         double ratio_of_IPs = IH / IonizationTables::ionization_energy(atomic_number_, Z);
 

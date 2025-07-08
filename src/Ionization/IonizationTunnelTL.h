@@ -33,7 +33,7 @@ class IonizationTunnelTL : public IonizationTunnel
     };
   
    protected:
-    double ionizationRate(const int Z, ElectricFields E) override {
+    double ionizationRate(unsigned int Z, const ElectricFields& E) override {
         return IonizationTunnel::ionizationRate(Z, E) * exp(-E.abs*lambda_tunnel[Z]);
     };
 

@@ -24,10 +24,10 @@ public:
     double ellipticity,cos_phi,sin_phi;
 
 protected:
-    void computeIonizationCurrents(unsigned int ipart, int Z, unsigned int k_times, ElectricFields E, Patch *patch, Projector *Proj, Particles *particles) override;
-    void createNewElectrons(unsigned int ipart, unsigned int k_times, unsigned int Z, Particles *particles, Patch *patch, EnvelopeElectricFields E);
+    void computeIonizationCurrents(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields& E, Patch *patch, Projector *Proj, Particles *particles) override;
+    void createNewElectrons(unsigned int ipart, unsigned int k_times, unsigned int Z, Particles *particles, Patch *patch, const EnvelopeElectricFields& E);
     ElectricFields calculateElectricFields(vector<vector<double>*> Epart, unsigned int ipart) override;
-    double ionizationRate(const int Z, ElectricFields E) override;
+    double ionizationRate(unsigned int Z, const ElectricFields& E) override;
 
 private:
     std::vector<double> Ip_times2_to_minus3ov4;

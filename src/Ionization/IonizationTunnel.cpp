@@ -159,7 +159,7 @@ ElectricFields IonizationTunnel::calculateElectricFields(vector<vector<double>*>
     return E;
 }
 
-void IonizationTunnel::computeIonizationCurrents(unsigned int ipart, int Z, unsigned int k_times, ElectricFields E, Patch *patch, Projector *Proj, Particles* particles) 
+void IonizationTunnel::computeIonizationCurrents(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields& E, Patch *patch, Projector *Proj, Particles* particles) 
 {
     if (patch->EMfields->Jx_ != NULL) {  // For the moment ionization current is
                                          // not accounted for in AM geometry
@@ -181,7 +181,7 @@ void IonizationTunnel::computeIonizationCurrents(unsigned int ipart, int Z, unsi
     }
 }
 
-void IonizationTunnel::createNewElectrons(unsigned int ipart, unsigned int k_times, unsigned int Z, Particles *particles, Patch *, ElectricFields)
+void IonizationTunnel::createNewElectrons(unsigned int ipart, unsigned int k_times, unsigned int Z, Particles *particles, Patch *, const ElectricFields&)
 {
     if (k_times != 0) {
         new_electrons.createParticle();
@@ -205,7 +205,7 @@ void IonizationTunnel::createNewElectrons(unsigned int ipart, unsigned int k_tim
 }
 
 
-double IonizationTunnel::ionizationRate(const int Z, ElectricFields E)
+double IonizationTunnel::ionizationRate(unsigned int Z, const ElectricFields& E)
 {
     double delta = gamma_tunnel[Z] / E.abs;
     return beta_tunnel[Z] * exp(-delta * one_third + alpha_tunnel[Z] * log(delta));
