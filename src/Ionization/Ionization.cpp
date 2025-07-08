@@ -22,6 +22,3 @@ Ionization::Ionization(Params &params, Species *species)
     
 }
 
-Ionization::~Ionization()
-{
-}

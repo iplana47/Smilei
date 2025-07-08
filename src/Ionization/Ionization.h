@@ -15,7 +15,7 @@ class Ionization
 public:
     //! Constructor for Ionization
     Ionization(Params &params, Species *species);
-    virtual ~Ionization();
+    virtual ~Ionization() {};
 
     //! Overloading of () operator
     virtual void operator()(Particles *, unsigned int, unsigned int, std::vector<std::vector<double> *>, Patch *, Projector *) {};

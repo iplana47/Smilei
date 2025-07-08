@@ -14,7 +14,6 @@ IonizationTunnel::IonizationTunnel(Params &params, Species *species) : Ionizatio
                                 // the Hartree coefficients; C_nl is set 
                                 // to 1 for a neutral atom
     double Blm           = 1.;
-    double ionization_tl_parameter;
     std::string tunneling_model = species->ionization_model_;
 
     // Ionization potential & quantum numbers (all in atomic units 1 au = 27.2116 eV)
@@ -47,11 +46,9 @@ IonizationTunnel::IonizationTunnel(Params &params, Species *species) : Ionizatio
         if(tunneling_model == "tunnel") {
             Anl = pow( 2, cst+1.0 ) / \
                 ( cst*tgamma( cst ) );
-        } else {
-            if( Z>0 ) {
-                Anl = pow( 2, cst+1.0 ) / \
+        } else if ( Z>0 ) {
+            Anl = pow( 2, cst+1.0 ) / \
                                 ( cst*tgamma( cst/2.0+Azimuthal_quantum_number[Z]+1 )*tgamma( cst/2.0-Azimuthal_quantum_number[Z]) );
-            }
         }
 
         alpha_tunnel[Z] = cst - 1.0 - abs_m;
