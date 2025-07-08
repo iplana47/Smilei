@@ -84,6 +84,7 @@ void IonizationTunnel::operator()(Particles *particles, unsigned int ipart_min, 
         if (E.abs < 1e-10) {
             continue;
         }
+        E.inv = 1/E.abs;
 
         // --------------------------------
         // Start of the Monte-Carlo routine
@@ -155,7 +156,6 @@ ElectricFields IonizationTunnel::calculateElectricFields(vector<vector<double>*>
     E.y = (*Epart[0])[nparts+ipart];
     E.z = (*Epart[0])[2*nparts+ipart];
     E.abs = EC_to_au * sqrt(E.x*E.x + E.y*E.y + E.z*E.z);
-    E.inv = 1/E.abs;
     return E;
 }
 
