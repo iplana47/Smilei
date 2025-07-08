@@ -1,15 +1,11 @@
 #ifndef IONIZATION_H
 #define IONIZATION_H
 
-#include <functional>
-#include <map>
-
 #include "Field.h"
 #include "Params.h"
 #include "Particles.h"
 #include "Patch.h"
 #include "Projector.h"
-#include "Tools.h"
 
 using namespace std;
 

@@ -2,7 +2,6 @@
 #define IONIZATIONTUNNELENVELOPEAVERAGED_H
 
 #include <cmath>
-
 #include <vector>
 
 #include "IonizationTunnel.h"

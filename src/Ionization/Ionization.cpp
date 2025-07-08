@@ -1,7 +1,5 @@
 #include "Ionization.h"
 
-#include <vector>
-
 #include "Species.h"
 
 using namespace std;
