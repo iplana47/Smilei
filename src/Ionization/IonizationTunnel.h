@@ -5,8 +5,9 @@
 #include <vector>
 
 #include "Ionization.h"
-#include "Particles.h"
-#include "Species.h"
+
+class Particles;
+class Species;
 
 struct ElectricFields {
     double x;

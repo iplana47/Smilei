@@ -1,6 +1,8 @@
 #include "IonizationTunnel.h"
 #include "IonizationTables.h"
 #include "Tools.h"
+#include "Particles.h"
+#include "Species.h"
 
 IonizationTunnel::IonizationTunnel(Params &params, Species *species) : Ionization(params, species)
 {
