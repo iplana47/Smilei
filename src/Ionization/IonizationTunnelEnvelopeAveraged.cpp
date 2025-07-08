@@ -73,12 +73,12 @@ double IonizationTunnelEnvelopeAveraged::ionizationRate(unsigned int Z, const El
     return coeff_ellipticity_in_ionization_rate * ionizRate;
 }
 
-void IonizationTunnelEnvelopeAveraged::computeIonizationCurrents(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields& E, Patch *patch, Projector *Proj, Particles* particles) 
+void IonizationTunnelEnvelopeAveraged::computeIonizationCurrents(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields& E, const SimulationContext& context) 
 {
     // ---- Ionization ion current cannot be computed with the envelope ionization model
 }
 
-void IonizationTunnelEnvelopeAveraged::createNewElectrons(unsigned int ipart, unsigned int k_times, unsigned int Z, Particles *particles, Patch *patch, const EnvelopeElectricFields& E)
+void IonizationTunnelEnvelopeAveraged::createNewElectrons(unsigned int ipart, unsigned int Z, unsigned int k_times, const EnvelopeElectricFields& E, const SimulationContext& context)
 {
     double Aabs, p_perp; 
     if( k_times !=0 ) {
@@ -92,10 +92,10 @@ void IonizationTunnelEnvelopeAveraged::createNewElectrons(unsigned int ipart, un
 
             // The new electron is in the same position of the atom where it originated from
             for( unsigned int i=0; i<new_electrons.dimension(); i++ ) {
-                new_electrons.position( i, idNew )=particles->position( i, ipart );
+                new_electrons.position( i, idNew )=context.particles->position( i, ipart );
             }
             for( unsigned int i=0; i<3; i++ ) {
-                new_electrons.momentum( i, idNew ) = particles->momentum( i, ipart )*ionized_species_invmass;
+                new_electrons.momentum( i, idNew ) = context.particles->momentum( i, ipart )*ionized_species_invmass;
             }
 
        
@@ -103,7 +103,7 @@ void IonizationTunnelEnvelopeAveraged::createNewElectrons(unsigned int ipart, un
 
             if (ellipticity==0.){ // linear polarization
 
-                double rand_gaussian  = patch->rand_->normal();
+                double rand_gaussian  = context.patch->rand_->normal();
 
                 Aabs    = sqrt(2. * E.Phi_env ); // envelope of the laser vector potential component along the polarization direction
             
@@ -124,7 +124,7 @@ void IonizationTunnelEnvelopeAveraged::createNewElectrons(unsigned int ipart, un
             } else if (ellipticity==1.){ // circular polarization
 
                 // extract a random angle between 0 and 2pi, and assign p_perp = eA
-                double rand_times_2pi = patch->rand_->uniform_2pi(); // from uniform distribution between [0,2pi]
+                double rand_times_2pi = context.patch->rand_->uniform_2pi(); // from uniform distribution between [0,2pi]
             
                 Aabs    = sqrt(2. * E.Phi_env );
 
@@ -139,16 +139,16 @@ void IonizationTunnelEnvelopeAveraged::createNewElectrons(unsigned int ipart, un
             }
 
             if( save_ion_charge_ ) {
-                ion_charge_.push_back( particles->charge( ipart ) );
+                ion_charge_.push_back( context.particles->charge( ipart ) );
             }
             
             // weight and charge of the new electron
-            new_electrons.weight( idNew )= particles->weight( ipart );
+            new_electrons.weight( idNew )= context.particles->weight( ipart );
             new_electrons.charge( idNew )= -1;
 
         } // end loop on electrons to create
 
         // Increase the charge of the ion particle
-        particles->charge( ipart ) += k_times;
+        context.particles->charge( ipart ) += k_times;
     } // end if electrons are created
 }

@@ -69,6 +69,7 @@ void IonizationTunnel::operator()(Particles *particles, unsigned int ipart_min, 
     double ran_p, Mult, D_sum, P_sum, Pint_tunnel;
     vector<double> IonizRate_tunnel(atomic_number_), Dnom_tunnel(atomic_number_);
     ElectricFields E;
+    SimulationContext context { particles, patch, Proj };
 
     for (unsigned int ipart = ipart_min; ipart < ipart_max; ipart++) {
         // Current charge state of the ion
@@ -141,8 +142,8 @@ void IonizationTunnel::operator()(Particles *particles, unsigned int ipart_min, 
             }
         }  // END Multiple ionization routine
 
-        computeIonizationCurrents(ipart, Z, k_times, E, patch, Proj, particles);
-        createNewElectrons(ipart, k_times, Z, particles, patch, E);
+        computeIonizationCurrents(ipart, Z, k_times, E, context);
+        createNewElectrons(ipart, Z, k_times, E, context);
 
     }  // Loop on particles
 }
@@ -159,9 +160,9 @@ ElectricFields IonizationTunnel::calculateElectricFields(vector<vector<double>*>
     return E;
 }
 
-void IonizationTunnel::computeIonizationCurrents(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields& E, Patch *patch, Projector *Proj, Particles* particles) 
+void IonizationTunnel::computeIonizationCurrents(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields& E, const SimulationContext& context) 
 {
-    if (patch->EMfields->Jx_ != NULL) {  // For the moment ionization current is
+    if (context.patch->EMfields->Jx_ != NULL) {  // For the moment ionization current is
                                          // not accounted for in AM geometry
         double TotalIonizPot = 0.0;
         for (unsigned int i=0; i<k_times; i++) {
@@ -177,30 +178,30 @@ void IonizationTunnel::computeIonizationCurrents(unsigned int ipart, unsigned in
         Jion.y = factorJion * E.y;
         Jion.z = factorJion * E.z;
 
-        Proj->ionizationCurrents(patch->EMfields->Jx_, patch->EMfields->Jy_, patch->EMfields->Jz_, *particles, ipart, Jion);
+        context.Proj->ionizationCurrents(context.patch->EMfields->Jx_, context.patch->EMfields->Jy_, context.patch->EMfields->Jz_, *(context.particles), ipart, Jion);
     }
 }
 
-void IonizationTunnel::createNewElectrons(unsigned int ipart, unsigned int k_times, unsigned int Z, Particles *particles, Patch *, const ElectricFields&)
+void IonizationTunnel::createNewElectrons(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields&, const SimulationContext& context)
 {
     if (k_times != 0) {
         new_electrons.createParticle();
         int idNew = new_electrons.size() - 1;
         for (unsigned int i = 0; i < new_electrons.dimension(); i++) {
-            new_electrons.position(i, idNew) = particles->position(i, ipart);
+            new_electrons.position(i, idNew) = context.particles->position(i, ipart);
         }
         for (unsigned int i = 0; i < 3; i++) {
-            new_electrons.momentum(i, idNew) = particles->momentum(i, ipart) * ionized_species_invmass;
+            new_electrons.momentum(i, idNew) = context.particles->momentum(i, ipart) * ionized_species_invmass;
         }
-        new_electrons.weight(idNew) = double(k_times) * particles->weight(ipart);
+        new_electrons.weight(idNew) = double(k_times) * context.particles->weight(ipart);
         new_electrons.charge(idNew) = -1;
 
         if (save_ion_charge_) {
-            ion_charge_.push_back(particles->charge(ipart));
+            ion_charge_.push_back(context.particles->charge(ipart));
         }
 
         // Increase the charge of the particle
-        particles->charge(ipart) += k_times;
+        context.particles->charge(ipart) += k_times;
     }
 }
 
