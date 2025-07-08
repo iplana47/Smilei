@@ -28,8 +28,9 @@ public:
     std::vector<short> ion_charge_;
 
 protected:
-    double eV_to_au;
-    double au_to_mec2;
+    // Normalization constant from Smilei normalization to/from atomic units
+    static constexpr double eV_to_au = 1.0 / 27.2116;
+    static constexpr double au_to_mec2 = 27.2116/510.998e3;
     double EC_to_au;
     double au_to_w0;
 
@@ -39,10 +40,6 @@ protected:
     unsigned int nDim_field;
     unsigned int nDim_particle;
     double ionized_species_invmass;
-
-private:
-
-
 };
 
 #endif
