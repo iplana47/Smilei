@@ -6,8 +6,8 @@ nx = 192
 Lx = nx * dx
 npatch_x = 32
 laser_fwhm = 20. 
-center_laser = Lx-2.*laser_fwhm 
-time_start_moving_window =  0.
+center_laser = 2.*laser_fwhm 
+time_start_moving_window =  Lx
 
 
 Main(
@@ -53,7 +53,7 @@ Species(
     c_part_max = 1.0,
     mass = 1.0,
     charge = -1.0,
-    charge_density = polygonal(xpoints=[center_laser+2.*laser_fwhm,center_laser+2.1*laser_fwhm,15000,20000],xvalues=[0.,0.0045,0.0045,0.]),
+    charge_density = polygonal(xpoints=[dx,10*dx,15000,20000],xvalues=[0.,0.0045,0.0045,0.]),
     mean_velocity = [0.0, 0.0, 0.0],
     temperature = [0.0],
     pusher = "ponderomotive_boris", # pusher to interact with envelope
@@ -64,12 +64,12 @@ Species(
     ],
 )
 
-LaserEnvelopePlanar1D( # linear regime of LWFA
-    a0              = 0.1,     
+LaserEnvelopePlanar1D( 
+    box_side        = "xmin",
+    a0              = 0.1,   # linear regime of LWFA  
     time_envelope   = tgaussian(center=center_laser, fwhm=laser_fwhm),
     envelope_solver = 'explicit_reduced_dispersion',
-     Envelope_boundary_conditions = [ ["reflective", "reflective"],
-     ],
+    Envelope_boundary_conditions = [ ["reflective", "reflective"],],
 )
 
 

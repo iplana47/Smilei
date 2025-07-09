@@ -8,8 +8,8 @@ Lx = nx * dx
 Ltrans = ntrans*dtrans
 npatch_x = 32
 laser_fwhm = 20. 
-center_laser = Lx-2.*laser_fwhm
-time_start_moving_window =  0.
+center_laser = 2.*laser_fwhm 
+time_start_moving_window = Lx
 
 
 Main(
@@ -32,7 +32,6 @@ Main(
 
     solve_poisson = False,
     print_every = 100,
-
     use_BTIS3_interpolation = True,
 
 )
@@ -49,6 +48,7 @@ LoadBalancing(
     frozen_particle_load = 0.1
 )
 
+start_plasma = 5*dx
 Species(
     name = "electron",
     position_initialization = "regular",
@@ -57,7 +57,7 @@ Species(
     c_part_max = 1.0,
     mass = 1.0,
     charge = -1.0,
-    charge_density = polygonal(xpoints=[center_laser+2.*laser_fwhm,center_laser+2.1*laser_fwhm,15000,20000],xvalues=[0.,0.0045,0.0045,0.]),
+    charge_density = polygonal(xpoints=[start_plasma+2.*laser_fwhm,start_plasma+2.1*laser_fwhm,15000,20000],xvalues=[0.,0.0045,0.0045,0.]),
     mean_velocity = [0.0, 0.0, 0.0],
     temperature = [0.0],
     pusher = "ponderomotive_borisBTIS3", # pusher to interact with envelope
@@ -69,16 +69,17 @@ Species(
     ],
 )
 
-LaserEnvelopeGaussian2D( # linear regime of LWFA
-    a0              = 0.1,     
+LaserEnvelopeGaussian2D(
+    box_side        = "xmin",
+    a0              = 0.1,  # linear regime of LWFA  
     focus           = [center_laser, Main.grid_length[1]/2.],
     waist           = 30.,
     time_envelope   = tgaussian(center=center_laser, fwhm=laser_fwhm),
-    envelope_solver = 'explicit',
+    envelope_solver = 'explicit_reduced_dispersion',
     Envelope_boundary_conditions = [ ["reflective", "reflective"],
         ["reflective", "reflective"], ],
+    
 )
-
 
 Checkpoints(
     dump_step = 0,

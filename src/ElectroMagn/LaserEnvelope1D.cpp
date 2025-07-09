@@ -68,7 +68,7 @@ LaserEnvelope1D::LaserEnvelope1D( LaserEnvelope *envelope, Patch *patch, Params 
 }
 
 
-void LaserEnvelope1D::initEnvelope( Patch *patch, ElectroMagn *EMfields )
+void LaserEnvelope1D::initEnvelopeInsideTheWindow( Patch *patch, ElectroMagn *EMfields )
 {
     cField1D *A1D          = static_cast<cField1D *>( A_ );
     cField1D *A01D         = static_cast<cField1D *>( A0_ );
@@ -90,7 +90,6 @@ void LaserEnvelope1D::initEnvelope( Patch *patch, ElectroMagn *EMfields )
     
     // position[0]: x coordinate
     // t: time coordinate --> x/c for the envelope initialization
-    
     position[0]           = cell_length[0]*( ( double )( patch->getCellStartingGlobalIndex( 0 ) )+( A1D->isDual( 0 )?-0.5:0. ) );
     t                     = position[0];          // x-ct     , t=0
     t_previous_timestep   = position[0]+timestep; // x-c(t-dt), t=0
@@ -130,6 +129,47 @@ void LaserEnvelope1D::initEnvelope( Patch *patch, ElectroMagn *EMfields )
     
 }
 
+void LaserEnvelope1D::injectEnvelopeFromXmin( Patch *patch, Params &params, double time_dual )
+{
+    cField1D *A1D                 = static_cast<cField1D *>( A_ );
+    cField1D *A01D                = static_cast<cField1D *>( A0_ );
+    
+    double t                      = time_dual;          // x-ct     , t=0
+    double t_previous_timestep    = time_dual-timestep; // x-c(t-dt), t=0
+    
+    // oversize
+    int oversize_                 = params.oversize[0];
+    
+    bool inject_envelope_from_this_patch = ( patch->isBoundary(0) ) && (  patch->isXmin() );
+    
+    // Impose the envelope value for x=0 at time t and t-dt 
+    if ( inject_envelope_from_this_patch ){    
+        ( *A1D  )( oversize_-1 )  = profile_->complexValueAt( t);
+        ( *A01D )( oversize_-1 )  = profile_->complexValueAt( t_previous_timestep );
+        
+        if (envelope_solver=="explicit_reduced_dispersion"){
+            // This solver needs another point on the x direction, for one timestep, as initial condition. 
+            // This value will be found by locally solving the envelope wave equation.
+            
+            // Adapting the approach by C. Benedetti described in 
+            // F. Massimo et al., PPCF 2025 https://doi.org/10.1088/1361-6587/addc97,
+            // the second order derivatives in time and longitudinal coordinate are neglected
+            // under the paraxial and slowly varying envelope approximation.
+            
+            // The resulting envelope equation, that will be discretized with first order derivatives, is 
+            // \nabla^2_\perp A + 2*i*(dA/dx+dA/dt) = 0.
+            
+            // from A^n_i and A^(n-1)_i, we find A^n_{i-1}
+            
+            // A^n_{i-1} = A^n_i 
+            ( *A1D  )( oversize_-2 )  = ( *A1D  )( oversize_-1 );
+            // A^n_{i-1}+= dx/dt*(A^{n+1}_i-A^{n}_i), until here it is like an upwind scheme for the advection equation
+            ( *A1D  )( oversize_-2 ) += cell_length[0]/timestep*(( *A1D  )( oversize_-1 )-( *A01D  )( oversize_-1 ));
+            
+        }  // end if envelope_solver=="explicit_reduced_dispersion"
+    }
+    
+}
 
 LaserEnvelope1D::~LaserEnvelope1D()
 {

@@ -23,6 +23,16 @@ LaserEnvelope::LaserEnvelope( Params &params, Patch *patch ) :
     
 {
 
+    // Read initialization method for the laser envelope
+    PyTools::extract( "box_side", box_side, "LaserEnvelope" );
+    if ( (box_side != "xmin") && (box_side != "inside") ){
+        ERROR("Unknown box_side - only 'inside_window' and 'from_xmin' are available. ");
+    }
+    if (box_side=="xmin"){
+        keep_injecting_laser_envelope = true;
+    }
+  
+    // Read envelope profile
     PyObject *profile = NULL;
     if( !PyTools::extract_pyProfile( "envelope_profile", profile, "LaserEnvelope" ) ) {
         MESSAGE( "No envelope profile set !" );
@@ -33,21 +43,26 @@ LaserEnvelope::LaserEnvelope( Params &params, Patch *patch ) :
         try_numpy = true; // use numpy for quicker initialisation in 3D
     }
     
-    profile_ = new Profile( profile, params.nDim_field+1, "envelope", params, try_numpy );
+    if (box_side=="inside"){
+        profile_ = new Profile( profile, params.nDim_field+1, "envelope", params, try_numpy );
+    } else { // box_side=="xmin"
+        profile_ = new Profile( profile, params.nDim_field  , "envelope", params, try_numpy );
+    }
     // params.Laser_Envelope_model = true;
     
     ostringstream name( "" );
     name << "Laser Envelope " << endl;
     
-    // extract laser frequency
+    // Read laser frequency
     PyTools::extract( "omega", omega, "LaserEnvelope" );
 
-    // Read laser envelope parameters
+    // Read solver for envelope equation 
     PyTools::extract( "envelope_solver", envelope_solver, "LaserEnvelope" );
 
     if ( (envelope_solver != "explicit") && (envelope_solver != "explicit_reduced_dispersion") ){
         ERROR("Unknown envelope_solver - only 'explicit' and 'explicit_reduced_dispersion' are available. ");
     }
+    
     WARNING("CFL: no general CFL condition is available for the envelope solvers. The maximum stable timestep may be lower than the CFL limit of the electromagnetic solver.");
     if (envelope_solver == "explicit"){
         WARNING("Envelope solver: more accurate results (albeit at a slightly higher computational cost), expecially at longer distances, require the 'explicit_reduced_dispersion' envelope solver.")
@@ -55,7 +70,8 @@ LaserEnvelope::LaserEnvelope( Params &params, Patch *patch ) :
     if (envelope_solver == "explicit_reduced_dispersion"){
         WARNING("CFL: The maximum stable timestep of the 'explicit_reduced_dispersion' envelope solver may be lower than the one of the 'explicit' solver.")
     }
-    
+
+    // Read laser ellipticity
     PyTools::extract( "polarization_phi", polarization_phi, "LaserEnvelope" );
     PyTools::extract( "ellipticity", ellipticity, "LaserEnvelope" );
     if ((ellipticity != 0.) and (ellipticity != 1.)){
@@ -69,9 +85,10 @@ LaserEnvelope::LaserEnvelope( Params &params, Patch *patch ) :
         ellipticity_factor = 2.;
     }
 
+    // Read laser polarization angle (relevant only for the momentum initialization of electrons born from ionization)
     params.envelope_polarization_phi = polarization_phi;
   
-    // auxiliary quantities
+    // auxiliary quantities used in the envelope solver
     std::complex<double>     i1 = std::complex<double>( 0., 1 ); // imaginary unit
     double k0 = omega; // normalized laser wavenumber
     i1_2k0_over_2dx = i1*2.*k0/2./cell_length[0];
@@ -109,6 +126,7 @@ LaserEnvelope::LaserEnvelope( LaserEnvelope *envelope, Patch *patch, Params &par
     ellipticity(envelope->ellipticity),
     ellipticity_factor(envelope->ellipticity_factor),
     envelope_solver(envelope->envelope_solver),
+    box_side(envelope->box_side),
     one_ov_2dt(envelope->one_ov_2dt),
     dt_sq(envelope->dt_sq),
     one_ov_dx_sq(envelope->one_ov_dx_sq),
@@ -127,7 +145,8 @@ LaserEnvelope::LaserEnvelope( LaserEnvelope *envelope, Patch *patch, Params &par
     i1_2k0_over_2dl( envelope->i1_2k0_over_2dl ),
     one_plus_ik0dt( envelope->one_plus_ik0dt ),
     one_plus_ik0dt_ov_one_plus_k0sq_dtsq( envelope->one_plus_ik0dt_ov_one_plus_k0sq_dtsq ),
-    delta(envelope->delta)
+    delta(envelope->delta),
+    keep_injecting_laser_envelope(envelope->keep_injecting_laser_envelope)
 {
     if( n_moved ==0 ) {
         profile_ = new Profile( envelope->profile_ );

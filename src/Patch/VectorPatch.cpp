@@ -1141,6 +1141,24 @@ void VectorPatch::solveEnvelope( Params &params, SimWindow *simWindow, int, doub
 
 } // END solveEnvelope
 
+
+
+void VectorPatch::injectEnvelopeFromXminIfNeeded( Params &params, double time_dual )
+{
+
+    if (  (( *this )( 0 )->EMfields->envelope!=NULL ) 
+       && (( *this )( 0 )->EMfields->envelope->box_side=="xmin") 
+       && (( *this )( 0 )->EMfields->envelope->keep_injecting_laser_envelope) ) 
+    {
+        #pragma omp for schedule(static)
+        for( unsigned int ipatch=0 ; ipatch<this->size() ; ipatch++ ) {
+            // Apply boundary conditions for envelope A to inject the laser
+            ( *this )( ipatch )->EMfields->envelope->injectEnvelopeFromXmin( ( *this )( ipatch ), params, time_dual );
+        }
+    }
+
+} // END injectEnvelopeFromXminIfNeeded
+
 void VectorPatch::finalizeSyncAndBCFields( Params &params, SmileiMPI *smpi, SimWindow *simWindow,
         double time_dual, Timers &timers, int itime )
 {
@@ -4312,6 +4330,7 @@ void VectorPatch::runEnvelopeModule( Params &params,
         SimWindow *simWindow,
         double time_dual, Timers &timers, int itime )
 {
+    
     // interpolate envelope for susceptibility deposition, project susceptibility for envelope equation, momentum advance
     ponderomotiveUpdateSusceptibilityAndMomentum( params, smpi, simWindow, time_dual, timers, itime );
 
@@ -4320,6 +4339,9 @@ void VectorPatch::runEnvelopeModule( Params &params,
 
     // solve envelope equation and comm envelope
     solveEnvelope( params, simWindow, itime, time_dual, timers, smpi );
+    
+    // if the envelope initialization method is "xmin", act on the Xmin boundary conditions to inject the envelope
+    injectEnvelopeFromXminIfNeeded(params, time_dual);
 
     // interp updated envelope for position advance, update positions and currents for Maxwell's equations
     ponderomotiveUpdatePositionAndCurrents( params, smpi, simWindow, time_dual, timers, itime );
@@ -4405,10 +4427,13 @@ void VectorPatch::ponderomotiveUpdatePositionAndCurrents( Params &params,
 void VectorPatch::initNewEnvelope( Params & )
 {
     if( ( *this )( 0 )->EMfields->envelope!=NULL ) {
-        // for all patches, init new envelope from input namelist parameters
-        for( unsigned int ipatch=0 ; ipatch<this->size() ; ipatch++ ) {
-            ( *this )( ipatch )->EMfields->envelope->initEnvelope( ( *this )( ipatch ), ( *this )( ipatch )->EMfields );
-        } // end loop on patches
+      
+        if (( *this )( 0 )->EMfields->envelope->box_side == "inside"){
+            // for all patches, init new envelope inside the window from input namelist parameters
+            for( unsigned int ipatch=0 ; ipatch<this->size() ; ipatch++ ) {
+                ( *this )( ipatch )->EMfields->envelope->initEnvelopeInsideTheWindow( ( *this )( ipatch ), ( *this )( ipatch )->EMfields );
+            } // end loop on patches
+        }
     }
 } // END initNewEnvelope
 

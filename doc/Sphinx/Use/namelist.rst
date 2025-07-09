@@ -1819,13 +1819,14 @@ this option.
   cylindrical symmetry, i.e. only one azimuthal mode. Therefore, to use it the user must choose
   ``number_of_AM = 1``.
 
-Contrarily to a standard Laser initialized with the Silver-Müller
-boundary conditions, the laser envelope will be entirely initialized inside
-the simulation box at the start of the simulation.
+Contrarily to a standard ``Laser`` initialized with the Silver-Müller
+boundary conditions, the laser envelope can be initialized either entirely inside
+the simulation box at the start of the simulation (default method) or as a standard ``Laser`` through boundary conditions at the left ``x`` border of the window.
+See ``box_side`` for more details.
 
 Currently only one laser pulse of a given frequency propagating in the positive
 `x` direction can be speficified. However, a multi-pulse set-up can be initialized
-if a multi-pulse profile is specified, e.g. if the temporal profile is given by two adjacents gaussian functions.
+e.g. if the envelope profile is given by two adjacents gaussian functions.
 The whole multi-pulse profile would have the same carrier frequency and would propagate in the positive
 `x` direction. For the moment it is not possible to specify more than one laser envelope profile, e.g.
 two counterpropagating lasers, or two lasers with different carrier frequency.
@@ -1843,8 +1844,9 @@ Thus, space-time profiles with variation scales larger than this length should b
 Following is the generic laser envelope creator ::
 
     LaserEnvelope(
-        omega          = 1.,
-        envelope_solver = 'explicit',
+        omega            = 1.,
+        envelope_solver  = 'explicit',
+        box_side         = "inside",
         envelope_profile = envelope_profile,
         Envelope_boundary_conditions = [["reflective"]]
         polarization_phi = 0.,
@@ -1857,21 +1859,35 @@ Following is the generic laser envelope creator ::
    :default: ``1.``
 
    The laser angular frequency.
+   
+.. py:data:: box_side
+
+   :default: ``"inside"``
+
+   The way the laser envelope is integrated in the simulation. Currently only ``"inside"`` and ``"xmin"`` are supported.
+   ``"inside"``: the laser envelope is added only at the start of the simulation. In this case, the temporal coordinate of the laser envelope profile is
+   interpreted as the coordinate along the ``x`` axis. If the laser puse length is short enough, it can entirely fit inside the simulation window.
+   ``"xmin"``: the laser is progressively injected in the window from the left window border in the ``x`` direction. The time coordinate
+   in the laser envelope profile is treated as in a ``Laser`` block. See also the parameter ``envelope_profile``. 
 
 .. py:data:: envelope_profile
 
    :type: a *python* function or a :doc:`python profile <profiles>`
    :default: None
 
-   The laser space-time profile, so if the geometry is ``3Dcartesian`` a function of 4 arguments (3 for space, 1 for time) is necessary.
-   Please note that the envelope will be entirely initialized in the simulation box
-   already at the start of the simulation, so the time coordinate will be applied
-   to the ``x`` direction instead of time. It is recommended to initialize the
-   laser envelope in vacuum, separated from the plasma, to avoid unphysical
+   The complex laser envelope profile.
+   If the parameter ``box_side`` is ``"inside"``, the profile arguments are all the coordinates and time.
+   If the parameter ``box_side`` is ``"xmin"``, the profile arguments are all the transverse coordinates at plane ``x=0`` and time,
+   as in a ``Laser`` block with ``box_side="xmin"``.
+   For example, if the geometry is ``"3Dcartesian"``, a complex-valued function of 4 arguments (3 for space, 1 for time) is necessary if ``box_side="inside"``.
+   Instead, if ``box_side="xmin"``, the needed profile is a complex-valued function of 3 arguments (2 for the transverse coordinates, 1 for time).
+   See also the parameter ``box_side``. 
+   It is recommended to initialize the laser envelope in vacuum, separated from the plasma, to avoid unphysical
    results.
-   Envelopes with variation scales near to the laser wavelength do not
-   satisfy the assumptions of the envelope model (see :doc:`/Understand/laser_envelope`),
-   yielding inaccurate results.
+   Envelopes with variation scales in space and time close to the laser wavelength do not
+   satisfy the assumptions of the envelope model (see :doc:`/Understand/laser_envelope`):
+   their simulation yieldss inaccurate results. 
+   Since at the moment the paraxial hypothesis is used when ``box_side="xmin"``, the requested ``envelope_profile`` should satisfy this hypothesis.
 
 .. py:data:: envelope_solver
 
@@ -1904,6 +1920,7 @@ Following is the generic laser envelope creator ::
   :default: 0.
 
   The polarization ellipticity: 0 for linear and 1 for circular. For the moment, only these two polarizations are available.
+
 
 .. rubric:: 2. Defining a 1D laser envelope
 
@@ -1980,18 +1997,14 @@ with some differences:
 
 .. py:data:: time_envelope
 
-   Since the envelope will be entirely initialized in the simulation box
-   already at the start of the simulation, the time envelope will be applied
-   in the ``x`` direction instead of time. It is recommended to initialize the
-   laser envelope in vacuum, separated from the plasma, to avoid unphysical
-   results.
+   The temporal envelope of the laser pulse. See the ``box_side`` in the ``LaserEnvelope`` block to understand its definition.
    Temporal envelopes with variation scales near to the laser wavelength do not
    satisfy the assumptions of the envelope model (see :doc:`/Understand/laser_envelope`),
    yielding inaccurate results.
 
 .. py:data:: waist
 
-   Please note that a waist size comparable to the laser wavelength does not
+   Please note that a waist size smaller or comparable to the laser wavelength does not
    satisfy the assumptions of the envelope model.
 
 
@@ -2009,7 +2022,7 @@ The parameters ``polarization_phi`` and ``ellipticity`` specify the polarization
 they are only used to compute the rate of ionization and the initial momentum of the electrons newly created by ionization,
 where the polarization of the laser plays an important role (see :doc:`/Understand/ionization`).
 For all other purposes (e.g. the particles equations of motions, the computation of the ponderomotive force,
-the evolution of the laser), the polarization of the laser plays no role in the envelope model.
+the evolution of the laser), the polarization angle of the laser plays no role in the envelope model.
 
 
 ----

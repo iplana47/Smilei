@@ -56,6 +56,9 @@ Changes made in the repository (not released)
   * ``LaserGaussian3D`` was giving wrong amplitude with large incidence angle.
   * Fix bug in ``Screen`` with a cylindrical shape.
 
+* **Experimental**
+
+  * LaserEnvelope model: now the laser pulse can be initialized either inside the window (default mode) or from the ``xmin`` border setting the ``box_side`` variable and using a ``Profile`` with transverse coordinates and time.
 
 ----
 
