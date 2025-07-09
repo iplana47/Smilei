@@ -228,7 +228,7 @@ void SpeciesVAdaptive::scalarDynamics( double time_dual, unsigned int ispec,
             
             // Copy interpolated fields to persistent buffers if requested
             if( particles->interpolated_fields_ ) {
-                particles->copyInterpolatedFields( &( smpi->dynamics_Epart[ithread][start] ), &( smpi->dynamics_Bpart[ithread][start] ), pold, start, n, n, mass_ );
+                particles->copyInterpolatedFields( &( smpi->dynamics_Epart[ithread][start] ), &( smpi->dynamics_Bpart[ithread][start] ), pold, start, n, n, params.timestep );
             }
             
             smpi->traceEventIfDiagTracing(diag_PartEventTracing, ithread, 1, 1);

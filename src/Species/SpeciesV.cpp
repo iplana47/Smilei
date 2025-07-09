@@ -379,7 +379,7 @@ void SpeciesV::dynamics( double time_dual, unsigned int ispec,
             
             // Copy interpolated fields to persistent buffers if requested
             if( particles->interpolated_fields_ ) {
-                particles->copyInterpolatedFields( &( smpi->dynamics_Epart[ithread][0] ), &( smpi->dynamics_Bpart[ithread][0] ), pold, start, nparts_in_pack, nparts_in_pack, mass_ );
+                particles->copyInterpolatedFields( &( smpi->dynamics_Epart[ithread][0] ), &( smpi->dynamics_Bpart[ithread][0] ), pold, start, nparts_in_pack, nparts_in_pack, params.timestep );
             }
             
             smpi->traceEventIfDiagTracing(diag_PartEventTracing, ithread,1,1);
