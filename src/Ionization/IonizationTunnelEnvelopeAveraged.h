@@ -5,12 +5,6 @@
 
 #include "IonizationTunnel.h"
 
-struct EnvelopeElectricFields : ElectricFields {
-    double env;
-    double x_env;
-    double Phi_env;
-};
-
 class Particles;
 
 //! calculate the particle tunnel ionization
@@ -22,10 +16,11 @@ public:
     IonizationTunnelEnvelopeAveraged( Params &params, Species *species );
 
     double ellipticity,cos_phi,sin_phi;
+    double Phi_env_;
 
 protected:
     void computeIonizationCurrents(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields& E, const SimulationContext& context) override;
-    void createNewElectrons(unsigned int ipart, unsigned int Z, unsigned int k_times, const EnvelopeElectricFields& E, const SimulationContext& context);
+    void createNewElectrons(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields& E, const SimulationContext& context) override;
     ElectricFields calculateElectricFields(vector<vector<double>*> Epart, unsigned int ipart) override;
     double ionizationRate(unsigned int Z, const ElectricFields& E) override;
 

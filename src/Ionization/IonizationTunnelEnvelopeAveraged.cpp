@@ -30,22 +30,22 @@ IonizationTunnelEnvelopeAveraged::IonizationTunnelEnvelopeAveraged( Params &para
 
 
 ElectricFields IonizationTunnelEnvelopeAveraged::calculateElectricFields(vector<vector<double>*> Epart, unsigned int ipart) {
-    EnvelopeElectricFields E;
+    ElectricFields E;
     int nparts = Epart[0]->size() / 3;
 
     E.x = (*Epart[0])[ipart];
     E.y = (*Epart[0])[nparts+ipart];
     E.z = (*Epart[0])[2*nparts+ipart];
-    E.env = (*Epart[1])[ipart];
-    E.x_env = (*Epart[2])[ipart];
-    E.Phi_env = (*Epart[3])[ipart];
+    double E_env = (*Epart[1])[ipart];
+    double Ex_env = (*Epart[2])[ipart];
+    Phi_env_ = (*Epart[3])[ipart];
 
     // Absolute value of the electric field |E_plasma| (from the plasma) normalized in atomic units
     double E_sq    = (EC_to_au * EC_to_au) * ( E.x*E.x + E.y*E.y + E.z*E.z );
 
     // Laser envelope electric field normalized in atomic units, using both transverse and longitudinal components:
     // |E_envelope|^2 = |Env_E|^2 + |Env_Ex|^2
-    double EnvE_sq = (EC_to_au * EC_to_au) * ( E.env*E.env + E.x_env*E.x_env );
+    double EnvE_sq = (EC_to_au * EC_to_au) * ( E_env*E_env + Ex_env*Ex_env );
 
     // Effective electric field for ionization:
     // |E| = sqrt(|E_plasma|^2+|E_envelope|^2)
@@ -78,7 +78,7 @@ void IonizationTunnelEnvelopeAveraged::computeIonizationCurrents(unsigned int ip
     // ---- Ionization ion current cannot be computed with the envelope ionization model
 }
 
-void IonizationTunnelEnvelopeAveraged::createNewElectrons(unsigned int ipart, unsigned int Z, unsigned int k_times, const EnvelopeElectricFields& E, const SimulationContext& context)
+void IonizationTunnelEnvelopeAveraged::createNewElectrons(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields& E, const SimulationContext& context)
 {
     double Aabs, p_perp; 
     if( k_times !=0 ) {
@@ -105,7 +105,7 @@ void IonizationTunnelEnvelopeAveraged::createNewElectrons(unsigned int ipart, un
 
                 double rand_gaussian  = context.patch->rand_->normal();
 
-                Aabs    = sqrt(2. * E.Phi_env ); // envelope of the laser vector potential component along the polarization direction
+                Aabs    = sqrt(2. * Phi_env_ ); // envelope of the laser vector potential component along the polarization direction
             
                 // recreate gaussian distribution with rms momentum spread for linear polarization, estimated by C.B. Schroeder
                 // C. B. Schroeder et al., Phys. Rev. ST Accel. Beams 17, 2014, first part of Eqs. 7,10
@@ -126,7 +126,7 @@ void IonizationTunnelEnvelopeAveraged::createNewElectrons(unsigned int ipart, un
                 // extract a random angle between 0 and 2pi, and assign p_perp = eA
                 double rand_times_2pi = context.patch->rand_->uniform_2pi(); // from uniform distribution between [0,2pi]
             
-                Aabs    = sqrt(2. * E.Phi_env );
+                Aabs    = sqrt(2. * Phi_env_ );
 
                 p_perp = Aabs;   // in circular polarization it corresponds to a0/sqrt(2)
                 new_electrons.momentum( 1, idNew ) += p_perp*cos(rand_times_2pi)/sqrt(2);
