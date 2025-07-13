@@ -21,7 +21,7 @@ public:
 protected:
     void computeIonizationCurrents(unsigned int, unsigned int, unsigned int, const ElectricFields&, const SimulationContext&) override;
     void createNewElectrons(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields& E, const SimulationContext& context) override;
-    ElectricFields calculateElectricFields(vector<vector<double>*> Epart, unsigned int ipart) override;
+    ElectricFields calculateElectricFields(const vector<const vector<double>*>& Epart, unsigned int ipart) override;
     double ionizationRate(unsigned int Z, const ElectricFields& E) override;
 
 private:

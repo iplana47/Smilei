@@ -60,7 +60,7 @@ IonizationTunnel::IonizationTunnel(Params &params, Species *species) : Ionizatio
 }
 
 void IonizationTunnel::operator()(Particles *particles, unsigned int ipart_min, unsigned int ipart_max,
-                                                vector<vector<double>*> Epart, Patch *patch, Projector *Proj)
+                                                const vector<const vector<double>*>& Epart, Patch *patch, Projector *Proj)
 {
     unsigned int Z, Zp1, newZ, k_times;
     double ran_p, Mult, D_sum, P_sum, Pint_tunnel;
@@ -145,7 +145,7 @@ void IonizationTunnel::operator()(Particles *particles, unsigned int ipart_min, 
     }  // Loop on particles
 }
 
-ElectricFields IonizationTunnel::calculateElectricFields(vector<vector<double>*> Epart, unsigned int ipart)
+ElectricFields IonizationTunnel::calculateElectricFields(const vector<const vector<double>*>& Epart, unsigned int ipart)
 {
     ElectricFields E;
     int nparts = Epart[0]->size() / 3;

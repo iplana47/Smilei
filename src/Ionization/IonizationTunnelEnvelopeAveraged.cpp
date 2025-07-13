@@ -29,7 +29,7 @@ IonizationTunnelEnvelopeAveraged::IonizationTunnelEnvelopeAveraged( Params &para
 }
 
 
-ElectricFields IonizationTunnelEnvelopeAveraged::calculateElectricFields(vector<vector<double>*> Epart, unsigned int ipart) {
+ElectricFields IonizationTunnelEnvelopeAveraged::calculateElectricFields(const vector<const vector<double>*>& Epart, unsigned int ipart) {
     ElectricFields E;
     int nparts = Epart[0]->size() / 3;
 

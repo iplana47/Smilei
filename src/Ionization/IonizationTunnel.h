@@ -22,7 +22,7 @@ class IonizationTunnel : public Ionization
    public:
     IonizationTunnel(Params &params, Species *species);
 
-    void operator()(Particles *, unsigned int, unsigned int, vector<vector<double>*>, Patch *, Projector *) override;
+    void operator()(Particles *, unsigned int, unsigned int, const vector<const vector<double>*>&, Patch *, Projector *) override;
 
    protected:
     struct SimulationContext {
@@ -33,7 +33,7 @@ class IonizationTunnel : public Ionization
 
     virtual void computeIonizationCurrents(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields& E, const SimulationContext& context);;
     virtual void createNewElectrons(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields&, const SimulationContext& context);
-    virtual ElectricFields calculateElectricFields(vector<vector<double>*> Epart, unsigned int ipart);
+    virtual ElectricFields calculateElectricFields(const vector<const vector<double>*>& Epart, unsigned int ipart);
     virtual double ionizationRate(unsigned int Z, const ElectricFields& E);
 
     static constexpr double one_third_ = 1. / 3.;

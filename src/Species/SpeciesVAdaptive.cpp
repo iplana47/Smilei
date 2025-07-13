@@ -95,7 +95,7 @@ void SpeciesVAdaptive::scalarDynamics( double time_dual, unsigned int ispec,
 
         //Point to local thread dedicated buffers
         //Still needed for ionization
-        vector<vector<double>*> Epart = {&( smpi->dynamics_Epart[ithread] ), };
+        const vector<const vector<double>*> Epart = {&( smpi->dynamics_Epart[ithread] ), };
 
         //Prepare for sorting
         for( unsigned int i=0; i<count.size(); i++ ) {
@@ -600,7 +600,7 @@ void SpeciesVAdaptive::scalarPonderomotiveUpdateSusceptibilityAndMomentum( doubl
             vector<double> *EnvEabs_part  = &( smpi->dynamics_EnvEabs_part[ithread] );
             vector<double> *EnvExabs_part = &( smpi->dynamics_EnvExabs_part[ithread] );
             vector<double> *Phipart = &( smpi->dynamics_PHIpart[ithread] );
-            vector<vector<double>*> Epart = { Epartxyz, EnvEabs_part, EnvExabs_part, Phipart };
+            const vector<const vector<double>*> Epart = { Epartxyz, EnvEabs_part, EnvExabs_part, Phipart };
 
             smpi->traceEventIfDiagTracing(diag_PartEventTracing, Tools::getOMPThreadNum(),0,5);
             Interp->envelopeFieldForIonization( EMfields, *particles, smpi, &( particles->first_index[0] ), &( particles->last_index[particles->last_index.size()-1] ), ithread );

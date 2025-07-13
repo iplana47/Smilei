@@ -18,7 +18,7 @@ public:
     virtual ~Ionization() {};
 
     //! Overloading of () operator
-    virtual void operator()(Particles *, unsigned int, unsigned int, std::vector<std::vector<double> *>, Patch *, Projector *) {};
+    virtual void operator()(Particles *, unsigned int, unsigned int, const std::vector<const std::vector<double> *>&, Patch *, Projector *) {};
 
     Particles new_electrons;
     

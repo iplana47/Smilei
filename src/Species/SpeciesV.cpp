@@ -174,7 +174,7 @@ void SpeciesV::dynamics( double time_dual, unsigned int ispec,
 
         //Point to local thread dedicated buffers
         //Still needed for ionization
-        vector<vector<double>*> Epart = {&( smpi->dynamics_Epart[ithread] ), };
+        const vector<const vector<double>*> Epart = {&( smpi->dynamics_Epart[ithread] ), };
 
         // Prepare particles buffers for multiphoton Breit-Wheeler
         if( Multiphoton_Breit_Wheeler_process ) {
@@ -1184,7 +1184,7 @@ void SpeciesV::ponderomotiveUpdateSusceptibilityAndMomentum( double time_dual,
                 vector<double> *EnvExabs_part = &( smpi->dynamics_EnvExabs_part[ithread] );
                 vector<double> *Phipart = &( smpi->dynamics_PHIpart[ithread] );
 
-                vector<vector<double>*> Epart = { Epartxyz, EnvEabs_part, EnvExabs_part, Phipart };
+                const vector<const vector<double>*> Epart = { Epartxyz, EnvEabs_part, EnvExabs_part, Phipart };
 
                 smpi->traceEventIfDiagTracing(diag_PartEventTracing, ithread,0,5);
                 for( unsigned int scell = 0 ; scell < packsize_ ; scell++ ) {
