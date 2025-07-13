@@ -36,10 +36,10 @@ class IonizationTunnel : public Ionization
     virtual ElectricFields calculateElectricFields(vector<vector<double>*> Epart, unsigned int ipart);
     virtual double ionizationRate(unsigned int Z, const ElectricFields& E);
 
-    static constexpr double one_third = 1. / 3.;
+    static constexpr double one_third_ = 1. / 3.;
     unsigned int atomic_number_;
-    std::vector<double> Potential, Azimuthal_quantum_number;
-    std::vector<double> alpha_tunnel, beta_tunnel, gamma_tunnel;
+    std::vector<double> potential_, azimuthal_quantum_number_;
+    std::vector<double> alpha_tunnel_, beta_tunnel_, gamma_tunnel_;
 };
 
 #endif

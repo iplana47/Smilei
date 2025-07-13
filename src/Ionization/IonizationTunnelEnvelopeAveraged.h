@@ -15,8 +15,8 @@ public:
     //! Constructor for IonizationTunnelEnvelope: with no input argument
     IonizationTunnelEnvelopeAveraged( Params &params, Species *species );
 
-    double ellipticity,cos_phi,sin_phi;
-    double Phi_env_;
+    double ellipticity_,cos_phi_,sin_phi_;
+    double phi_env_;
 
 protected:
     void computeIonizationCurrents(unsigned int, unsigned int, unsigned int, const ElectricFields&, const SimulationContext&) override;
@@ -25,7 +25,7 @@ protected:
     double ionizationRate(unsigned int Z, const ElectricFields& E) override;
 
 private:
-    std::vector<double> Ip_times2_to_minus3ov4;
+    std::vector<double> Ip_times2_to_minus3ov4_;
 };
 
 #endif

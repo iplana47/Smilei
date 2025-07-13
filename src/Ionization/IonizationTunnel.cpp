@@ -18,12 +18,12 @@ IonizationTunnel::IonizationTunnel(Params &params, Species *species) : Ionizatio
 
     // Ionization potential & quantum numbers (all in atomic units 1 au = 27.2116 eV)
     atomic_number_ = species->atomic_number_;
-    Potential.resize(atomic_number_);
-    Azimuthal_quantum_number.resize(atomic_number_);
+    potential_.resize(atomic_number_);
+    azimuthal_quantum_number_.resize(atomic_number_);
 
-    alpha_tunnel.resize(atomic_number_);
-    beta_tunnel.resize(atomic_number_);
-    gamma_tunnel.resize(atomic_number_);
+    alpha_tunnel_.resize(atomic_number_);
+    beta_tunnel_.resize(atomic_number_);
+    gamma_tunnel_.resize(atomic_number_);
 
     for (unsigned int Z = 0; Z < atomic_number_; Z++) {
         DEBUG("Z : " << Z);
@@ -33,27 +33,27 @@ IonizationTunnel::IonizationTunnel(Params &params, Species *species) : Ionizatio
             g_factor = IonizationTables::magnetic_degeneracy_atomic_number(atomic_number_, Z);
         } 
 
-        Potential[Z] = IonizationTables::ionization_energy(atomic_number_, Z) * eV_to_au;
-        Azimuthal_quantum_number[Z] = IonizationTables::azimuthal_atomic_number(atomic_number_, Z);
+        potential_[Z] = IonizationTables::ionization_energy(atomic_number_, Z) * eV_to_au;
+        azimuthal_quantum_number_[Z] = IonizationTables::azimuthal_atomic_number(atomic_number_, Z);
 
-        DEBUG("Potential: " << Potential[Z] << " Az.q.num: " << Azimuthal_quantum_number[Z]);
+        DEBUG("potential_: " << potential_[Z] << " Az.q.num: " << azimuthal_quantum_number_[Z]);
 
-        Blm      = ( 2.*Azimuthal_quantum_number[Z]+1.0 ) * \
-                   tgamma(Azimuthal_quantum_number[Z]+abs_m+1) / \
-                   ( pow( 2, abs_m )*tgamma(abs_m+1)*tgamma(Azimuthal_quantum_number[Z]-abs_m+1) );
+        Blm      = ( 2.*azimuthal_quantum_number_[Z]+1.0 ) * \
+                   tgamma(azimuthal_quantum_number_[Z]+abs_m+1) / \
+                   ( pow( 2, abs_m )*tgamma(abs_m+1)*tgamma(azimuthal_quantum_number_[Z]-abs_m+1) );
 
-        double cst = ((double)Z + 1.0) * sqrt(2.0 / Potential[Z]);
+        double cst = ((double)Z + 1.0) * sqrt(2.0 / potential_[Z]);
         if(tunneling_model == "tunnel") {
             Anl = pow( 2, cst+1.0 ) / \
                 ( cst*tgamma( cst ) );
         } else if ( Z>0 ) {
             Anl = pow( 2, cst+1.0 ) / \
-                                ( cst*tgamma( cst/2.0+Azimuthal_quantum_number[Z]+1 )*tgamma( cst/2.0-Azimuthal_quantum_number[Z]) );
+                                ( cst*tgamma( cst/2.0+azimuthal_quantum_number_[Z]+1 )*tgamma( cst/2.0-azimuthal_quantum_number_[Z]) );
         }
 
-        alpha_tunnel[Z] = cst - 1.0 - abs_m;
-        beta_tunnel[Z] = g_factor*Anl*Blm * Potential[Z] * au_to_w0;
-        gamma_tunnel[Z] = 2.0 * sqrt(2.0 * Potential[Z] * 2.0 * Potential[Z] * 2.0 * Potential[Z]);
+        alpha_tunnel_[Z] = cst - 1.0 - abs_m;
+        beta_tunnel_[Z] = g_factor*Anl*Blm * potential_[Z] * au_to_w0;
+        gamma_tunnel_[Z] = 2.0 * sqrt(2.0 * potential_[Z] * 2.0 * potential_[Z] * 2.0 * potential_[Z]);
     }
 
     DEBUG("Finished Creating the Tunnel Ionizaton class");
@@ -163,7 +163,7 @@ void IonizationTunnel::computeIonizationCurrents(unsigned int ipart, unsigned in
                                          // not accounted for in AM geometry
         double TotalIonizPot = 0.0;
         for (unsigned int i=0; i<k_times; i++) {
-            TotalIonizPot += Potential[Z+i];
+            TotalIonizPot += potential_[Z+i];
         }
 
         double factorJion_0 = au_to_mec2 * EC_to_au * EC_to_au * invdt;
@@ -205,7 +205,7 @@ void IonizationTunnel::createNewElectrons(unsigned int ipart, unsigned int, unsi
 
 double IonizationTunnel::ionizationRate(unsigned int Z, const ElectricFields& E)
 {
-    double delta = gamma_tunnel[Z] / E.abs;
-    return beta_tunnel[Z] * exp(-delta * one_third + alpha_tunnel[Z] * log(delta));
+    double delta = gamma_tunnel_[Z] / E.abs;
+    return beta_tunnel_[Z] * exp(-delta * one_third_ + alpha_tunnel_[Z] * log(delta));
 }
 

@@ -21,12 +21,12 @@ class IonizationTunnelTL : public IonizationTunnel
         // species->ionization_tl_parameter_ is double Varies from 6 to 9. This is the alpha parameter in Tong-Lin
         // exponential, see Eq. (6) in [M F Ciappina and S V Popruzhenko 2020 Laser Phys. Lett. 17 025301 2020].
         double ionization_tl_parameter = species->ionization_tl_parameter_;
-        lambda_tunnel.resize(atomic_number_);
+        lambda_tunnel_.resize(atomic_number_);
 
         for (unsigned int Z = 0; Z < atomic_number_; Z++) {
             DEBUG("Z : " << Z);
-            cst = ((double)Z + 1.0) * sqrt(2.0 / Potential[Z]);
-            lambda_tunnel[Z] = ionization_tl_parameter * cst * cst / gamma_tunnel[Z];
+            cst = ((double)Z + 1.0) * sqrt(2.0 / potential_[Z]);
+            lambda_tunnel_[Z] = ionization_tl_parameter * cst * cst / gamma_tunnel_[Z];
         }
 
         DEBUG("Finished Creating the Tunnel Ionizaton class");
@@ -34,11 +34,11 @@ class IonizationTunnelTL : public IonizationTunnel
   
    protected:
     double ionizationRate(unsigned int Z, const ElectricFields& E) override {
-        return IonizationTunnel::ionizationRate(Z, E) * exp(-E.abs*lambda_tunnel[Z]);
+        return IonizationTunnel::ionizationRate(Z, E) * exp(-E.abs*lambda_tunnel_[Z]);
     };
 
    private:
-    std::vector<double> lambda_tunnel;
+    std::vector<double> lambda_tunnel_;
 };
 
 #endif
