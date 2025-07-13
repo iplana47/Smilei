@@ -179,7 +179,7 @@ void IonizationTunnel::computeIonizationCurrents(unsigned int ipart, unsigned in
     }
 }
 
-void IonizationTunnel::createNewElectrons(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields&, const SimulationContext& context)
+void IonizationTunnel::createNewElectrons(unsigned int ipart, unsigned int, unsigned int k_times, const ElectricFields&, const SimulationContext& context)
 {
     if (k_times != 0) {
         new_electrons.createParticle();

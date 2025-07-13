@@ -19,7 +19,7 @@ public:
     double Phi_env_;
 
 protected:
-    void computeIonizationCurrents(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields& E, const SimulationContext& context) override;
+    void computeIonizationCurrents(unsigned int, unsigned int, unsigned int, const ElectricFields&, const SimulationContext&) override;
     void createNewElectrons(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields& E, const SimulationContext& context) override;
     ElectricFields calculateElectricFields(vector<vector<double>*> Epart, unsigned int ipart) override;
     double ionizationRate(unsigned int Z, const ElectricFields& E) override;

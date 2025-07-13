@@ -60,7 +60,6 @@ double IonizationTunnelEnvelopeAveraged::ionizationRate(unsigned int Z, const El
     double coeff_ellipticity_in_ionization_rate;
 
     double delta = gamma_tunnel[Z] / E.abs;
-    double ionizRate = beta_tunnel[Z] * exp( -delta*one_third + alpha_tunnel[Z]*log( delta ) );
 
     // Corrections on averaged ionization rate given by the polarization ellipticity  
     if( ellipticity==0. ){ // linear polarization
@@ -68,12 +67,14 @@ double IonizationTunnelEnvelopeAveraged::ionizationRate(unsigned int Z, const El
     } else if( ellipticity==1. ){ // circular polarization
         // for circular polarization, the ionization rate is unchanged
         coeff_ellipticity_in_ionization_rate = 1.; 
+    } else {
+        ERROR("ellipticity not in {0,1}")
     }
 
-    return coeff_ellipticity_in_ionization_rate * ionizRate;
+    return coeff_ellipticity_in_ionization_rate * IonizationTunnel::ionizationRate(Z, E);
 }
 
-void IonizationTunnelEnvelopeAveraged::computeIonizationCurrents(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields& E, const SimulationContext& context) 
+void IonizationTunnelEnvelopeAveraged::computeIonizationCurrents(unsigned int, unsigned int, unsigned int, const ElectricFields&, const SimulationContext&) 
 {
     // ---- Ionization ion current cannot be computed with the envelope ionization model
 }
