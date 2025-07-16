@@ -1,15 +1,11 @@
 #ifndef IONIZATION_H
 #define IONIZATION_H
 
-#include <functional>
-#include <map>
-
 #include "Field.h"
 #include "Params.h"
 #include "Particles.h"
 #include "Patch.h"
 #include "Projector.h"
-#include "Tools.h"
 
 using namespace std;
 
@@ -19,12 +15,10 @@ class Ionization
 public:
     //! Constructor for Ionization
     Ionization(Params &params, Species *species);
-    virtual ~Ionization();
+    virtual ~Ionization() {};
 
     //! Overloading of () operator
-    virtual void operator()(Particles *, unsigned int, unsigned int, std::vector<double> *, Patch *, Projector *, int = 0) {};
-    //! method for envelope ionization
-    virtual void envelopeIonization( Particles *, unsigned int, unsigned int, std::vector<double> *, std::vector<double> *, std::vector<double> *, std::vector<double> *, Patch *, Projector *, int = 0, int = 0 ){};
+    virtual void operator()(Particles *, unsigned int, unsigned int, const std::vector<const std::vector<double> *>&, Patch *, Projector *) {};
 
     Particles new_electrons;
     
@@ -34,8 +28,9 @@ public:
     std::vector<short> ion_charge_;
 
 protected:
-    double eV_to_au;
-    double au_to_mec2;
+    // Normalization constant from Smilei normalization to/from atomic units
+    static constexpr double eV_to_au = 1.0 / 27.2116;
+    static constexpr double au_to_mec2 = 27.2116/510.998e3;
     double EC_to_au;
     double au_to_w0;
 
@@ -45,10 +40,6 @@ protected:
     unsigned int nDim_field;
     unsigned int nDim_particle;
     double ionized_species_invmass;
-
-private:
-
-
 };
 
 #endif
