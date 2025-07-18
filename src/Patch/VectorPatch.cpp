@@ -1022,33 +1022,11 @@ void VectorPatch::solveMaxwell( Params &params, SimWindow *simWindow, int itime,
         // Computes Bx_, By_, Bz_ at time n+1 on interior points.
         ( *( *this )( ipatch )->EMfields->MaxwellFaradaySolver_ )( ( *this )( ipatch )->EMfields );
     }
-    //Synchronize B fields between patches.
-//    timers.maxwell.update( params.printNow( itime ) );
-//
-//
-//    timers.syncField.restart();
-//    if( params.geometry != "AMcylindrical" ) {
-//        if( params.is_spectral ) SyncVectorPatch::exchangeE( params, ( *this ), smpi );
-//        SyncVectorPatch::exchangeB( params, ( *this ), smpi );
-//    } else {
-//        for( unsigned int imode = 0 ; imode < static_cast<ElectroMagnAM *>( patches_[0]->EMfields )->El_.size() ; imode++ ) {
-//            if( params.is_spectral ) SyncVectorPatch::exchangeE( params, ( *this ), imode, smpi );
-//            SyncVectorPatch::exchangeB( params, ( *this ), imode, smpi );
-//        }
-//    }
-//    timers.syncField.update( params.printNow( itime ) );
 
 
-    if ( (params.multiple_decomposition) && ( itime!=0 ) && ( time_dual > params.time_fields_frozen ) ) { // multiple_decomposition = true -> is_spectral = true
-        timers.syncField.restart();
-        if( params.is_spectral && params.geometry != "AMcylindrical" ) {
-            SyncVectorPatch::finalizeexchangeE( params, ( *this ) );
-        }
+    timers.maxwell.update( params.printNow( itime ) );
 
-        if( params.geometry != "AMcylindrical" ){
-            SyncVectorPatch::finalizeexchangeB( params, ( *this ) );
-        }
-        timers.syncField.update( params.printNow( itime ) );
+    if ( (params.multiple_decomposition) && ( itime!=0 ) && ( time_dual > params.time_fields_frozen ) ) { // When using spectral solver multiple_decomposition is necessarily true.
 
         timers.maxwellBC.restart();
         #pragma omp for schedule(static)
@@ -1056,6 +1034,25 @@ void VectorPatch::solveMaxwell( Params &params, SimWindow *simWindow, int itime,
             // Applies boundary conditions on B
             ( *this )( ipatch )->EMfields->boundaryConditions( time_dual, ( *this )( ipatch ), simWindow );
         }
+        timers.maxwellBC.update(params.printNow( itime ));
+
+        // Sync E and B fields now after BC
+        timers.syncField.restart();
+        if( params.geometry != "AMcylindrical" ) {
+             if( params.is_spectral ) SyncVectorPatch::exchangeE( params, ( *this ), smpi );
+            SyncVectorPatch::exchangeB( params, ( *this ), smpi );
+        } else {
+            for( unsigned int imode = 0 ; imode < static_cast<ElectroMagnAM *>( patches_[0]->EMfields )->El_.size() ; imode++ ) {
+                if( params.is_spectral ) SyncVectorPatch::exchangeE( params, ( *this ), imode, smpi );
+                SyncVectorPatch::exchangeB( params, ( *this ), imode, smpi );
+            }
+        }
+        if( params.geometry != "AMcylindrical" ) {
+            if( params.is_spectral ) SyncVectorPatch::finalizeexchangeE( params, ( *this ) );
+            SyncVectorPatch::finalizeexchangeB( params, ( *this ) );
+        }
+
+
         SyncVectorPatch::exchangeForPML( params, (*this), smpi );
 
         #pragma omp for schedule(static)
@@ -1144,12 +1141,7 @@ void VectorPatch::solveEnvelope( Params &params, SimWindow *simWindow, int, doub
 void VectorPatch::finalizeSyncAndBCFields( Params &params, SmileiMPI *smpi, SimWindow *simWindow,
         double time_dual, Timers &timers, int itime )
 {
-    if ( (!params.multiple_decomposition) && ( itime!=0 ) && ( time_dual > params.time_fields_frozen ) ) { // multiple_decomposition = true -> is_spectral = true
-        //if( params.geometry != "AMcylindrical" ) {
-        //    timers.syncField.restart();
-        //    SyncVectorPatch::finalizeexchangeB( params, ( *this ) );
-        //    timers.syncField.update( params.printNow( itime ) );
-        //}
+    if ( (!params.multiple_decomposition) && ( itime!=0 ) && ( time_dual > params.time_fields_frozen ) ) { // not multiple_decomposition => not spectral here.
 
         timers.maxwellBC.restart();
         SMILEI_PY_SAVE_MASTER_THREAD
@@ -1168,11 +1160,9 @@ void VectorPatch::finalizeSyncAndBCFields( Params &params, SmileiMPI *smpi, SimW
         // Sync B field now after BC
         timers.syncField.restart();
         if( params.geometry != "AMcylindrical" ) {
-            if( params.is_spectral ) SyncVectorPatch::exchangeE( params, ( *this ), smpi );
             SyncVectorPatch::exchangeB( params, ( *this ), smpi );
         } else {
             for( unsigned int imode = 0 ; imode < static_cast<ElectroMagnAM *>( patches_[0]->EMfields )->El_.size() ; imode++ ) {
-                if( params.is_spectral ) SyncVectorPatch::exchangeE( params, ( *this ), imode, smpi );
                 SyncVectorPatch::exchangeB( params, ( *this ), imode, smpi );
             }
         }
@@ -2960,6 +2950,7 @@ void VectorPatch::exchangePatches( SmileiMPI *smpi, Params &params )
             tagsend_left ++;
         }
         int irequest = 0;
+        std::cout << "Send patch " << ( *this )( send_patch_id_[ipatch] )->hindex << " from " << smpi->getRank() << " to " << newMPIrank << std::endl;
         smpi->isend_species( ( *this )( send_patch_id_[ipatch] ), newMPIrank, irequest, tag, params );
     }
 
@@ -2973,6 +2964,7 @@ void VectorPatch::exchangePatches( SmileiMPI *smpi, Params &params )
             tag = tagrecv_left*nrequests;
             tagrecv_left ++;
         }
+        std::cout << "Receive patch " << recv_patches_[ipatch]->hindex << " from " << oldMPIrank << " to " << smpi->getRank() << std::endl;
         smpi->recv_species( recv_patches_[ipatch], oldMPIrank, tag, params );
     }
 
