@@ -1,37 +1,31 @@
 #ifndef IONIZATIONTUNNELENVELOPEAVERAGED_H
 #define IONIZATIONTUNNELENVELOPEAVERAGED_H
 
-#include <cmath>
-
 #include <vector>
 
-#include "Ionization.h"
-#include "Tools.h"
-
+#include "IonizationTunnel.h"
 
 class Particles;
 
 //! calculate the particle tunnel ionization
-class IonizationTunnelEnvelopeAveraged : public Ionization
+class IonizationTunnelEnvelopeAveraged : public IonizationTunnel
 {
 
 public:
     //! Constructor for IonizationTunnelEnvelope: with no input argument
     IonizationTunnelEnvelopeAveraged( Params &params, Species *species );
-    
-    //! method for envelope ionization
-    void envelopeIonization( Particles *, unsigned int, unsigned int, std::vector<double> *, std::vector<double> *, std::vector<double> *, std::vector<double> *, Patch *, Projector *, int ibin = 0, int ipart_ref = 0 ) override;
 
-    double ellipticity,cos_phi,sin_phi;
+    double ellipticity_,cos_phi_,sin_phi_;
+    double phi_env_;
+
+protected:
+    void computeIonizationCurrents(unsigned int, unsigned int, unsigned int, const ElectricFields&, const SimulationContext&) override;
+    void createNewElectrons(unsigned int ipart, unsigned int Z, unsigned int k_times, const ElectricFields& E, const SimulationContext& context) override;
+    ElectricFields calculateElectricFields(const vector<const vector<double>*>& Epart, unsigned int ipart) override;
+    double ionizationRate(unsigned int Z, const ElectricFields& E) override;
 
 private:
-    unsigned int atomic_number_;
-    std::vector<double> Potential;
-    std::vector<double> Azimuthal_quantum_number;
-    
-    double one_third;
-    std::vector<double> alpha_tunnel, beta_tunnel, gamma_tunnel,Ip_times2_to_minus3ov4;
+    std::vector<double> Ip_times2_to_minus3ov4_;
 };
-
 
 #endif

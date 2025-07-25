@@ -95,7 +95,7 @@ void SpeciesVAdaptive::scalarDynamics( double time_dual, unsigned int ispec,
 
         //Point to local thread dedicated buffers
         //Still needed for ionization
-        vector<double> *Epart = &( smpi->dynamics_Epart[ithread] );
+        const vector<const vector<double>*> Epart = {&( smpi->dynamics_Epart[ithread] ), };
 
         //Prepare for sorting
         for( unsigned int i=0; i<count.size(); i++ ) {
@@ -596,14 +596,15 @@ void SpeciesVAdaptive::scalarPonderomotiveUpdateSusceptibilityAndMomentum( doubl
 #ifdef  __DETAILED_TIMERS
             timer = MPI_Wtime();
 #endif
-            vector<double> *Epart = &( smpi->dynamics_Epart[ithread] );
+            vector<double> *Epartxyz = &( smpi->dynamics_Epart[ithread] );
             vector<double> *EnvEabs_part  = &( smpi->dynamics_EnvEabs_part[ithread] );
             vector<double> *EnvExabs_part = &( smpi->dynamics_EnvExabs_part[ithread] );
             vector<double> *Phipart = &( smpi->dynamics_PHIpart[ithread] );
+            const vector<const vector<double>*> Epart = { Epartxyz, EnvEabs_part, EnvExabs_part, Phipart };
 
             smpi->traceEventIfDiagTracing(diag_PartEventTracing, Tools::getOMPThreadNum(),0,5);
             Interp->envelopeFieldForIonization( EMfields, *particles, smpi, &( particles->first_index[0] ), &( particles->last_index[particles->last_index.size()-1] ), ithread );
-            Ionize->envelopeIonization( particles, ( particles->first_index[0] ), ( particles->last_index[particles->last_index.size()-1] ), Epart, EnvEabs_part, EnvExabs_part, Phipart, patch, Proj );
+            ( *Ionize )( particles, ( particles->first_index[0] ), ( particles->last_index[particles->last_index.size()-1] ), Epart, patch, Proj );
             smpi->traceEventIfDiagTracing(diag_PartEventTracing, Tools::getOMPThreadNum(),1,5);
 
 #ifdef  __DETAILED_TIMERS
