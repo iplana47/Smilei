@@ -287,7 +287,7 @@ public :
     void createPatches( Params &params, SmileiMPI *smpi, SimWindow *simWindow );
     
     //! Exchange patches, based on createPatches initialization
-    void exchangePatches( SmileiMPI *smpi, Params &params );
+    void exchangePatches( SmileiMPI *smpi, Params &params, double time );
     
     //! Write in a file patches communications
     void outputExchanges( SmileiMPI *smpi );

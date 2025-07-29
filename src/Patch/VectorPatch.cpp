@@ -2820,7 +2820,7 @@ void VectorPatch::loadBalance( Params &params, double time_dual, SmileiMPI *smpi
     this->createPatches( params, smpi, simWindow );
 
     // Proceed to patch exchange, and delete patch which moved
-    this->exchangePatches( smpi, params );
+    this->exchangePatches( smpi, params, time_dual-0.5*params.timestep );
 
     // Tell that the patches moved this iteration (needed for probes)
     lastIterationPatchesMoved = itime;
@@ -2915,7 +2915,7 @@ void VectorPatch::createPatches( Params &params, SmileiMPI *smpi, SimWindow *sim
 // Exchange patches, based on createPatches initialization
 //   take care of reinitialize patch master and diag file managment
 // ---------------------------------------------------------------------------------------------------------------------
-void VectorPatch::exchangePatches( SmileiMPI *smpi, Params &params )
+void VectorPatch::exchangePatches( SmileiMPI *smpi, Params &params, double time )
 {
 
     int newMPIrank = smpi->getRank() -1;
@@ -2980,6 +2980,12 @@ void VectorPatch::exchangePatches( SmileiMPI *smpi, Params &params )
     newMPIrank = smpi->getRank() -1;
     oldMPIrank = smpi->getRank() -1;
 
+    //Remove prescribed fields from the patches before sending them if necessary
+    if ( ( *this)(0)->EMfields->prescribedFields.size() ) {
+        for( unsigned int ipatch=0 ; ipatch < send_patch_id_.size() ; ipatch++ ) {
+            ( *this )( send_patch_id_[ipatch] )->EMfields->resetPrescribedFields();
+        }
+    }
 
     // Send fields
     for( unsigned int ipatch=0 ; ipatch < send_patch_id_.size() ; ipatch++ ) {
@@ -3011,6 +3017,11 @@ void VectorPatch::exchangePatches( SmileiMPI *smpi, Params &params )
         }
         int patch_tag = tag * nrequests;
         smpi->recv_fields( recv_patches_[ipatch], oldMPIrank, patch_tag, params );
+
+        //apply the prescribed fields if necessary
+        if ( ( *this)(0)->EMfields->prescribedFields.size() ) {
+            recv_patches_[ipatch]->EMfields->applyPrescribedFields( (recv_patches_[ipatch]), time );
+        }
     }
 
 
