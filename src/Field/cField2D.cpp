@@ -300,22 +300,21 @@ void cField2D::add( Field *outField, Params &params, Patch *thisPatch, Patch *ou
     
 }
 
-
+//Populate the current field (this) of thisPatch with data from  inField of inPatch
+//Sometimes thisPatch is a fake patch used to populate part of a region and not all the metadata are well defined hence the sole use of Pcoordinates and nothing else.
+//In the case where inPatch is a region, the region oversize is accounted for in the CellStartingGlobalIndex.
 void cField2D::get( Field *inField, Params &params, Patch *inPatch, Patch *thisPatch )
 {
     cField2D *in2D  = static_cast<cField2D *>( inField );
     
     std::vector<unsigned int> dual =  in2D->isDual_;
     
-    int iin = thisPatch->Pcoordinates[0]*params.patch_size_[0] - ( inPatch->getCellStartingGlobalIndex(0) + params.region_oversize[0] );
-    int jin = thisPatch->Pcoordinates[1]*params.patch_size_[1] - ( inPatch->getCellStartingGlobalIndex(1) + params.region_oversize[1] );
+    int iin = thisPatch->Pcoordinates[0]*params.patch_size_[0] - params.oversize[0] - inPatch->getCellStartingGlobalIndex(0) ;
+    int jin = thisPatch->Pcoordinates[1]*params.patch_size_[1] - params.oversize[1] - inPatch->getCellStartingGlobalIndex(1) ;
     
-    //for ( unsigned int i = params.oversize[0] ; i < out2D->dims_[0]-params.oversize[0] ; i++ ) {
-    //    for ( unsigned int j = params.oversize[1] ; j < out2D->dims_[1]-params.oversize[1] ; j++ ) {
     for( unsigned int i = 0 ; i < params.patch_size_[0]+1+dual[0]+2*params.oversize[0] ; i++ ) {
         for( unsigned int j = 0 ; j < params.patch_size_[1]+1+dual[1]+2*params.oversize[1] ; j++ ) {
-            ( *this )( i, j ) = ( *in2D )( iin+i+params.region_oversize[0]-params.oversize[0], jin+j+params.region_oversize[1]-params.oversize[1] );
-            //( *out2D )( i, j ) = in2D->hindex;
+            ( *this )( i, j ) = ( *in2D )( iin + i, jin + j );
         }
     }
     
