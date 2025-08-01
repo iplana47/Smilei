@@ -577,12 +577,17 @@ int main( int argc, char *argv[] )
                 timers.syncDens.update( params.printNow( itime ) );
 
 
+                // de-apply prescribed fields if requested
+                if( region.vecPatch_(0)->EMfields->prescribedFields.size() ) {
+                    region.vecPatch_.resetPrescribedFields();
+                }
+                region.solveMaxwell( params, simWindow, itime, time_dual, timers, &smpi );
+
                 // apply external time fields if requested
                 if( region.vecPatch_(0)->EMfields->prescribedFields.size() ) {
                     region.vecPatch_.applyPrescribedFields( time_prim );
                 }
 
-                region.solveMaxwell( params, simWindow, itime, time_dual, timers, &smpi );
                 if ( params.geometry != "AMcylindrical" )
                     DoubleGrids::syncFieldsOnPatches( region, vecPatches, params, &smpi, timers );
                 else {
