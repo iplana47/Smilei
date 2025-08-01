@@ -38,6 +38,8 @@ Changes made in the repository (not released)
   * Remove experimental support for task parallelization.
   * Low dispersion Maxwell solver ``"Terzani"`` from `this article <https://doi.org/10.1016/j.cpc.2019.04.007>`_ in ``"AMcylindrical"`` geometry.
   * Tunnel ionization supports fullPPT model and 2 BSI models.
+  * Prescribed fields with dynamic load balancing.
+  * Custom oversize in AM geometry solvers.
 
 * **Bug fixes**:
 
