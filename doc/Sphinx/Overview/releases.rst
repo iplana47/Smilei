@@ -57,6 +57,7 @@ Changes made in the repository (not released)
   * OpenPMD compatibility: fixed units of density and weight.
   * ``LaserGaussian3D`` was giving wrong amplitude with large incidence angle.
   * Fix bug in ``Screen`` with a cylindrical shape.
+  * Fix PrescribedFields with MLMD.
 
 * **Experimental**
 
