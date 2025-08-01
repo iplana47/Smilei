@@ -451,6 +451,12 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
             ERROR_NAMELIST("Unknown envelope_solver - only 'explicit' and 'explicit_reduced_dispersion' are available. ",
                            LINK_NAMELIST + std::string("#laser-envelope-model"));
         }
+        
+        PyTools::extract( "box_side", box_side, "LaserEnvelope" );
+        if ( (box_side != "inside") && (box_side != "xmin") ){
+            ERROR_NAMELIST("Unknown envelope_solver - only 'inside_window' and 'from_xmin' are available. ",
+                           LINK_NAMELIST + std::string("#laser-envelope-model"));
+        }
         if (geometry=="1Dcartesian"){
             full_Envelope_exchange = false;
         }
@@ -1414,14 +1420,17 @@ void Params::print_init()
     if ( Laser_Envelope_model ) {
         TITLE( "Laser Envelope parameters" );
         ostringstream info( "" );
-        info << "\tpolarization angle : " << envelope_polarization_phi << endl;
-        info << "\t\tellipticity        : " << envelope_ellipticity << endl;
-        info << "\t\tEnvelope solver    : " << envelope_solver << endl;
+        info << "\tpolarization angle      : " << envelope_polarization_phi << endl;
+        info << "\t\tellipticity             : " << envelope_ellipticity << endl;
+        info << "\t\tEnvelope solver         : " << envelope_solver << endl;
+        info << "\t\tEnvelope initialization : " << box_side << endl;
         MESSAGE( 1, info.str() );
         for( unsigned int i=0 ; i<grid_length.size() ; i++ ) {
             MESSAGE( 1, "\tdimension " << i );
             MESSAGE( 1, "\t- Envelope boundary conditions: " << "(" << Env_BCs[i][0] << ", " << Env_BCs[i][1] << ")" );
         }
+        
+        
     }
 
 

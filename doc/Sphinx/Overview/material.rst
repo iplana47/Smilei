@@ -31,7 +31,7 @@ Papers involving Smilei
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 Only papers published in peer-reviewed journals are listed (for the complete list of citing papers see `Google Scholar <https://scholar.google.com/scholar?hl=fr&as_sdt=2005&sciodt=0,5&cites=17416460455672944837&scipsc=&q=&scisbd=1>`_).
-As of April 2025, at least 245 papers have been published covering a broad range of topics:
+As of June 2025, at least 260 papers have been published covering a broad range of topics:
 
 * laser-plasma interaction (LPI) / inertial fusion (FCI)
 * ultra-high intensity (UHI) applications
@@ -51,9 +51,100 @@ Following is the distribution of these topics in the listed publications up to N
    Use the python script doc/doi2publications.py to generate entries from a DOI number, and paste them here
    You can count the number of papers in the list with the vim command :%s/.. \[//gn. 
 
+.. [Quin2025]
+
+    M. J. Quin, A. Di Piazza, Ç. Erciyes, C. H. Keitel and M. Tamburini,
+    `Broadband coherent XUV light from e−/e+ microbunching in an intense laser pulse`,
+    `Communications Physics 8, 282 (2025) <https://doi.org/10.1038/s42005-025-02209-8>`_
+       
+.. [Liu2025]
+
+    R. Liu, C. Pan, S. Rykovanov, J. Bin and J. Wang,
+    `Extreme Faraday effect in plasma under relativistic conditions`,
+    `Optics Express 33, 30271-30278 (2025) <https://doi.org/10.1364/OE.560517>`_
+
+.. [Massimo2025]
+
+    F. Massimo, C. Benedetti, D. Terzani, A. Beck and B. Cros,
+    `Modeling laser-wakefield accelerators using the time-averaged ponderomotive approximation in a Lorentz boosted frame`,
+    `Plasma Physics and Controlled Fusion 67, 065032 (2025) <https://doi.org/10.1088/1361-6587/addc97>`_
+
+.. [Baraka2025]
+
+    M. Baraka, O. Le Contel, P. Canu, S. W. Alqeeq, J. Dargent, A. Beck, G. Cozzani, A. Retinò, T. Chust, L. Mirioni, S. Toledo-Redondo, M. Akhavan-Tafti, R. Bandyopadhyay, A. Chasapis, C. Norgren, Y. Khotyaintsev, N. Ahmadi, H. Y. Wei, D. Fischer, D. J. Gershman, J. L. Burch, R. B. Torbert, B. L. Giles, S. A. Fuselier, R. E. Ergun, P.-A. Lindqvist, C. T. Russell, R. J. Strangeway and K. R. Bromund,
+    `MMS Analysis of a Dayside Compressed Magnetospheric Separatrix in the Presence of Cold Ions and a Moderate Guide Field`,
+    `Journal of Geophysical Research: Space Physics, 130, 4 (2025) <https://doi.org/10.1029/2024JA033234>`_
+
+.. [Ye2025]
+
+    X. Ye, Y. Lv, Z. Zhang, S. Zhou and J. Liu,
+    `Enhanced generation of attosecond electron beams via laser-irradiated thin film targets`,
+    `Plasma Physics and Controlled Fusion 67, 065017 (2025) <https://doi.org/10.1088/1361-6587/addb77>`_
+
+.. [Tamaki2025]
+
+    N. Tamaki, T. Minami, S. Suzuki, Y. Kuramitsu,
+    `Optimization of Ion Acceleration by Irradiating Large-Area Suspended Graphene With a Picosecond Laser`,
+    `Contributions to Plasma Physics e70016 (2025) <https://doi.org/10.1002/ctpp.70016>`_
+
+.. [DeRocco2025]
+
+    W. DeRocco, P. Giffin,
+    `Dark plasmas in the nonlinear regime: Constraints from particle-in-cell simulations`,
+    `Physical Review D 111, 095031 (2025) <https://doi.org/10.1103/PhysRevD.111.095031>`_
+
+.. [Korzhimanov2025]
+
+    A. V. Korzhimanov, S. A. Koryagin, A. D. Sladkov and M. E. Viktorov,
+    `Numerical modeling of two magnetized counter-propagating weakly collisional plasma flows in arch configuration`,
+    `Physics of Plasmas 32, 052305 (2025) <https://doi.org/10.1063/5.0253315>`_
+
+.. [Sakai2025]
+
+    K. Sakai, K. Himeno, S. J. Tanaka, T. Asai, T. Minami, Y. Abe, F. Nikaido, K. Kuramoto, M. Kanasaki, H.Kiriyama, A.Kon, K.Kondo, N.Nakanii, W.Y.Woon, C.M.Chu, K.T.Wu, C.S.Jao, Y.L.Liu, T. A. Pikuz, H. Kohri, A. O. Tokiyasu, S. Isayama, H. S. Kumar, K. Tomita, Y. Fukuda and Y. Kuramitsu,
+    `Electron Density Structure Measurements With Scattered Intense Laser Beam`,
+    `Contributions to Plasma Physics e70020 (2025) <https://doi.org/10.1002/ctpp.70020>`_
+
+.. [Broughton2025]
+
+    D. P. Broughton, S. Palaniyappan, C.-K. Huang, N. R. C. Lemos, A. MacKinnon, A. Pak, P. K. Singh,  C.-S. Wong, M. Alvarado Alvarez, S. R. Klein, A. Junghans, S. H. Batha, R. E. Reinovsky and A. Favalli,
+    `Laser-driven flash x-ray radiography of a shocked metallic foil`,
+    `AIP Advances 15, 055023 (2025) <https://doi.org/10.1063/5.0215729>`_
+
+.. [Jikei2025]
+
+    T. Jikei, T. Amano, Y. Matsumoto, Y. Kuramitsu,
+    `Effect of Background Magnetic Field on Ion Weibel Instability With High-Intensity Short-Pulse Lasers`,
+    `Contributions to Plasma Physics 0:e70017 (2025) <https://doi.org/10.1002/ctpp.70017>`_
+
+.. [Wang2025]
+
+    P.-T. Wang, X.-S. Geng, G.-Q. Zhang, L.-L. Ji and Y.-G. Ma ,
+    `Laser-driven micro-pinch: a pathway to ultra-intense neutrons`,
+    `Nuclear Science and Techniques 36, 108, (2025) <https://link.springer.com/article/10.1007/s41365-025-01738-9>`_
+
+.. [Renner2025]
+
+    O. Renner, O. Klimo, M. Krus, Ph. Nicolai, A. Poletaeva, N. Bukharskii and V. T. Tikhonchuk,
+    `Hot-electron generation in high-intensity laser–matter experiments with copper targets`,
+    `Matter and Radiation at Extremes 10, 037403 (2025) <https://doi.org/10.1063/5.0246250>`_
+
+.. [Liseykina2025]
+
+    T. V. Liseykina, E. E. Peganov and S. V. Popruzhenko
+    `Probing the radiation-dominated regime of laser-plasma interaction in multibeam configurations of petawatt lasers`,
+    `Physical Review E 111, 045212 (2025) <https://doi.org/10.1103/PhysRevE.111.045212>`_
+       
+
+.. [Takizawa2025]
+
+    R. Takizawa, A. Morace, Y. Abe, Y. Arikawa, B. Zhu, H. Morita, Z. Lan, J. Dun, T. Tsuido, Y. Karaki, H. Matsubara, K. F. F. Law, C. Liu, K. Matsuo, A. Yogo, A. Iwamoto, H. Nagatomo, T. Johzaki, M. Nakai, H. Shiraga, R. Kodama, Y. Sentoku and S. Fujioka,
+    `Boosting fast ignition heating through interaction between ultrahigh-contrast heating lasers and a cone-shaped target`,
+    `Physical Review Research 7, 023081 (2025) <https://doi.org/10.1063/5.0240578>`_
+
 .. [Oudin2025]
 
-    A. Oudin, Y. Lalaire, G. Bouchard, A. Debayle, A. Fusaro, P. Loiseau, C. Ruyer, D. Benisti,
+    A. Oudin, Y. Lalaire, G. Bouchard, A. Debayle, A. Fusaro, P. Loiseau, C. Ruyer and D. Benisti,
     `Theory and simulations of cross-beam energy transfer between speckled laser beams`,
     `Physics of Plasmas 32, 042706 (2025) <https://doi.org/10.1063/5.0240578>`_
        

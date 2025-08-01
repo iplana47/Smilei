@@ -94,7 +94,9 @@ Field2D::~Field2D()
         }
     }
     if( data_!=NULL ) {
+#if defined(SMILEI_ACCELERATOR_GPU_OACC)
         #pragma acc exit data delete (data_[0:number_of_points_]) if (acc_deviceptr(data_) != NULL)
+#endif
         delete [] data_;
         delete [] data_2D;
     }

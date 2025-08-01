@@ -30,6 +30,15 @@ double Function_Python1D::valueAt( vector<double> x_cell )
     SMILEI_PY_RELEASE_GIL
     return v;
 }
+// 1D complex
+std::complex<double> Function_Python1D::complexValueAt( double time )
+{
+    std::complex<double> v;
+    SMILEI_PY_ACQUIRE_GIL
+    v = PyTools::runPyFunction( py_profile, time );
+    SMILEI_PY_RELEASE_GIL
+    return v;
+}
 
 // 2D
 double Function_Python2D::valueAt( vector<double> x_cell, double time )

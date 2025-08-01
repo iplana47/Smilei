@@ -224,6 +224,9 @@ public :
     //! For all patch, update envelope field A (envelope equation, boundary contitions, exchange A)
     void solveEnvelope( Params &params, SimWindow *simWindow, int itime, double time_dual, Timers &timers, SmileiMPI *smpi );
     
+    //! For all patch, inject the envelope from the xmin border if this envelope initialization method is chosen
+    void injectEnvelopeFromXminIfNeeded( Params &params, double time_dual );
+    
     //! For all patch, Compute and Write all diags (Scalars, Probes, Phases, TrackParticles, Fields, Average fields)
     //! param[in] params object containing all constant simulation parameters
     //! param[in] smpi object containing MPI functions for Smilei

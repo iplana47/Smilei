@@ -174,7 +174,7 @@ void SpeciesV::dynamics( double time_dual, unsigned int ispec,
 
         //Point to local thread dedicated buffers
         //Still needed for ionization
-        vector<double> *Epart = &( smpi->dynamics_Epart[ithread] );
+        const vector<const vector<double>*> Epart = {&( smpi->dynamics_Epart[ithread] ), };
 
         // Prepare particles buffers for multiphoton Breit-Wheeler
         if( Multiphoton_Breit_Wheeler_process ) {
@@ -379,7 +379,7 @@ void SpeciesV::dynamics( double time_dual, unsigned int ispec,
             
             // Copy interpolated fields to persistent buffers if requested
             if( particles->interpolated_fields_ ) {
-                particles->copyInterpolatedFields( &( smpi->dynamics_Epart[ithread][0] ), &( smpi->dynamics_Bpart[ithread][0] ), pold, start, nparts_in_pack, nparts_in_pack, mass_ );
+                particles->copyInterpolatedFields( &( smpi->dynamics_Epart[ithread][0] ), &( smpi->dynamics_Bpart[ithread][0] ), pold, start, nparts_in_pack, nparts_in_pack, params.timestep );
             }
             
             smpi->traceEventIfDiagTracing(diag_PartEventTracing, ithread,1,1);
@@ -1179,15 +1179,17 @@ void SpeciesV::ponderomotiveUpdateSusceptibilityAndMomentum( double time_dual,
 #ifdef  __DETAILED_TIMERS
                 timer = MPI_Wtime();
 #endif
-                vector<double> *Epart = &( smpi->dynamics_Epart[ithread] );
+                vector<double> *Epartxyz = &( smpi->dynamics_Epart[ithread] );
                 vector<double> *EnvEabs_part  = &( smpi->dynamics_EnvEabs_part[ithread] );
                 vector<double> *EnvExabs_part = &( smpi->dynamics_EnvExabs_part[ithread] );
                 vector<double> *Phipart = &( smpi->dynamics_PHIpart[ithread] );
 
+                const vector<const vector<double>*> Epart = { Epartxyz, EnvEabs_part, EnvExabs_part, Phipart };
+
                 smpi->traceEventIfDiagTracing(diag_PartEventTracing, ithread,0,5);
                 for( unsigned int scell = 0 ; scell < packsize_ ; scell++ ) {
                     Interp->envelopeFieldForIonization( EMfields, *particles, smpi, &( particles->first_index[ipack*packsize_+scell] ), &( particles->last_index[ipack*packsize_+scell] ), ithread );
-                    Ionize->envelopeIonization( particles, particles->first_index[ipack*packsize_+scell], particles->last_index[ipack*packsize_+scell], Epart, EnvEabs_part, EnvExabs_part, Phipart, patch, Proj );
+                    ( *Ionize )( particles, particles->first_index[ipack*packsize_+scell], particles->last_index[ipack*packsize_+scell], Epart, patch, Proj );
                 }
                 smpi->traceEventIfDiagTracing(diag_PartEventTracing, ithread,1,5);
 

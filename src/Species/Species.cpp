@@ -597,7 +597,7 @@ void Species::dynamics( double time_dual,
 
                 patch->startFineTimer(4);
                 smpi->traceEventIfDiagTracing(diag_PartEventTracing, Tools::getOMPThreadNum(),0,5);
-                ( *Ionize )( particles, particles->first_index[ibin], particles->last_index[ibin], &smpi->dynamics_Epart[ithread], patch, Proj );
+                ( *Ionize )( particles, particles->first_index[ibin], particles->last_index[ibin], vector<const vector<double>*>{&smpi->dynamics_Epart[ithread]}, patch, Proj );
 
                 smpi->traceEventIfDiagTracing(diag_PartEventTracing, Tools::getOMPThreadNum(),1,5);
                 patch->stopFineTimer(4);
@@ -729,7 +729,7 @@ void Species::dynamics( double time_dual,
             
             // Copy interpolated fields to persistent buffers if requested
             if( particles->interpolated_fields_ ) {
-                particles->copyInterpolatedFields( &( smpi->dynamics_Epart[ithread][start] ), &( smpi->dynamics_Bpart[ithread][start] ), pold, start, n, smpi->getBufferSize(ithread), mass_ );
+                particles->copyInterpolatedFields( &( smpi->dynamics_Epart[ithread][start] ), &( smpi->dynamics_Bpart[ithread][start] ), pold, start, n, smpi->getBufferSize(ithread), params.timestep );
             }
             
             smpi->traceEventIfDiagTracing(diag_PartEventTracing, Tools::getOMPThreadNum(),1,1);
@@ -2075,12 +2075,13 @@ void Species::ponderomotiveUpdateSusceptibilityAndMomentum( double time_dual,
 #endif
 
                 smpi->traceEventIfDiagTracing(diag_PartEventTracing, Tools::getOMPThreadNum(),0,5);
-                vector<double> *Epart = &( smpi->dynamics_Epart[ithread] );
+                vector<double> *Epartxyz = &( smpi->dynamics_Epart[ithread] );
                 vector<double> *EnvEabs_part = &( smpi->dynamics_EnvEabs_part[ithread] );
                 vector<double> *EnvExabs_part = &( smpi->dynamics_EnvExabs_part[ithread] );
                 vector<double> *Phipart = &( smpi->dynamics_PHIpart[ithread] );
+                const vector<const vector<double>*> Epart = { Epartxyz, EnvEabs_part, EnvExabs_part, Phipart };
                 Interp->envelopeFieldForIonization( EMfields, *particles, smpi, &( particles->first_index[ibin] ), &( particles->last_index[ibin] ), ithread );
-                Ionize->envelopeIonization( particles, particles->first_index[ibin], particles->last_index[ibin], Epart, EnvEabs_part, EnvExabs_part, Phipart, patch, Proj );
+                ( *Ionize )( particles, particles->first_index[ibin], particles->last_index[ibin], Epart, patch, Proj );
                 smpi->traceEventIfDiagTracing(diag_PartEventTracing, Tools::getOMPThreadNum(),1,5);
 
 #ifdef  __DETAILED_TIMERS

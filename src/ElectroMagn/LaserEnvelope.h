@@ -20,7 +20,8 @@ class LaserEnvelope
 public:
     LaserEnvelope( Params &params, Patch *patch ); // Main constructor
     LaserEnvelope( LaserEnvelope *envelope, Patch *patch, Params &params, unsigned int n_moved ); // Cloning constructor
-    virtual void initEnvelope( Patch *patch, ElectroMagn *EMfields ) = 0;
+    virtual void initEnvelopeInsideTheWindow( Patch *patch, ElectroMagn *EMfields ) = 0;
+    virtual void injectEnvelopeFromXmin( Patch *patch, Params &params, double time_dual ) = 0;
     virtual ~LaserEnvelope();
     virtual void updateEnvelope( Patch *patch ) = 0;
     virtual void updateEnvelopeReducedDispersion( Patch *patch ) = 0;
@@ -34,13 +35,16 @@ public:
     const std::vector<double> cell_length;
     const double timestep;
 
-    double omega; // frequency of the laser
-    double polarization_phi;
-    double ellipticity; // 0 for linear polarization, 1 for circular polarization
-    double ellipticity_factor; // 1 for linear polarization, 2 for circular polarization.
+    double omega;                                         // frequency of the laser
+    double polarization_phi;                              // polarization angle
+    double ellipticity;                                   // 0 for linear polarization, 1 for circular polarization
     // This coefficient is used for the ponderomotive potential Phi = ellipticity_factor*|A|^2/2.
+    double ellipticity_factor;                            // 1 for linear polarization, 2 for circular polarization.
 
-    std:: string envelope_solver  = "explicit"; // default value
+    std:: string envelope_solver       = "explicit";      // default value for the solver for the envelope equation 
+    
+    std:: string box_side              = "inside";        // default value; accepted values: "inside", "xmin"
+    bool keep_injecting_laser_envelope = false;           // true only if box_side="xmin" and window is not yet moving
     
     Field *A_;         // envelope value at timestep n
     Field *A0_;        // envelope value at timestep n-1
@@ -90,7 +94,8 @@ class LaserEnvelope1D : public LaserEnvelope
 public:
     LaserEnvelope1D( Params &params, Patch *patchs );
     LaserEnvelope1D( LaserEnvelope *envelope, Patch *patch, Params &params, unsigned int n_moved );
-    void initEnvelope( Patch *patch, ElectroMagn *EMfields ) override final;
+    void initEnvelopeInsideTheWindow( Patch *patch, ElectroMagn *EMfields ) override final;
+    void injectEnvelopeFromXmin( Patch *patch, Params &params, double time_dual ) override final;
     ~LaserEnvelope1D();
     void updateEnvelope( Patch *patch ) override final;
     void updateEnvelopeReducedDispersion( Patch *patch ) override final;
@@ -106,7 +111,8 @@ class LaserEnvelope2D : public LaserEnvelope
 public:
     LaserEnvelope2D( Params &params, Patch *patch );
     LaserEnvelope2D( LaserEnvelope *envelope, Patch *patch, Params &params, unsigned int n_moved );
-    void initEnvelope( Patch *patch, ElectroMagn *EMfields ) override final;
+    void initEnvelopeInsideTheWindow( Patch *patch, ElectroMagn *EMfields ) override final;
+    void injectEnvelopeFromXmin( Patch *patch, Params &params, double time_dual ) override final;
     ~LaserEnvelope2D();
     void updateEnvelope( Patch *patch ) override final;
     void updateEnvelopeReducedDispersion( Patch *patch ) override final;
@@ -122,7 +128,8 @@ class LaserEnvelope3D : public LaserEnvelope
 public:
     LaserEnvelope3D( Params &params, Patch *patch );
     LaserEnvelope3D( LaserEnvelope *envelope, Patch *patch, Params &params, unsigned int n_moved );
-    void initEnvelope( Patch *patch, ElectroMagn *EMfields ) override final;
+    void initEnvelopeInsideTheWindow( Patch *patch, ElectroMagn *EMfields ) override final;
+    void injectEnvelopeFromXmin( Patch *patch, Params &params, double time_dual ) override final;
     ~LaserEnvelope3D();
     void updateEnvelope( Patch *patch ) override final;
     void updateEnvelopeReducedDispersion( Patch *patch ) override final;
@@ -138,7 +145,8 @@ class LaserEnvelopeAM : public LaserEnvelope
 public:
     LaserEnvelopeAM( Params &params, Patch *patch );
     LaserEnvelopeAM( LaserEnvelope *envelope, Patch *patch, Params &params, unsigned int n_moved );
-    void initEnvelope( Patch *patch, ElectroMagn *EMfields ) override final;
+    void initEnvelopeInsideTheWindow( Patch *patch, ElectroMagn *EMfields ) override final;
+    void injectEnvelopeFromXmin( Patch *patch, Params &params, double time_dual ) override final;
     ~LaserEnvelopeAM();
     void updateEnvelope( Patch *patch ) override final;
     void updateEnvelopeReducedDispersion( Patch *patch ) override final;

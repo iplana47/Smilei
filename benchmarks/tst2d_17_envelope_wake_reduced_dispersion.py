@@ -8,7 +8,7 @@ Lx = nx * dx
 Ltrans = ntrans*dtrans
 npatch_x = 32
 laser_fwhm = 20. 
-center_laser = Lx-2.*laser_fwhm # the temporal center here is the same as waist position, but in principle they can differ
+center_laser = Lx-2.*laser_fwhm
 time_start_moving_window =  0.
 
 

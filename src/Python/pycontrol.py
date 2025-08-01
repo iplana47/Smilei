@@ -180,6 +180,10 @@ def _keep_python_running():
     for s in Species:
         if s.ionization_rate is not None:
             return True
+    # Verify if the envelope is injected from the xmin border through a space-temporal profile
+    if len(LaserEnvelope)>0:
+        if LaserEnvelope.box_side=="xmin":
+            return True
     # else False
     return False
 

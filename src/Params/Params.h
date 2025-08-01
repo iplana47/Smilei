@@ -153,6 +153,8 @@ public:
     double envelope_polarization_phi = 0.; // used only for envelope ionization; in radians, angle with the xy plane
     // define the solver for the envelope equation
     std::string envelope_solver;
+    // define the initialization method for the laser envelope 
+    std::string box_side;
     
     //Poisson solver
     //! Do we solve poisson
