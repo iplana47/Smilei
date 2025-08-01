@@ -46,13 +46,12 @@ void MF_SolverAM_Lehe::operator()( ElectroMagn *fields )
         bool isYmin = ( static_cast<ElectroMagnAM *>( fields ) )->isYmin;
         bool isXmin = ( static_cast<ElectroMagnAM *>( fields ) )->isXmin;
         bool isXmax = ( static_cast<ElectroMagnAM *>( fields ) )->isXmax;
-        //double *invR = ( static_cast<ElectroMagnAM *>( fields ) )->invR;
-        //double *invRd = ( static_cast<ElectroMagnAM *>( fields ) )->invRd;
+        int oversize_r = fields->oversize[1];
 
         // Magnetic field Bl^(p,d)
         for( unsigned int i=1 ; i<nl_p-1;  i++ ) {
             #pragma omp simd
-            for( unsigned int j=1+isYmin*2 ; j<nr_d-1 ; j++ ) {
+            for( unsigned int j=1+isYmin*oversize_r ; j<nr_d-1 ; j++ ) {
                 ( *Bl )( i, j ) += -dt/( ( j_glob+j-0.5 )*dr ) * alpha_r * ( ( double )( j+j_glob )*( *Et )( i  , j ) - ( double )( j+j_glob-1. )*( *Et )( i  , j-1 ) )
                                    -dt/( ( j_glob+j-0.5 )*dr ) * beta_rl * ( ( double )( j+j_glob )*( *Et )( i+1, j ) - ( double )( j+j_glob-1. )*( *Et )( i+1, j-1 ) )
                                    -dt/( ( j_glob+j-0.5 )*dr ) * beta_rl * ( ( double )( j+j_glob )*( *Et )( i-1, j ) - ( double )( j+j_glob-1. )*( *Et )( i-1, j-1 ) )         
@@ -65,7 +64,7 @@ void MF_SolverAM_Lehe::operator()( ElectroMagn *fields )
         // Magnetic field Br^(d,p)
         for( unsigned int i=2 ; i<nl_d-2 ; i++ ) {
             #pragma omp simd
-            for( unsigned int j=isYmin*3 ; j<nr_p ; j++ ) { //Specific condition on axis
+            for( unsigned int j=isYmin*(oversize_r+1) ; j<nr_p ; j++ ) { //Specific condition on axis
                 ( *Br )( i, j ) +=  dt_ov_dl * alpha_l * ( ( *Et )( i  , j ) - ( *Et )( i-1, j ) )
                                    +dt_ov_dl * delta_l * ( ( *Et )( i+1, j ) - ( *Et )( i-2, j ) )
                                    +Icpx*dt*alpha_t*( double )imode/( ( double )( j_glob+j )*dr )*( *El )( i  , j )
@@ -76,7 +75,7 @@ void MF_SolverAM_Lehe::operator()( ElectroMagn *fields )
         // Magnetic field Bt^(d,d)
         for( unsigned int i=2 ; i<nl_d-2 ; i++ ) {
             #pragma omp simd
-            for( unsigned int j=1 + isYmin*2 ; j<nr_d-1 ; j++ ) {
+            for( unsigned int j=1 + isYmin*oversize_r ; j<nr_d-1 ; j++ ) {
                 ( *Bt )( i, j ) +=  dt_ov_dr * alpha_r * ( ( *El )( i  , j ) - ( *El )( i  , j-1 ) )
                                    +dt_ov_dr * beta_rl * ( ( *El )( i+1, j ) - ( *El )( i+1, j-1 ) )
                                    +dt_ov_dr * beta_rl * ( ( *El )( i-1, j ) - ( *El )( i-1, j-1 ) )
@@ -89,21 +88,21 @@ void MF_SolverAM_Lehe::operator()( ElectroMagn *fields )
             unsigned int i=0;
             // Bl
             #pragma omp simd
-            for( unsigned int j=1+isYmin*2 ; j<nr_d-1 ; j++ ) {
+            for( unsigned int j=1+isYmin*oversize_r ; j<nr_d-1 ; j++ ) {
                 ( *Bl )( i, j ) += -dt/( ( j_glob+j-0.5 )*dr ) * ( ( double )( j+j_glob )*( *Et )( i  , j ) - ( double )( j+j_glob-1. )*( *Et )( i  , j-1 ) )
                                    -dt/( ( j_glob+j-0.5 )*dr ) * Icpx * ( double )imode  *( *Er )( i  , j );
             }
             // Br
             i = 1;
             #pragma omp simd
-            for( unsigned int j=isYmin*3 ; j<nr_p ; j++ ) { //Specific condition on axis
+            for( unsigned int j=isYmin*(oversize_r+1) ; j<nr_p ; j++ ) { //Specific condition on axis
                 ( *Br )( i, j ) +=  dt_ov_dl * ( ( *Et )( i  , j ) - ( *Et )( i-1, j ) )
                                    +Icpx*dt*( double )imode/( ( double )( j_glob+j )*dr )*( *El )( i  , j ); 
             } 
             // Bt
             i = 1;
             #pragma omp simd
-            for( unsigned int j=1 + isYmin*2 ; j<nr_d-1 ; j++ ) {
+            for( unsigned int j=1 + isYmin*oversize_r ; j<nr_d-1 ; j++ ) {
                 ( *Bt )( i, j ) +=  dt_ov_dr * ( ( *El )( i  , j ) - ( *El )( i  , j-1 ) )
                                    -dt_ov_dl * ( ( *Er )( i  , j ) - ( *Er )( i-1, j   ) );
             }
@@ -115,21 +114,21 @@ void MF_SolverAM_Lehe::operator()( ElectroMagn *fields )
             // Bl
             unsigned int i=nl_p-1;
             #pragma omp simd
-            for( unsigned int j=1+isYmin*2 ; j<nr_d-1 ; j++ ) {
+            for( unsigned int j=1+isYmin*oversize_r ; j<nr_d-1 ; j++ ) {
                 ( *Bl )( i, j ) += -dt/( ( j_glob+j-0.5 )*dr ) * ( ( double )( j+j_glob )*( *Et )( i  , j ) - ( double )( j+j_glob-1. )*( *Et )( i  , j-1 ) )
                                    -dt/( ( j_glob+j-0.5 )*dr ) * Icpx * ( double )imode  *( *Er )( i  , j );
             }
             // Br
             i=nl_d-2;
             #pragma omp simd
-            for( unsigned int j=isYmin*3 ; j<nr_p ; j++ ) { 
+            for( unsigned int j=isYmin*(oversize_r+1) ; j<nr_p ; j++ ) { 
                 ( *Br )( i, j ) +=  dt_ov_dl * ( ( *Et )( i  , j ) - ( *Et )( i-1, j ) )
                                    +Icpx*dt*( double )imode/( ( double )( j_glob+j )*dr )*( *El )( i  , j ); 
             } 
             // Bt
             i=nl_d-2;
             #pragma omp simd
-            for( unsigned int j=1 + isYmin*2 ; j<nr_d-1 ; j++ ) {
+            for( unsigned int j=1 + isYmin*oversize_r ; j<nr_d-1 ; j++ ) {
                 ( *Bt )( i, j ) +=  dt_ov_dr * ( ( *El )( i  , j ) - ( *El )( i  , j-1 ) )
                                    -dt_ov_dl * ( ( *Er )( i  , j ) - ( *Er )( i-1, j   ) );
             }
@@ -138,46 +137,45 @@ void MF_SolverAM_Lehe::operator()( ElectroMagn *fields )
         
         // On axis conditions
         if( isYmin ) {
-            unsigned int j=2;
             if( imode==0 ) {
                 for( unsigned int i=0 ; i<nl_d ; i++ ) {
-                    ( *Br )( i, j )=0;
+                    ( *Br )( i, oversize_r )=0;
                     ( *Br )( i, 1 )=-( *Br )( i, 3 );
                 }
                 for( unsigned int i=0 ; i<nl_d ; i++ ) {
-                    //( *Bt )( i, j+1 )= ( *Bt )( i, j+2 )/9.;
-                    ( *Bt )( i, j )= -( *Bt )( i, j+1 );
+                    //( *Bt )( i, oversize_r+1 )= ( *Bt )( i, oversize_r+2 )/9.;
+                    ( *Bt )( i, oversize_r )= -( *Bt )( i, oversize_r+1 );
                 }
                 for( unsigned int i=0 ; i<nl_p ; i++ ) {
-                    ( *Bl )( i, j )= ( *Bl )( i, j+1 );
+                    ( *Bl )( i, oversize_r )= ( *Bl )( i, oversize_r+1 );
                 }
             }
 
             else if( imode==1 ) {
                 for( unsigned int i=0 ; i<nl_p  ; i++ ) {
-                    ( *Bl )( i, j )= -( *Bl )( i, j+1 );
+                    ( *Bl )( i, oversize_r )= -( *Bl )( i, oversize_r+1 );
                 }
 
                 for( unsigned int i=2 ; i<nl_d-2 ; i++ ) {
-                    ( *Br )( i, j )+=  Icpx*dt_ov_dr*( *El )( i, j+1 )
-                                       + dt_ov_dl * alpha_l* ( ( *Et )( i, j )-( *Et )( i-1, j ) )
-                                       + dt_ov_dl * delta_l* ( ( *Et )( i+1, j ) - ( *Et )( i-2, j ) );
+                    ( *Br )( i, oversize_r )+=  Icpx*dt_ov_dr*( *El )( i, oversize_r+1 )
+                                       + dt_ov_dl * alpha_l* ( ( *Et )( i, oversize_r )-( *Et )( i-1, oversize_r ) )
+                                       + dt_ov_dl * delta_l* ( ( *Et )( i+1, oversize_r ) - ( *Et )( i-2, oversize_r ) );
                     ( *Br )( i, 1 )=( *Br )( i, 3 );
                 }
                 for( unsigned int i=0; i<nl_d ; i++ ) {
-                    ( *Bt )( i, j )= -2.*Icpx*( *Br )( i, j )-( *Bt )( i, j+1 );
+                    ( *Bt )( i, oversize_r )= -2.*Icpx*( *Br )( i, oversize_r )-( *Bt )( i, oversize_r+1 );
                 }
 
             } else { // modes > 1
                 for( unsigned int  i=0 ; i<nl_p; i++ ) {
-                    ( *Bl )( i, j )= -( *Bl )( i, j+1 );
+                    ( *Bl )( i, oversize_r )= -( *Bl )( i, oversize_r+1 );
                 }
                 for( unsigned int i=0 ; i<nl_d; i++ ) {
-                    ( *Br )( i, j )= 0;
+                    ( *Br )( i, oversize_r )= 0;
                     ( *Br )( i, 1 )=-( *Br )( i, 3 );
                 }
                 for( unsigned int  i=0 ; i<nl_d ; i++ ) {
-                    ( *Bt )( i, j )= - ( *Bt )( i, j+1 );
+                    ( *Bt )( i, oversize_r )= - ( *Bt )( i, oversize_r+1 );
                 }
             }
         }

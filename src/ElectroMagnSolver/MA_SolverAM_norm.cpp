@@ -34,17 +34,18 @@ void MA_SolverAM_norm::operator()( ElectroMagn *fields )
         cField2D *Jt = ( static_cast<ElectroMagnAM *>( fields ) )->Jt_[imode];
         int j_glob    = ( static_cast<ElectroMagnAM *>( fields ) )->j_glob_;
         bool isYmin = ( static_cast<ElectroMagnAM *>( fields ) )->isYmin;
+        int oversize_r = fields->oversize[1];
         
         // Electric field Elr^(d,p)
         for( unsigned int i=0 ; i<nl_d ; i++ ) {
-            for( unsigned int j=isYmin*3 ; j<nr_p ; j++ ) {
+            for( unsigned int j=isYmin*(oversize_r+1) ; j<nr_p ; j++ ) {
                 ( *El )( i, j ) += -dt*( *Jl )( i, j )
                                    +                 dt/( ( j_glob+j )*dr )*( ( j+j_glob+0.5 )*( *Bt )( i, j+1 ) - ( j+j_glob-0.5 )*( *Bt )( i, j ) )
                                    +                 Icpx*dt*( double )imode/( ( j_glob+j )*dr )*( *Br )( i, j );
             }
         }
         for( unsigned int i=0 ; i<nl_p ; i++ ) {
-            for( unsigned int j=isYmin*3 ; j<nr_d ; j++ ) {
+            for( unsigned int j=isYmin*(oversize_r+1) ; j<nr_d ; j++ ) {
                 ( *Er )( i, j ) += -dt*( *Jr )( i, j )
                                    -                  dt_ov_dl * ( ( *Bt )( i+1, j ) - ( *Bt )( i, j ) )
                                    -                  Icpx*dt*( double )imode/( ( j_glob+j-0.5 )*dr )* ( *Bl )( i, j );
@@ -52,7 +53,7 @@ void MA_SolverAM_norm::operator()( ElectroMagn *fields )
             }
         }
         for( unsigned int i=0 ;  i<nl_p ; i++ ) {
-            for( unsigned int j=isYmin*3 ; j<nr_p ; j++ ) {
+            for( unsigned int j=isYmin*(oversize_r+1) ; j<nr_p ; j++ ) {
                 ( *Et )( i, j ) += -dt*( *Jt )( i, j )
                                    +                  dt_ov_dl * ( ( *Br )( i+1, j ) - ( *Br )( i, j ) )
                                    -                  dt_ov_dr * ( ( *Bl )( i, j+1 ) - ( *Bl )( i, j ) );
@@ -60,42 +61,41 @@ void MA_SolverAM_norm::operator()( ElectroMagn *fields )
         }
         if( isYmin ) { 
             // Conditions on axis
-            unsigned int j=2;
             if( imode==0 ) {
                 for( unsigned int i=0 ; i<nl_p  ; i++ ) {
-                    ( *Et )( i, j )=0;
-                    ( *Et )( i, j-1 )=-( *Et )( i, j+1 );
+                    ( *Et )( i, oversize_r )=0;
+                    ( *Et )( i, oversize_r-1 )=-( *Et )( i, oversize_r+1 );
                 }
                 for( unsigned int i=0 ; i<nl_p  ; i++ ) {
-                    ( *Er )( i, j )= -( *Er )( i, j+1 );
+                    ( *Er )( i, oversize_r )= -( *Er )( i, oversize_r+1 );
                 }
                 for( unsigned int i=0 ; i<nl_d ; i++ ) {
-                    ( *El )( i, j )+= 4.*dt_ov_dr*( *Bt )( i, j+1 )-dt*( *Jl )( i, j );
-                    ( *El )( i, j-1 )=( *El )( i, j+1 );
+                    ( *El )( i, oversize_r )+= 4.*dt_ov_dr*( *Bt )( i, oversize_r+1 )-dt*( *Jl )( i, oversize_r );
+                    ( *El )( i, oversize_r-1 )=( *El )( i, oversize_r+1 );
                 }
             } else if( imode==1 ) {
                 for( unsigned int i=0 ; i<nl_d  ; i++ ) {
-                    ( *El )( i, j )= 0;
-                    ( *El )( i, j-1 )=-( *El )( i, j+1 );
+                    ( *El )( i, oversize_r )= 0;
+                    ( *El )( i, oversize_r-1 )=-( *El )( i, oversize_r+1 );
                 }
                 for( unsigned int i=0 ; i<nl_p  ; i++ ) {
-                    ( *Et )( i, j )= -Icpx/8.*( 9.*( *Er )( i, j+1 )-( *Er )( i, j+2 ) );// div( E mode 1) = 0 on axis.
-                    ( *Et )( i, j-1 )=( *Et )( i, j+1 );
+                    ( *Et )( i, oversize_r )= -Icpx/8.*( 9.*( *Er )( i, oversize_r+1 )-( *Er )( i, oversize_r+2 ) );// div( E mode 1) = 0 on axis.
+                    ( *Et )( i, oversize_r-1 )=( *Et )( i, oversize_r+1 );
                 }
                 for( unsigned int i=0 ; i<nl_p ; i++ ) {
-                    ( *Er )( i, j ) = ( *Er )( i, j+1 );
+                    ( *Er )( i, oversize_r ) = ( *Er )( i, oversize_r+1 );
                 }
             } else { // mode > 1
                 for( unsigned int  i=0 ; i<nl_d; i++ ) {
-                    ( *El )( i, j )= 0;
-                    ( *El )( i, j-1 )=-( *El )( i, j+1 );
+                    ( *El )( i, oversize_r )= 0;
+                    ( *El )( i, oversize_r-1 )=-( *El )( i, oversize_r+1 );
                 }
                 for( unsigned int  i=0 ; i<nl_p; i++ ) {
-                    ( *Er )( i, j )= -( *Er )( i, j+1 );
+                    ( *Er )( i, oversize_r )= -( *Er )( i, oversize_r+1 );
                 }
                 for( unsigned int i=0 ; i<nl_p; i++ ) {
-                    ( *Et )( i, j )= 0;
-                    ( *Et )( i, j-1 )=-( *Et )( i, j+1 );
+                    ( *Et )( i, oversize_r )= 0;
+                    ( *Et )( i, oversize_r-1 )=-( *Et )( i, oversize_r+1 );
                 }
             }
         }
