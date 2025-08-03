@@ -481,11 +481,6 @@ namespace cudahip1d {
                                          int          not_spectral_,
                                          bool         cell_sorting )
         {
-            // TODO(Etienne M): refactor this function. Break it into smaller
-            // pieces (lds init/store, coeff computation, deposition etc..)
-            // TODO(Etienne M): __ldg could be used to slightly improve GDS load
-            // speed. This would only have an effect on Nvidia cards as this
-            // operation is a no op on AMD.
             const unsigned int workgroup_size = kWorkgroupSize; // blockDim.x;
             const unsigned int bin_count      = gridDim.x;
             const unsigned int loop_stride    = workgroup_size; // This stride should enable better memory access coalescing
@@ -498,19 +493,8 @@ namespace cudahip1d {
             const unsigned int global_x_scratch_space_coordinate_offset = x_cluster_coordinate * Params::getGPUClusterWidth( 1 /* 1D */ );
             const int GPUClusterWithGCWidth = Params::getGPUClusterWithGhostCellWidth( 1 /* 1D */, 2 /* 2nd order interpolation */ );
 
-            // NOTE: We gain from the particles not being sorted inside a
-            // cluster because it reduces the bank conflicts one gets when
-            // multiple threads access the same part of the shared memory. Such
-            // "conflicted" accesses are serialized !
-            // NOTE: We use a bit to much LDS. For Jx, the first row could be
-            // discarded, for Jy we could remove the first column.
-
             static constexpr unsigned int kFieldScratchSpaceSize = Params::getGPUInterpolationClusterCellVolume( 1 /* 1D */, 2 /* 2nd order interpolation */ );
 
-            //    kWorkgroupSize, bin_count, loop_stride, x_cluster_coordinate, workgroup_dedicated_bin_index, thread_index_offset, Params::getGPUClusterWidth(1), GPUClusterWithGCWidth, kFieldScratchSpaceSize, global_x_scratch_space_coordinate_offset);
-            // NOTE: I tried having only one cache and reusing it. Doing that
-            // requires you to iterate multiple time over the particle which is
-            // possible but cost more bandwidth. The speedup was ~x0.92.
             __shared__ ReductionFloat Jx_scratch_space[kFieldScratchSpaceSize];
             __shared__ ReductionFloat Jy_scratch_space[kFieldScratchSpaceSize];
             __shared__ ReductionFloat Jz_scratch_space[kFieldScratchSpaceSize];
@@ -607,25 +591,21 @@ namespace cudahip1d {
                                 global_x_scratch_space_coordinate_offset /* Offset to get cluster relative coordinates */;
 
                 // Jx
-                ComputeFloat tmpJx[5]{};
+                //ComputeFloat tmpJx[5]{};
+                ComputeFloat tmpJx = 0.0; 
                 for( unsigned int i = 1; i < 5; ++i ) {
                     const int    iloc = i + ipo;
-                    tmpJx[i] = tmpJx[i-1] + crx_p * (Sx0[i-1] - Sx1[i-1]); 
-                    atomic::LDS::AddNoReturn( &Jx_scratch_space[iloc], static_cast<ReductionFloat>( tmpJx[i] ) );
+                    tmpJx = tmpJx + crx_p * (Sx0[i-1] - Sx1[i-1]); 
+                    atomic::LDS::AddNoReturn( &Jx_scratch_space[iloc], static_cast<ReductionFloat>( tmpJx ) );
                 }
 
-                // Jy
+                // Jy & Jz
                 for( unsigned int i = 0; i < 5; ++i ) {
                     const int    iloc = i + ipo;
-                    tmpJx[i] = cry_p * 0.5 * (Sx0[i] - Sx1[i]); 
-                    atomic::LDS::AddNoReturn( &Jy_scratch_space[iloc], static_cast<ReductionFloat>( tmpJx[i] ) );
-                }
-
-                // Jz
-                for( unsigned int i = 0; i < 5; ++i ) {
-                    const int    iloc = i + ipo;
-                    tmpJx[i] = crz_p * 0.5 * (Sx0[i] - Sx1[i]); 
-                    atomic::LDS::AddNoReturn( &Jz_scratch_space[iloc], static_cast<ReductionFloat>( tmpJx[i] ) );
+                    ComputeFloat tmpJy = cry_p * 0.5 * (Sx0[i] + Sx1[i]);
+                    ComputeFloat tmpJz = crz_p * 0.5 * (Sx0[i] + Sx1[i]);
+                    atomic::LDS::AddNoReturn( &Jy_scratch_space[iloc], static_cast<ReductionFloat>( tmpJy ) );
+                    atomic::LDS::AddNoReturn( &Jz_scratch_space[iloc], static_cast<ReductionFloat>( tmpJz ) );
                 }
             } // particle_index
 
@@ -640,7 +620,7 @@ namespace cudahip1d {
 
                 // These atomics are basically free (very few of them).
                 atomic::GDS::AddNoReturn( &device_Jx[global_memory_index], static_cast<double>( Jx_scratch_space[scratch_space_index] ) );
-                atomic::GDS::AddNoReturn( &device_Jy[global_memory_index +  not_spectral_ * global_x_scratch_space_coordinate], static_cast<double>( Jy_scratch_space[scratch_space_index] ) ); //  We handle the FTDT/picsar 
+                atomic::GDS::AddNoReturn( &device_Jy[global_memory_index /*+  not_spectral_ * global_x_scratch_space_coordinate*/], static_cast<double>( Jy_scratch_space[scratch_space_index] ) ); //  We handle the FTDT/picsar 
                 atomic::GDS::AddNoReturn( &device_Jz[global_memory_index], static_cast<double>( Jz_scratch_space[scratch_space_index] ) );
             }
         } // end DepositCurrent
@@ -675,11 +655,6 @@ namespace cudahip1d {
                                             int          not_spectral_,
                                             bool         cell_sorting )
         {
-            // TODO(Etienne M): refactor this function. Break it into smaller
-            // pieces (lds init/store, coeff computation, deposition etc..)
-            // TODO(Etienne M): __ldg could be used to slightly improve GDS load
-            // speed. This would only have an effect on Nvidia cards as this
-            // operation is a no op on AMD.
             const unsigned int workgroup_size = kWorkgroupSize; // blockDim.x;
             const unsigned int bin_count      = gridDim.x;
             const unsigned int loop_stride    = workgroup_size; // This stride should enable better memory access coalescing
@@ -691,19 +666,9 @@ namespace cudahip1d {
             // The unit is the cell
             const unsigned int global_x_scratch_space_coordinate_offset = x_cluster_coordinate * Params::getGPUClusterWidth( 1 /* 1D */ );
 
-            // NOTE: We gain from the particles not being sorted inside a
-            // cluster because it reduces the bank conflicts one gets when
-            // multiple threads access the same part of the shared memory. Such
-            // "conflicted" accesses are serialized !
-            // NOTE: We use a bit to much LDS. For Jx, the first row could be
-            // discarded, for Jy we could remove the first column.
-
             const int GPUClusterWithGCWidth = Params::getGPUClusterWithGhostCellWidth( 1 /* 1D */, 2 /* 2nd order interpolation */ );
             static constexpr unsigned int kFieldScratchSpaceSize = Params::getGPUInterpolationClusterCellVolume( 1 /* 1D */, 2 /* 2nd order interpolation */ );
 
-            // NOTE: I tried having only one cache and reusing it. Doing that
-            // requires you to iterate multiple time over the particle which is
-            // possible but cost more bandwidth. The speedup was ~x0.92.
             __shared__ ReductionFloat Jx_scratch_space[kFieldScratchSpaceSize];
             __shared__ ReductionFloat Jy_scratch_space[kFieldScratchSpaceSize];
             __shared__ ReductionFloat Jz_scratch_space[kFieldScratchSpaceSize];
@@ -738,7 +703,7 @@ namespace cudahip1d {
                 stop_thread = last_particle;
                 stride = workgroup_size;
             }
-            
+
             for( unsigned int particle_index = start_thread; particle_index < stop_thread; particle_index += stride ) {
                 const ComputeFloat                  invgf = static_cast<ComputeFloat>( device_invgf_[particle_index] );
                 const int *const __restrict__        iold = &device_iold_[particle_index];
@@ -796,25 +761,19 @@ namespace cudahip1d {
                                 global_x_scratch_space_coordinate_offset /* Offset to get cluster relative coordinates */;
 
                 // Jx
-                ComputeFloat tmpJx[5]{};
+                ComputeFloat tmpJx = 0.0; 
                 for( unsigned int i = 1; i < 5; ++i ) {
                     const int    iloc = i + ipo;
-                    tmpJx[i] = tmpJx[i-1] + crx_p * (Sx0[i-1] - Sx1[i-1]); 
-                    atomic::LDS::AddNoReturn( &Jx_scratch_space[iloc], static_cast<ReductionFloat>( tmpJx[i] ) );
+                    tmpJx = tmpJx + crx_p * (Sx0[i-1] - Sx1[i-1]); 
+                    atomic::LDS::AddNoReturn( &Jx_scratch_space[iloc], static_cast<ReductionFloat>( tmpJx ) );
                 }
-
-                // Jy
+                // Jy & Jz
                 for( unsigned int i = 0; i < 5; ++i ) {
                     const int    iloc = i + ipo;
-                    tmpJx[i] = cry_p * 0.5 * (Sx0[i] - Sx1[i]); 
-                    atomic::LDS::AddNoReturn( &Jy_scratch_space[iloc], static_cast<ReductionFloat>( tmpJx[i] ) );
-                }
-
-                // Jz
-                for( unsigned int i = 0; i < 5; ++i ) {
-                    const int    iloc = i + ipo;
-                    tmpJx[i] = crz_p * 0.5 * (Sx0[i] - Sx1[i]); 
-                    atomic::LDS::AddNoReturn( &Jz_scratch_space[iloc], static_cast<ReductionFloat>( tmpJx[i] ) );
+                    ComputeFloat tmpJy = cry_p * 0.5 * (Sx0[i] + Sx1[i]);
+                    ComputeFloat tmpJz = crz_p * 0.5 * (Sx0[i] + Sx1[i]);
+                    atomic::LDS::AddNoReturn( &Jy_scratch_space[iloc], static_cast<ReductionFloat>( tmpJy ) );
+                    atomic::LDS::AddNoReturn( &Jz_scratch_space[iloc], static_cast<ReductionFloat>( tmpJz ) );
                 }
 
                 // Rho
@@ -822,40 +781,6 @@ namespace cudahip1d {
                     const int iloc = i + ipo;
                     atomic::LDS::AddNoReturn( &rho_scratch_space[iloc], static_cast<ReductionFloat>( charge_weight * Sx1[i] ) );
                 }
-
-                // improvements ideas: 1. unrolling to reduce the size of Sx0 and Sx1
-                // 2. combine the loops
-
-                /*
-                // 
-                {
-                    //ComputeFloat tmp = 0.5 * (Sx0[0] - Sx1[0]); // = - 0.5 * Sx1[0]
-                    atomic::LDS::AddNoReturn( &Jy_scratch_space[ipo], static_cast<ReductionFloat>( -cry_p * 0.5 * Sx1[0] ) );
-                    atomic::LDS::AddNoReturn( &Jz_scratch_space[ipo], static_cast<ReductionFloat>( -crz_p * 0.5 * Sx1[0] ) );
-                    atomic::LDS::AddNoReturn( &rho_scratch_space[ipo], static_cast<ReductionFloat>( charge_weight * Sx1[0] ) );
-                }*/
-                /*for( unsigned int i = 1; i < 4; ++i ) {
-                    const int iloc = i + ipo;
-                    tmpJx[i] = tmpJx[i-1] + crx_p * (Sx0[i-1] - Sx1[i-1]); 
-                    ComputeFloat tmp = 0.5 * (Sx0[i] - Sx1[i]);
-                    atomic::LDS::AddNoReturn( &Jx_scratch_space[iloc], static_cast<ReductionFloat>( tmpJx[i] ) );
-                    atomic::LDS::AddNoReturn( &Jy_scratch_space[iloc], static_cast<ReductionFloat>( cry_p * tmp ) );
-                    atomic::LDS::AddNoReturn( &Jz_scratch_space[iloc], static_cast<ReductionFloat>( crz_p * tmp ) );
-                    atomic::LDS::AddNoReturn( &rho_scratch_space[iloc], static_cast<ReductionFloat>( charge_weight * Sx1[i] ) );
-                }*/
-                /* i=4
-                {
-                    const int iloc = i + ipo;
-                    tmpJx[4] = tmpJx[3] + crx_p * (Sx0[i-1] - Sx1[i-1]); // can save some registers by  tmpJx[0] instead of tmpJx[4] ? reducing its size from 5 to 4?
-                    //ComputeFloat tmp = 0.5 * (Sx0[4] - Sx1[4]); // = -0.5 * Sx1[4]
-                    atomic::LDS::AddNoReturn( &Jx_scratch_space[iloc], static_cast<ReductionFloat>( tmpJx[i] ) );    
-                    atomic::LDS::AddNoReturn( &Jy_scratch_space[iloc], static_cast<ReductionFloat>( -cry_p * 0.5 * Sx1[4] ) ); //null
-                    atomic::LDS::AddNoReturn( &Jz_scratch_space[iloc], static_cast<ReductionFloat>( -crz_p * 0.5 * Sx1[4] ) ); //null
-                    atomic::LDS::AddNoReturn( &rho_scratch_space[iloc], static_cast<ReductionFloat>( charge_weight * Sx1[4] ) ); //null
-                }
-
-
-                */
 
             } // particle_index
 
@@ -873,7 +798,8 @@ namespace cudahip1d {
 
                 // These atomics are basically free (very few of them).
                 atomic::GDS::AddNoReturn( &device_Jx[global_memory_index], static_cast<double>( Jx_scratch_space[scratch_space_index] ) );
-                atomic::GDS::AddNoReturn( &device_Jy[global_memory_index + /* We handle the FTDT/picsar */ not_spectral_ * global_x_scratch_space_coordinate], static_cast<double>( Jy_scratch_space[scratch_space_index] ) );
+                //atomic::GDS::AddNoReturn( &device_Jy[global_memory_index + /* We handle the FTDT/picsar */ not_spectral_ * global_x_scratch_space_coordinate], static_cast<double>( Jy_scratch_space[scratch_space_index] ) );
+                atomic::GDS::AddNoReturn( &device_Jy[global_memory_index], static_cast<double>( Jy_scratch_space[scratch_space_index] ) );
                 atomic::GDS::AddNoReturn( &device_Jz[global_memory_index], static_cast<double>( Jz_scratch_space[scratch_space_index] ) );
                 atomic::GDS::AddNoReturn( &device_rho[global_memory_index], static_cast<double>( rho_scratch_space[scratch_space_index] ) );
             }
@@ -1028,6 +954,11 @@ namespace cudahip1d {
         // operations) can lead to drastic performance improvement.
         // One just need to assign 'float' to ReductionFloat.
         //
+        /*printf("pointers and sizes Jx %p %d  Jy %p %d  Jz %p %d  rho %p %d \n", 
+                            smilei::tools::gpu::HostDeviceMemoryManagement::GetDevicePointer( host_Jx ), Jx_size,
+                            smilei::tools::gpu::HostDeviceMemoryManagement::GetDevicePointer( host_Jy ), Jy_size,
+                            smilei::tools::gpu::HostDeviceMemoryManagement::GetDevicePointer( host_Jz ), Jz_size,
+                            smilei::tools::gpu::HostDeviceMemoryManagement::GetDevicePointer( host_rho ), rho_size);*/
         using ComputeFloat   = double;
         using ReductionFloat = double;
         auto KernelFunction = kernel::DepositCurrentAndDensity_1D_Order2<ComputeFloat, ReductionFloat, kWorkgroupSize>;

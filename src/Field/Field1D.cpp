@@ -71,6 +71,18 @@ Field1D::~Field1D()
 {
     for( unsigned int iside=0 ; iside<sendFields_.size() ; iside++ ) {
         if ( sendFields_[iside] != NULL ) {
+
+#if defined ( SMILEI_ACCELERATOR_GPU )
+            if ( sendFields_[iside]->isOnDevice() )
+            {
+                sendFields_[iside]->deleteOnDevice();
+            }
+            
+            if ( recvFields_[iside]->isOnDevice() )
+            {
+                recvFields_[iside]->deleteOnDevice();
+            }
+#endif
             delete sendFields_[iside];
             sendFields_[iside] = NULL;
             delete recvFields_[iside];
@@ -78,6 +90,9 @@ Field1D::~Field1D()
         }
     }
     if( data_!=NULL ) {
+#if defined(SMILEI_ACCELERATOR_GPU_OACC)
+        #pragma acc exit data delete (data_[0:number_of_points_]) if (acc_deviceptr(data_) != NULL)
+#endif
         delete [] data_;
     }
 }
@@ -102,6 +117,7 @@ void Field1D::allocateDims()
     }
     
     number_of_points_ = dims_[0];
+    Field::put_to(0.0);
     
 }
 
