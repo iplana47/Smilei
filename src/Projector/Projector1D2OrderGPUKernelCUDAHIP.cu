@@ -27,329 +27,6 @@
     #include "gpu.h"
 #endif
 
-//    #if defined( PRIVATE_SMILEI_USE_OPENMP_PROJECTION_IMPLEMENTATION )
-
-//namespace naive {
-//
-//    void //static inline void
-//    currentDepositionKernel2D( double     *__restrict__ Jx,
-//                             double       *__restrict__ Jy,
-//                             double       *__restrict__ Jz,
-//                             int Jx_size,
-//                             int Jy_size,
-//                             int Jz_size,
-//                             const double *__restrict__ device_particle_position_x,
-//                             const double *__restrict__ device_particle_momentum_y,
-//                             const double *__restrict__ device_particle_momentum_z,
-//                             const short  *__restrict__ device_particle_charge,
-//                             const double *__restrict__ device_particle_weight,
-//                             const int    *__restrict__ host_bin_index,
-//                             unsigned int x_dimension_bin_count,
-//                             const double *__restrict__ invgf_,
-//                             const int *__restrict__ iold_,
-//                             const double *__restrict__ deltaold_,
-//                             double inv_cell_volume,
-//                             double dx_inv,
-//                             double dx_ov_dt,
-//                             int    i_domain_begin,
-//                             int    not_spectral_ )
-//    {
-//        // The OMP implementation is NOT bin aware. As per the precondition on
-//        // host_bin_index, index zero always contains the number of particles.
-//        // See nvidiaParticles::prepareBinIndex / setHostBinIndex.
-//        const unsigned int bin_count      = 1;
-//        const int          particle_count = host_bin_index[bin_count - 1];
-//
-//        #if defined( SMILEI_ACCELERATOR_GPU_OMP )
-//            #pragma omp target is_device_ptr /* map */ ( /* to: */                                            \
-//                                                         device_particle_position_x /* [0:particle_count] */, \
-//                                                         device_particle_momentum_y /* [0:particle_count] */, \
-//                                                         device_particle_momentum_z /* [0:particle_count] */, \
-//                                                         device_particle_charge /* [0:particle_count] */,     \
-//                                                         device_particle_weight /* [0:particle_count] */ )
-//            #pragma omp teams thread_limit( 64 ) distribute parallel for
-//        #elif defined( SMILEI_ACCELERATOR_GPU_OACC )
-//            #pragma acc parallel                      \
-//            deviceptr( device_particle_position_x,    \
-//                       device_particle_momentum_y,    \
-//                       device_particle_momentum_z,    \
-//                       device_particle_charge,        \
-//                       device_particle_weight )       \
-//                present( iold [0:3 * particle_count], \
-//                         deltaold [0:3 * particle_count] )
-//            #pragma acc loop gang worker vector
-//        #endif
-//        for( int particle_index = 0; particle_index < particle_count; ++particle_index ) {
-//            const double invgf                        = invgf_[particle_index];
-//            const int *const __restrict__ iold        = &iold_[particle_index];
-//            const double *const __restrict__ deltaold = &deltaold_[particle_index];
-//
-//            double Sx0[5];
-//            double Sx1[5];
-//
-//            // Variable declaration & initialization
-//            // Esirkepov's paper: https://arxiv.org/pdf/physics/9901047.pdf
-//
-//            // Locate the particle on the primal grid at former time-step & calculate coeff. S0
-//            {
-//                const double delta  = deltaold[0 * particle_count];
-//                const double delta2 = delta * delta;
-//                Sx0[0]              = 0.0;
-//                Sx0[1]              = 0.5 * ( delta2 - delta + 0.25 );
-//                Sx0[2]              = 0.75 - delta2;
-//                Sx0[3]              = 0.5 * ( delta2 + delta + 0.25 );
-//                Sx0[4]              = 0.0;
-//            }
-//
-//            // Locate the particle on the primal grid at current time-step & calculate coeff. S1
-//            {
-//                const double xpn      = device_particle_position_x[particle_index] * dx_inv;
-//                const int    ip       = std::round( xpn );
-//                const int    ipo      = iold[0 * particle_count];
-//                const int    ip_m_ipo = ip - ipo - i_domain_begin;
-//                const double delta    = xpn - static_cast<double>( ip );
-//                const double delta2   = delta * delta;
-//
-//                Sx1[0] = 0.0;
-//                Sx1[1] = 0.0;
-//                // Sx1[2] = 0.0; // Always set below
-//                Sx1[3] = 0.0;
-//                Sx1[4] = 0.0;
-//
-//                Sx1[ip_m_ipo + 1] = 0.5 * ( delta2 - delta + 0.25 );
-//                Sx1[ip_m_ipo + 2] = 0.75 - delta2;
-//                Sx1[ip_m_ipo + 3] = 0.5 * ( delta2 + delta + 0.25 );
-//            }
-//
-//            // (x,y,z) components of the current density for the macro-particle
-//            const double charge_weight = inv_cell_volume * static_cast<double>( device_particle_charge[particle_index] ) * device_particle_weight[particle_index];
-//            const double crx_p         = charge_weight * dx_ov_dt;
-//            const double cry_p         = charge_weight * dy_ov_dt;
-//            const double crz_p         = charge_weight * ( 1.0 / 3.0 ) * device_particle_momentum_z[particle_index] * invgf;
-//
-//            // This is the particle position as grid index
-//            // This minus 2 come from the order 2 scheme, based on a 5 points stencil from -2 to +2.
-//            const int ipo = iold[0 * particle_count] - 2;
-//
-//            for( unsigned int i = 0; i < 1; ++i ) {
-//                const int iloc = ( i + ipo ) ;
-//                /* Jx[iloc] += tmpJx[0]; */
-//
-//                SMILEI_ACCELERATOR_ATOMIC
-//                Jz[iloc] += crz_p * ( Sy1[0] * ( /* 0.5 * Sx0[i] + */ Sx1[i] ) );
-//                double tmp = 0.0;
-//                for( unsigned int j = 1; j < 5; j++ ) {
-//                    tmp -= cry_p * ( Sy1[j - 1] - Sy0[j - 1] ) * ( Sx0[i] + 0.5 * ( Sx1[i] - Sx0[i] ) );
-//
-//                    SMILEI_ACCELERATOR_ATOMIC
-//                    Jy[iloc + j + not_spectral_ * ( /* i + */ ipo )] += tmp;
-//
-//                    SMILEI_ACCELERATOR_ATOMIC
-//                    Jz[iloc + j] += crz_p * ( Sy0[j] * ( 0.5 * Sx1[i] /* + Sx0[i] */ ) +
-//                                              Sy1[j] * ( /* 0.5 * Sx0[i] + */ Sx1[i] ) );
-//                }
-//            }
-//
-//            double tmpJx[5]{};
-//
-//            for( unsigned int i = 1; i < 5; ++i ) {
-//                const int iloc = ( i + ipo ) ;
-//                tmpJx[0] -= crx_p * ( Sx1[i - 1] - Sx0[i - 1] ) * ( 0.5 * ( Sy1[0] - Sy0[0] ) );
-//                SMILEI_ACCELERATOR_ATOMIC
-//                Jx[iloc] += tmpJx[0];
-//                SMILEI_ACCELERATOR_ATOMIC
-//                Jz[iloc] += crz_p * ( Sy1[0] * ( 0.5 * Sx0[i] + Sx1[i] ) );
-//                double tmp = 0.0;
-//                for( unsigned int j = 1; j < 5; ++j ) {
-//                    tmpJx[j] -= crx_p * ( Sx1[i - 1] - Sx0[i - 1] ) * ( Sy0[j] + 0.5 * ( Sy1[j] - Sy0[j] ) );
-//                    SMILEI_ACCELERATOR_ATOMIC
-//                    Jx[iloc + j] += tmpJx[j];
-//                    tmp -= cry_p * ( Sy1[j - 1] - Sy0[j - 1] ) * ( Sx0[i] + 0.5 * ( Sx1[i] - Sx0[i] ) );
-//                    SMILEI_ACCELERATOR_ATOMIC
-//                    Jy[iloc + j + not_spectral_ * ( i + ipo )] += tmp;
-//
-//                    SMILEI_ACCELERATOR_ATOMIC
-//                    Jz[iloc + j] += crz_p * ( Sy0[j] * ( 0.5 * Sx1[i] + Sx0[i] ) +
-//                                              Sy1[j] * ( 0.5 * Sx0[i] + Sx1[i] ) );
-//                }
-//            }
-//        }
-//    } // end currentDepositionKernel
-//
-//    //static inline
-//    void
-//    currentAndDensityDepositionKernel( double *__restrict__ Jx,
-//                                       double *__restrict__ Jy,
-//                                       double *__restrict__ Jz,
-//                                       double *__restrict__ rho,
-//                                       int Jx_size,
-//                                       int Jy_size,
-//                                       int Jz_size,
-//                                       int rho_size,
-//                                       const double *__restrict__ device_particle_position_x,
-//                                       const double *__restrict__ device_particle_momentum_y,
-//                                       const double *__restrict__ device_particle_momentum_z,
-//                                       const short *__restrict__ device_particle_charge,
-//                                       const double *__restrict__ device_particle_weight,
-//                                       const int *__restrict__ host_bin_index,
-//                                       unsigned int,
-//                                       unsigned int,
-//                                       const double *__restrict__ invgf_,
-//                                       const int *__restrict__ iold_,
-//                                       const double *__restrict__ deltaold_,
-//                                       double inv_cell_volume,
-//                                       double dx_inv,
-//                                       double dx_ov_dt,
-//                                       int    i_domain_begin,
-//                                       int    not_spectral_ )
-//    {
-//        // The OMP implementation is NOT bin aware. As per the precondition on
-//        // host_bin_index, index zero always contains the number of particles.
-//        // See nvidiaParticles::prepareBinIndex / setHostBinIndex.
-//        const unsigned int bin_count      = 1;
-//        const int          particle_count = host_bin_index[bin_count - 1];
-//
-//        #if defined( SMILEI_ACCELERATOR_GPU_OMP )
-//            #pragma omp target is_device_ptr /* map */ ( /* to: */                                            \
-//                                                         device_particle_position_x /* [0:particle_count] */, \
-//                                                         device_particle_momentum_y /* [0:particle_count] */, \
-//                                                         device_particle_momentum_z /* [0:particle_count] */, \
-//                                                         device_particle_charge /* [0:particle_count] */,     \
-//                                                         device_particle_weight /* [0:particle_count] */ )
-//            #pragma omp teams thread_limit( 64 ) distribute parallel for
-//        #elif defined( SMILEI_ACCELERATOR_GPU_OACC )
-//            #pragma acc parallel                      \
-//            deviceptr( device_particle_position_x,    \
-//                       device_particle_momentum_y,    \
-//                       device_particle_momentum_z,    \
-//                       device_particle_charge,        \
-//                       device_particle_weight )       \
-//                present( iold [0:3 * particle_count], \
-//                         deltaold [0:3 * particle_count] )
-//            #pragma acc loop gang worker vector
-//        #endif
-//        for( int particle_index = 0; particle_index < particle_count; ++particle_index ) {
-//            const double invgf                        = invgf_[particle_index];
-//            const int *const __restrict__ iold        = &iold_[particle_index];
-//            const double *const __restrict__ deltaold = &deltaold_[particle_index];
-//
-//            double Sx0[5];
-//            double Sx1[5];
-//            double Sy0[5];
-//            double Sy1[5];
-//
-//            // Variable declaration & initialization
-//            // Esirkepov's paper: https://arxiv.org/pdf/physics/9901047.pdf
-//
-//            // Locate the particle on the primal grid at former time-step & calculate coeff. S0
-//            {
-//                const double delta  = deltaold[0 * particle_count];
-//                const double delta2 = delta * delta;
-//                Sx0[0]              = 0.0;
-//                Sx0[1]              = 0.5 * ( delta2 - delta + 0.25 );
-//                Sx0[2]              = 0.75 - delta2;
-//                Sx0[3]              = 0.5 * ( delta2 + delta + 0.25 );
-//                Sx0[4]              = 0.0;
-//            }
-//            // Locate the particle on the primal grid at current time-step & calculate coeff. S1
-//            {
-//                const double xpn      = device_particle_position_x[particle_index] * dx_inv;
-//                const int    ip       = std::round( xpn );
-//                const int    ipo      = iold[0 * particle_count];
-//                const int    ip_m_ipo = ip - ipo - i_domain_begin;
-//                const double delta    = xpn - static_cast<double>( ip );
-//                const double delta2   = delta * delta;
-//
-//                Sx1[0] = 0.0;
-//                Sx1[1] = 0.0;
-//                // Sx1[2] = 0.0; // Always set below
-//                Sx1[3] = 0.0;
-//                Sx1[4] = 0.0;
-//
-//                Sx1[ip_m_ipo + 1] = 0.5 * ( delta2 - delta + 0.25 );
-//                Sx1[ip_m_ipo + 2] = 0.75 - delta2;
-//                Sx1[ip_m_ipo + 3] = 0.5 * ( delta2 + delta + 0.25 );
-//            }
-//
-//            // (x,y,z) components of the current density for the macro-particle
-//            const double charge_weight = inv_cell_volume * static_cast<double>( device_particle_charge[particle_index] ) * device_particle_weight[particle_index];
-//            const double crx_p         = charge_weight * dx_ov_dt;
-//            const double cry_p         = charge_weight * dy_ov_dt;
-//            const double crz_p         = charge_weight * ( 1.0 / 3.0 ) * device_particle_momentum_z[particle_index] * invgf;
-//
-//            // This is the particle position as grid index
-//            // This minus 2 come from the order 2 scheme, based on a 5 points stencil from -2 to +2.
-//            const int ipo = iold[0 * particle_count] - 2;
-//            const int jpo = iold[1 * particle_count] - 2;
-//
-//            // case i =0
-//            for( unsigned int i = 0; i < 1; ++i ) {
-//                const int iloc = ( i + ipo ) ;
-//                /* Jx[iloc] += tmpJx[0]; */
-//
-//                SMILEI_ACCELERATOR_ATOMIC
-//                Jz[iloc] += crz_p * ( Sy1[0] * ( /* 0.5 * Sx0[i] + */ Sx1[i] ) );
-//
-//                SMILEI_ACCELERATOR_ATOMIC
-//                rho[iloc] += charge_weight * Sx1[0] * Sy1[0];
-//                double tmp = 0.0;
-//                for( unsigned int j = 1; j < 5; j++ ) {
-//                    tmp -= cry_p * ( Sy1[j - 1] - Sy0[j - 1] ) * ( Sx0[i] + 0.5 * ( Sx1[i] - Sx0[i] ) );
-//
-//                    SMILEI_ACCELERATOR_ATOMIC
-//                    Jy[iloc + j + not_spectral_ * ( /* i + */ ipo )] += tmp;
-//
-//                    SMILEI_ACCELERATOR_ATOMIC
-//                    Jz[iloc + j] += crz_p * ( Sy0[j] * ( 0.5 * Sx1[i] /* + Sx0[i] */ ) +
-//                                              Sy1[j] * ( /* 0.5 * Sx0[i] + */ Sx1[i] ) );
-//                    SMILEI_ACCELERATOR_ATOMIC
-//                    rho[iloc + j] += charge_weight * Sx1[0] * Sy1[j];
-//                }
-//            }
-//
-//            double tmpJx[5]{};
-//
-//            // case i> 0
-//            for( unsigned int i = 1; i < 5; ++i ) {
-//                const int iloc = i + ipo ;
-//                tmpJx[0] -= crx_p * ( Sx1[i - 1] - Sx0[i - 1] );
-//
-//                SMILEI_ACCELERATOR_ATOMIC
-//                Jx[iloc] += tmpJx[0];
-//
-//                SMILEI_ACCELERATOR_ATOMIC
-//                Jz[iloc] += crz_p * ( Sy1[0] * ( 0.5 * Sx0[i] + Sx1[i] ) );
-//
-//                SMILEI_ACCELERATOR_ATOMIC
-//                rho[iloc] += charge_weight * Sx1[i] * Sy1[0];
-//
-//                double tmp = 0.0;
-//                for( unsigned int j = 1; j < 5; ++j ) {
-//                    tmpJx[j] -= crx_p * ( Sx1[i - 1] - Sx0[i - 1] ) * ( Sy0[j] + 0.5 * ( Sy1[j] - Sy0[j] ) );
-//
-//                    SMILEI_ACCELERATOR_ATOMIC
-//                    Jx[iloc + j] += tmpJx[j];
-//                    tmp -= cry_p * ( Sy1[j - 1] - Sy0[j - 1] ) * ( Sx0[i] + 0.5 * ( Sx1[i] - Sx0[i] ) );
-//
-//                    SMILEI_ACCELERATOR_ATOMIC
-//                    Jy[iloc + j + not_spectral_ * ( i + ipo )] += tmp;
-//
-//                    SMILEI_ACCELERATOR_ATOMIC
-//                    Jz[iloc + j] += crz_p * ( Sy0[j] * ( 0.5 * Sx1[i] + Sx0[i] ) +
-//                                              Sy1[j] * ( 0.5 * Sx0[i] + Sx1[i] ) );
-//
-//                    SMILEI_ACCELERATOR_ATOMIC
-//                    rho[iloc + j] += charge_weight * Sx1[i] * Sy1[j];
-//                }
-//            }
-//        }
-//    } // end currentDepositionKernel
-//
-//
-//} // namespace naive
-//
-//    #else
-
 namespace cudahip1d {
     namespace detail {
 #if defined( __HIP__ )
@@ -478,7 +155,6 @@ namespace cudahip1d {
                                          ComputeFloat dx_inv,
                                          ComputeFloat dx_ov_dt,
                                          int          i_domain_begin,
-                                         int          not_spectral_,
                                          bool         cell_sorting )
         {
             const unsigned int workgroup_size = kWorkgroupSize; // blockDim.x;
@@ -537,7 +213,13 @@ namespace cudahip1d {
                 const int *const __restrict__ iold        = &device_iold_[particle_index];
                 const double *const __restrict__ deltaold = &device_deltaold_[particle_index];
 
-                ComputeFloat Sx0[5];
+                // (x,y,z) components of the current density for the macro-particle
+                const ComputeFloat charge_weight = inv_cell_volume * static_cast<ComputeFloat>( device_particle_charge[particle_index] ) * static_cast<ComputeFloat>( device_particle_weight[particle_index] );
+                const ComputeFloat crx_p         = charge_weight * dx_ov_dt;
+                const ComputeFloat cry_p         = charge_weight * static_cast<ComputeFloat>( device_particle_momentum_y[particle_index] ) * invgf;
+                const ComputeFloat crz_p         = charge_weight * static_cast<ComputeFloat>( device_particle_momentum_z[particle_index] ) * invgf;
+
+                ComputeFloat Sx0[3];
                 ComputeFloat Sx1[5];
 
                 // Variable declaration & initialization
@@ -548,11 +230,9 @@ namespace cudahip1d {
                     const ComputeFloat delta  = deltaold[0 * particle_count];
                     const ComputeFloat delta2 = delta * delta;
 
-                    Sx0[0] = static_cast<ComputeFloat>( 0.0 );
-                    Sx0[1] = static_cast<ComputeFloat>( 0.5 ) * ( delta2 - delta + static_cast<ComputeFloat>( 0.25 ) );
-                    Sx0[2] = static_cast<ComputeFloat>( 0.75 ) - delta2;
-                    Sx0[3] = static_cast<ComputeFloat>( 0.5 ) * ( delta2 + delta + static_cast<ComputeFloat>( 0.25 ) );
-                    Sx0[4] = static_cast<ComputeFloat>( 0.0 );
+                    Sx0[0] = static_cast<ComputeFloat>( 0.5 ) * ( delta2 - delta + static_cast<ComputeFloat>( 0.25 ) );
+                    Sx0[1] = static_cast<ComputeFloat>( 0.75 ) - delta2;
+                    Sx0[2] = static_cast<ComputeFloat>( 0.5 ) * ( delta2 + delta + static_cast<ComputeFloat>( 0.25 ) );
                 }
                 //init_S0(deltaold[0 * particle_count], Sx0);
                 //init_S0(deltaold[1 * particle_count], Sy0);
@@ -578,12 +258,6 @@ namespace cudahip1d {
                     Sx1[ip_m_ipo + 3] = static_cast<ComputeFloat>( 0.5 ) * ( delta2 + delta + static_cast<ComputeFloat>( 0.25 ) );
                 }
 
-                // (x,y,z) components of the current density for the macro-particle
-                const ComputeFloat charge_weight = inv_cell_volume * static_cast<ComputeFloat>( device_particle_charge[particle_index] ) * static_cast<ComputeFloat>( device_particle_weight[particle_index] );
-                const ComputeFloat crx_p         = charge_weight * dx_ov_dt;
-                const ComputeFloat cry_p         = charge_weight * static_cast<ComputeFloat>( device_particle_momentum_y[particle_index] ) * invgf;
-                const ComputeFloat crz_p         = charge_weight * static_cast<ComputeFloat>( device_particle_momentum_z[particle_index] ) * invgf;
-
                 // This is the particle position as grid index
                 // This minus 2 come from the order 2 scheme, based on a 5 points stencil from -2 to +2.
                 const int ipo = iold[0 * particle_count] -
@@ -591,21 +265,32 @@ namespace cudahip1d {
                                 global_x_scratch_space_coordinate_offset /* Offset to get cluster relative coordinates */;
 
                 // Jx
-                //ComputeFloat tmpJx[5]{};
                 ComputeFloat tmpJx = 0.0; 
-                for( unsigned int i = 1; i < 5; ++i ) {
+                // i=1
+                tmpJx += crx_p * ( - Sx1[0] ); 
+                atomic::LDS::AddNoReturn( &Jx_scratch_space[ipo + 1], static_cast<ReductionFloat>( tmpJx ) );
+                for( unsigned int i = 2; i < 5; ++i ) {
                     const int    iloc = i + ipo;
-                    tmpJx = tmpJx + crx_p * (Sx0[i-1] - Sx1[i-1]); 
+                    tmpJx = tmpJx + crx_p * (Sx0[i-2] - Sx1[i-1]); 
                     atomic::LDS::AddNoReturn( &Jx_scratch_space[iloc], static_cast<ReductionFloat>( tmpJx ) );
                 }
-
                 // Jy & Jz
-                for( unsigned int i = 0; i < 5; ++i ) {
+                //i=0
+                {
+                    atomic::LDS::AddNoReturn( &Jy_scratch_space[ipo], static_cast<ReductionFloat>( cry_p * 0.5 * Sx1[0] ) );
+                    atomic::LDS::AddNoReturn( &Jz_scratch_space[ipo], static_cast<ReductionFloat>( crz_p * 0.5 * Sx1[0] ) );
+                }
+                for( unsigned int i = 1; i < 4; ++i ) {
                     const int    iloc = i + ipo;
-                    ComputeFloat tmpJy = cry_p * 0.5 * (Sx0[i] + Sx1[i]);
-                    ComputeFloat tmpJz = crz_p * 0.5 * (Sx0[i] + Sx1[i]);
-                    atomic::LDS::AddNoReturn( &Jy_scratch_space[iloc], static_cast<ReductionFloat>( tmpJy ) );
-                    atomic::LDS::AddNoReturn( &Jz_scratch_space[iloc], static_cast<ReductionFloat>( tmpJz ) );
+                    double temp = 0.5 * (Sx0[i-1] + Sx1[i]);
+                    atomic::LDS::AddNoReturn( &Jy_scratch_space[iloc], static_cast<ReductionFloat>( cry_p * temp ) );
+                    atomic::LDS::AddNoReturn( &Jz_scratch_space[iloc], static_cast<ReductionFloat>( crz_p * temp ) );
+                }
+                //i=4
+                {
+                    const int    iloc = 4 + ipo;
+                    atomic::LDS::AddNoReturn( &Jy_scratch_space[iloc], static_cast<ReductionFloat>( cry_p * 0.5 * Sx1[4] ) );
+                    atomic::LDS::AddNoReturn( &Jz_scratch_space[iloc], static_cast<ReductionFloat>( crz_p * 0.5 * Sx1[4] ) );
                 }
             } // particle_index
 
@@ -620,7 +305,7 @@ namespace cudahip1d {
 
                 // These atomics are basically free (very few of them).
                 atomic::GDS::AddNoReturn( &device_Jx[global_memory_index], static_cast<double>( Jx_scratch_space[scratch_space_index] ) );
-                atomic::GDS::AddNoReturn( &device_Jy[global_memory_index /*+  not_spectral_ * global_x_scratch_space_coordinate*/], static_cast<double>( Jy_scratch_space[scratch_space_index] ) ); //  We handle the FTDT/picsar 
+                atomic::GDS::AddNoReturn( &device_Jy[global_memory_index /*+  not_spectral * global_x_scratch_space_coordinate*/], static_cast<double>( Jy_scratch_space[scratch_space_index] ) ); //  We handle the FTDT/picsar 
                 atomic::GDS::AddNoReturn( &device_Jz[global_memory_index], static_cast<double>( Jz_scratch_space[scratch_space_index] ) );
             }
         } // end DepositCurrent
@@ -652,7 +337,6 @@ namespace cudahip1d {
                                             ComputeFloat dx_inv,
                                             ComputeFloat dx_ov_dt,
                                             int          i_domain_begin,
-                                            int          not_spectral_,
                                             bool         cell_sorting )
         {
             const unsigned int workgroup_size = kWorkgroupSize; // blockDim.x;
@@ -709,7 +393,13 @@ namespace cudahip1d {
                 const int *const __restrict__        iold = &device_iold_[particle_index];
                 const double *const __restrict__ deltaold = &device_deltaold_[particle_index];
 
-                ComputeFloat Sx0[5];
+                // (x,y,z) components of the current density for the macro-particle
+                const ComputeFloat charge_weight = inv_cell_volume * static_cast<ComputeFloat>( device_particle_charge[particle_index] ) * static_cast<ComputeFloat>( device_particle_weight[particle_index] );
+                const ComputeFloat crx_p         = charge_weight * dx_ov_dt;
+                const ComputeFloat cry_p         = charge_weight * static_cast<ComputeFloat>( device_particle_momentum_y[particle_index] ) * invgf;
+                const ComputeFloat crz_p         = charge_weight * static_cast<ComputeFloat>( device_particle_momentum_z[particle_index] ) * invgf;
+
+                ComputeFloat Sx0[3];
                 ComputeFloat Sx1[5];
 
                 // Variable declaration & initialization
@@ -720,11 +410,9 @@ namespace cudahip1d {
                     const ComputeFloat delta  = deltaold[0 * particle_count];
                     const ComputeFloat delta2 = delta * delta;
 
-                    Sx0[0] = static_cast<ComputeFloat>( 0.0 );
-                    Sx0[1] = static_cast<ComputeFloat>( 0.5 ) * ( delta2 - delta + static_cast<ComputeFloat>( 0.25 ) );
-                    Sx0[2] = static_cast<ComputeFloat>( 0.75 ) - delta2;
-                    Sx0[3] = static_cast<ComputeFloat>( 0.5 ) * ( delta2 + delta + static_cast<ComputeFloat>( 0.25 ) );
-                    Sx0[4] = static_cast<ComputeFloat>( 0.0 );
+                    Sx0[0] = static_cast<ComputeFloat>( 0.5 ) * ( delta2 - delta + static_cast<ComputeFloat>( 0.25 ) );
+                    Sx0[1] = static_cast<ComputeFloat>( 0.75 ) - delta2;
+                    Sx0[2] = static_cast<ComputeFloat>( 0.5 ) * ( delta2 + delta + static_cast<ComputeFloat>( 0.25 ) );
                 }
 
                 // Locate the particle on the primal grid at current time-step & calculate coeff. S1
@@ -748,12 +436,6 @@ namespace cudahip1d {
                     Sx1[ip_m_ipo + 3] = static_cast<ComputeFloat>( 0.5 ) * ( delta2 + delta + static_cast<ComputeFloat>( 0.25 ) );
                 }
 
-                // (x,y,z) components of the current density for the macro-particle
-                const ComputeFloat charge_weight = inv_cell_volume * static_cast<ComputeFloat>( device_particle_charge[particle_index] ) * static_cast<ComputeFloat>( device_particle_weight[particle_index] );
-                const ComputeFloat crx_p         = charge_weight * dx_ov_dt;
-                const ComputeFloat cry_p         = charge_weight * static_cast<ComputeFloat>( device_particle_momentum_y[particle_index] ) * invgf;
-                const ComputeFloat crz_p         = charge_weight * static_cast<ComputeFloat>( device_particle_momentum_z[particle_index] ) * invgf;
-
                 // This is the particle position as grid index
                 // This minus 2 come from the order 2 scheme, based on a 5 points stencil from -2 to +2.
                 const int ipo = iold[0 * particle_count] -
@@ -762,18 +444,31 @@ namespace cudahip1d {
 
                 // Jx
                 ComputeFloat tmpJx = 0.0; 
-                for( unsigned int i = 1; i < 5; ++i ) {
+                // i=1
+                tmpJx += crx_p * ( - Sx1[0] ); 
+                atomic::LDS::AddNoReturn( &Jx_scratch_space[ipo + 1], static_cast<ReductionFloat>( tmpJx ) );
+                for( unsigned int i = 2; i < 5; ++i ) {
                     const int    iloc = i + ipo;
-                    tmpJx = tmpJx + crx_p * (Sx0[i-1] - Sx1[i-1]); 
+                    tmpJx = tmpJx + crx_p * (Sx0[i-2] - Sx1[i-1]); 
                     atomic::LDS::AddNoReturn( &Jx_scratch_space[iloc], static_cast<ReductionFloat>( tmpJx ) );
                 }
                 // Jy & Jz
-                for( unsigned int i = 0; i < 5; ++i ) {
+                //i=0
+                {
+                    atomic::LDS::AddNoReturn( &Jy_scratch_space[ipo], static_cast<ReductionFloat>( cry_p * 0.5 * Sx1[0] ) );
+                    atomic::LDS::AddNoReturn( &Jz_scratch_space[ipo], static_cast<ReductionFloat>( crz_p * 0.5 * Sx1[0] ) );
+                }
+                for( unsigned int i = 1; i < 4; ++i ) {
                     const int    iloc = i + ipo;
-                    ComputeFloat tmpJy = cry_p * 0.5 * (Sx0[i] + Sx1[i]);
-                    ComputeFloat tmpJz = crz_p * 0.5 * (Sx0[i] + Sx1[i]);
-                    atomic::LDS::AddNoReturn( &Jy_scratch_space[iloc], static_cast<ReductionFloat>( tmpJy ) );
-                    atomic::LDS::AddNoReturn( &Jz_scratch_space[iloc], static_cast<ReductionFloat>( tmpJz ) );
+                    double temp = 0.5 * (Sx0[i-1] + Sx1[i]);
+                    atomic::LDS::AddNoReturn( &Jy_scratch_space[iloc], static_cast<ReductionFloat>( cry_p * temp ) );
+                    atomic::LDS::AddNoReturn( &Jz_scratch_space[iloc], static_cast<ReductionFloat>( crz_p * temp ) );
+                }
+                //i=4
+                {
+                    const int    iloc = 4 + ipo;
+                    atomic::LDS::AddNoReturn( &Jy_scratch_space[iloc], static_cast<ReductionFloat>( cry_p * 0.5 * Sx1[4] ) );
+                    atomic::LDS::AddNoReturn( &Jz_scratch_space[iloc], static_cast<ReductionFloat>( crz_p * 0.5 * Sx1[4] ) );
                 }
 
                 // Rho
@@ -794,11 +489,11 @@ namespace cudahip1d {
                 const unsigned int global_x_scratch_space_coordinate = global_x_scratch_space_coordinate_offset + local_x_scratch_space_coordinate;
 
                 const unsigned int global_memory_index = global_x_scratch_space_coordinate;
-                const unsigned int scratch_space_index = field_index; // local_x_scratch_space_coordinate * GPUClusterWithGCWidth + local_y_scratch_space_coordinate;
+                const unsigned int scratch_space_index = field_index;
 
                 // These atomics are basically free (very few of them).
                 atomic::GDS::AddNoReturn( &device_Jx[global_memory_index], static_cast<double>( Jx_scratch_space[scratch_space_index] ) );
-                //atomic::GDS::AddNoReturn( &device_Jy[global_memory_index + /* We handle the FTDT/picsar */ not_spectral_ * global_x_scratch_space_coordinate], static_cast<double>( Jy_scratch_space[scratch_space_index] ) );
+                //atomic::GDS::AddNoReturn( &device_Jy[global_memory_index + /* We handle the FTDT/picsar */ not_spectral * global_x_scratch_space_coordinate], static_cast<double>( Jy_scratch_space[scratch_space_index] ) );
                 atomic::GDS::AddNoReturn( &device_Jy[global_memory_index], static_cast<double>( Jy_scratch_space[scratch_space_index] ) );
                 atomic::GDS::AddNoReturn( &device_Jz[global_memory_index], static_cast<double>( Jz_scratch_space[scratch_space_index] ) );
                 atomic::GDS::AddNoReturn( &device_rho[global_memory_index], static_cast<double>( rho_scratch_space[scratch_space_index] ) );
@@ -829,15 +524,12 @@ namespace cudahip1d {
                              double dx_inv,
                              double dx_ov_dt,
                              int    i_domain_begin,
-                             int    not_spectral_,
                              bool   cell_sorting )
     {
         SMILEI_ASSERT( Params::getGPUClusterWidth( 1 /* 1D */ ) != -1 &&
                        Params::getGPUClusterGhostCellBorderWidth( 2 /* 2nd order interpolation */ ) != -1 );
 
-        // NOTE:
-        // This cluster is very strongly bound by atomic operations in LDS (shared memory)
-        // TODO(Etienne M): Find a way to lessen the atomic usage
+        // NOTE: This cluster is very strongly bound by atomic operations in LDS (shared memory)
 
         const ::dim3 kGridDimension  { static_cast<uint32_t>( x_dimension_bin_count ), 1, 1 };
 
@@ -877,7 +569,6 @@ namespace cudahip1d {
                             dx_inv,
                             dx_ov_dt,
                             i_domain_begin,
-                            not_spectral_,
                             cell_sorting );
 
         checkHIPErrors( ::hipDeviceSynchronize() );
@@ -906,7 +597,6 @@ namespace cudahip1d {
                             dx_inv,
                             dx_ov_dt,
                             i_domain_begin,
-                            not_spectral_,
                             cell_sorting
                        );
         checkHIPErrors( ::cudaDeviceSynchronize() );
@@ -937,7 +627,6 @@ namespace cudahip1d {
                                        double dx_inv,
                                        double dx_ov_dt,
                                        int    i_domain_begin,
-                                       int    not_spectral_,
                                        bool cell_sorting )
     {
         // & because one  1D ; 2 because of 2nd order interpolation
@@ -949,16 +638,6 @@ namespace cudahip1d {
         static constexpr std::size_t kWorkgroupSize = 128;
         const ::dim3                 kBlockDimension{ static_cast<uint32_t>( kWorkgroupSize ), 1, 1 };
 
-        // NOTE: On cards lacking hardware backed Binary64 atomic operations,
-        // falling back to Binary32 (supposing hardware support for atomic
-        // operations) can lead to drastic performance improvement.
-        // One just need to assign 'float' to ReductionFloat.
-        //
-        /*printf("pointers and sizes Jx %p %d  Jy %p %d  Jz %p %d  rho %p %d \n", 
-                            smilei::tools::gpu::HostDeviceMemoryManagement::GetDevicePointer( host_Jx ), Jx_size,
-                            smilei::tools::gpu::HostDeviceMemoryManagement::GetDevicePointer( host_Jy ), Jy_size,
-                            smilei::tools::gpu::HostDeviceMemoryManagement::GetDevicePointer( host_Jz ), Jz_size,
-                            smilei::tools::gpu::HostDeviceMemoryManagement::GetDevicePointer( host_rho ), rho_size);*/
         using ComputeFloat   = double;
         using ReductionFloat = double;
         auto KernelFunction = kernel::DepositCurrentAndDensity_1D_Order2<ComputeFloat, ReductionFloat, kWorkgroupSize>;
@@ -987,7 +666,6 @@ namespace cudahip1d {
                             dx_inv,
                             dx_ov_dt,
                             i_domain_begin,
-                            not_spectral_,
                             cell_sorting );
 
         checkHIPErrors( ::hipDeviceSynchronize() );
@@ -1017,7 +695,6 @@ namespace cudahip1d {
                             dx_inv,
                             dx_ov_dt,
                             i_domain_begin,
-                            not_spectral_,
                             cell_sorting
                        );
         checkHIPErrors( ::cudaDeviceSynchronize() );
