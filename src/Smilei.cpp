@@ -671,16 +671,6 @@ int main( int argc, char *argv[] )
             // Move window
             vecPatches.moveWindow( params, &smpi, region, simWindow, time_dual, timers, itime );
 
-            // timers.movWindow.restart();
-            // simWindow->shift( vecPatches, &smpi, params, itime, time_dual, region );
-
-            // if (itime == simWindow->getAdditionalShiftsIteration() ) {
-            //     int adjust = simWindow->isMoving(time_dual)?0:1;
-            //     for (unsigned int n=0;n < simWindow->getNumberOfAdditionalShifts()-adjust; n++)
-            //         simWindow->shift( vecPatches, &smpi, params, itime, time_dual, region );
-            // }
-            // timers.movWindow.update();
-
             // Checkpointing: dump data
             #pragma omp master
             checkpoint.dump( vecPatches, region, itime, &smpi, simWindow, params );
@@ -694,7 +684,22 @@ int main( int argc, char *argv[] )
 //             ERROR( "Load balancing not tested on GPU !" );
 // #endif
             count_dlb++;
+            // Every 5 DLB, regions are completely recomputed in order to minimize the number of patches not owned.
             if (params.multiple_decomposition && count_dlb%5 ==0 ) {
+
+                // de-apply prescribed fields if requested before load balance and synchronize all fields on patches
+                if( region.vecPatch_(0)->EMfields->prescribedFields.size() ) {
+
+                    region.vecPatch_.resetPrescribedFields();
+
+                    if ( params.geometry != "AMcylindrical" )
+                        DoubleGrids::syncFieldsOnPatches( region, vecPatches, params, &smpi, timers );
+                    else {
+                        for (unsigned int imode = 0 ; imode < params.nmodes ; imode++  )
+                            DoubleGridsAM::syncFieldsOnPatches( region, vecPatches, params, &smpi, timers, imode );
+                    }
+                } 
+                //Synchronize only B field
                 if ( params.geometry != "AMcylindrical" ) {
                     DoubleGrids::syncBOnPatches( region, vecPatches, params, &smpi, timers );
                 } else {
@@ -712,6 +717,7 @@ int main( int argc, char *argv[] )
             if( params.multiple_decomposition ) {
 
                 if( count_dlb%5 == 0 ) {
+
                     region.reset_fitting( &smpi, params );
                     region.clean();
                     region.reset_mapping();
@@ -722,11 +728,23 @@ int main( int argc, char *argv[] )
                     region.identify_additional_patches( &smpi, vecPatches, params, simWindow );
                     region.identify_missing_patches( &smpi, vecPatches, params );
 
+                    // After resetting the regions, initialize it from the fields on patches.
                     if ( params.geometry != "AMcylindrical" ) {
                         DoubleGrids::syncFieldsOnRegion( vecPatches, region, params, &smpi );
                     } else {
                         for (unsigned int imode = 0 ; imode < params.nmodes ; imode++  ) {
                             DoubleGridsAM::syncFieldsOnRegion( vecPatches, region, params, &smpi, imode );
+                        }
+                    }
+                    // Apply prescribed fields and store original fields on region
+                    if( region.vecPatch_(0)->EMfields->prescribedFields.size() ) {
+                        region.vecPatch_.applyPrescribedFields( time_prim );
+                        //update patches fields
+                        if ( params.geometry != "AMcylindrical" )
+                            DoubleGrids::syncFieldsOnPatches( region, vecPatches, params, &smpi, timers );
+                        else {
+                            for (unsigned int imode = 0 ; imode < params.nmodes ; imode++  )
+                                DoubleGridsAM::syncFieldsOnPatches( region, vecPatches, params, &smpi, timers, imode );
                         }
                     }
 
