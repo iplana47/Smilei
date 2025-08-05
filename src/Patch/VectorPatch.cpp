@@ -2968,7 +2968,6 @@ void VectorPatch::exchangePatches( SmileiMPI *smpi, Params &params, double time 
             tagsend_left ++;
         }
         int irequest = 0;
-        std::cout << "Send patch " << ( *this )( send_patch_id_[ipatch] )->hindex << " from " << smpi->getRank() << " to " << newMPIrank << std::endl;
         smpi->isend_species( ( *this )( send_patch_id_[ipatch] ), newMPIrank, irequest, tag, params );
     }
 
@@ -2982,7 +2981,6 @@ void VectorPatch::exchangePatches( SmileiMPI *smpi, Params &params, double time 
             tag = tagrecv_left*nrequests;
             tagrecv_left ++;
         }
-        std::cout << "Receive patch " << recv_patches_[ipatch]->hindex << " from " << oldMPIrank << " to " << smpi->getRank() << std::endl;
         smpi->recv_species( recv_patches_[ipatch], oldMPIrank, tag, params );
     }
 
@@ -2999,7 +2997,7 @@ void VectorPatch::exchangePatches( SmileiMPI *smpi, Params &params, double time 
     oldMPIrank = smpi->getRank() -1;
 
     //Remove prescribed fields from the patches before sending them if necessary
-    if ( ( *this)(0)->EMfields->prescribedFields.size() ) {
+    if ( !params.multiple_decomposition && ( *this)(0)->EMfields->prescribedFields.size() ) {
         for( unsigned int ipatch=0 ; ipatch < send_patch_id_.size() ; ipatch++ ) {
             ( *this )( send_patch_id_[ipatch] )->EMfields->resetPrescribedFields();
         }
@@ -3036,8 +3034,8 @@ void VectorPatch::exchangePatches( SmileiMPI *smpi, Params &params, double time 
         int patch_tag = tag * nrequests;
         smpi->recv_fields( recv_patches_[ipatch], oldMPIrank, patch_tag, params );
 
-        //apply the prescribed fields if necessary
-        if ( ( *this)(0)->EMfields->prescribedFields.size() ) {
+        //apply the prescribed fields if necessary and if not already taken care of via multiple decomposition
+        if ( !params.multiple_decomposition && ( *this)(0)->EMfields->prescribedFields.size() ) {
             recv_patches_[ipatch]->EMfields->applyPrescribedFields( (recv_patches_[ipatch]), time );
         }
     }
