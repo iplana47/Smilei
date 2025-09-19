@@ -334,7 +334,48 @@ class switchPlots:
             self.max_annot_drawn = False
         
         self.display_min_mean_max_annotations()
+
+    def compare_branches(self, branch1, branch2):
+        """
+        Compare the performances of two branches for all available test case
+        """
     
+        #Aggregate last measured time of branch1 for all test case
+        branch1_times = [] 
+        branch2_times = [] 
+        for case in self.data: # Loop on all test cases
+            if (len(np.where(case["branches"]==branch1)[0]) > 0 and len(np.where(case["branches"]==branch2)[0]) ):
+                last_index_1 = max(loc for loc, val in enumerate(case["branches"]) if val == branch1) # Last measured run on branch1
+                last_index_2 = max(loc for loc, val in enumerate(case["branches"]) if val == branch2) # Last measured run on branch2
+                branch1_times += [case["time_in_timeloop"][last_index_1]]
+                branch2_times += [case["time_in_timeloop"][last_index_2]]
+
+        print("Mean time in timeloop for branchs 1 and 2 respectively are : ", mean(branch1_times), mean(branch2_times))
+ 
+        branches_times = {
+            branch1: branch1_times,
+            branch2: branch2_times,
+        }
+        x = np.arange(len(branches_times[branch1]))  # the label locations
+        width = 0.25  # the width of the bars
+        multiplier = 0
+        
+        fig, ax = subplots()
+        
+        for branch, measurement in branches_times.items():
+            offset = width * multiplier
+            rects = ax.bar(x + offset, measurement, width, label=branch)
+            multiplier += 1
+        
+        # Add some text for labels, title and custom x-axis tick labels, etc.
+        ax.set_ylabel('Time in loop (s)')
+        ax.set_title('Branch comparison')
+        ax.legend(loc='upper left')
+        ax.set_ylim(0, 155)
+        
+
+
+
     def plot_summary(self):
         self.plottype = "summary"
         
