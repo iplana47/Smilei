@@ -229,24 +229,51 @@ class Main(SmileiSingleton):
         # Load all arguments to Main()
         super(Main, self).__init__(**kwargs)
 
+        # Initialize simulation_time if not defined by the user
+        if Main.simulation_time is None:
+            if Main.number_of_timesteps is None:
+                raise Exception("ERROR in the namelist in Main: simulation_time and number_of_timesteps are not defined")
+            Main.simulation_time = Main.timestep * Main.number_of_timesteps
+
+        # Initialize grid_length if not defined based on number_of_cells and cell_length
+        if (    len(Main.grid_length + Main.number_of_cells) == 0
+             or len(Main.grid_length + Main.cell_length) == 0
+             or len(Main.number_of_cells + Main.cell_length) == 0
+             or len(Main.number_of_cells) * len(Main.grid_length) * len(Main.cell_length) != 0
+           ):
+                raise Exception("ERROR in the namelist in Main: you must define exactly two parameters among grid_length, number_of_cells and cell_length")
+
+        if len(Main.grid_length) == 0:
+            Main.grid_length = [a*b for a,b in zip(Main.number_of_cells, Main.cell_length)]
+
+        if len(Main.cell_length) == 0:
+            Main.cell_length = [a/b for a,b in zip(Main.grid_length, Main.number_of_cells)]
+
+        if len(Main.number_of_cells) == 0:
+            Main.number_of_cells = [int(round(float(a)/float(b))) for a,b in zip(Main.grid_length, Main.cell_length)]
+            old_grid_length = Main.grid_length
+            Main.grid_length = [a*b for a,b in zip(Main.number_of_cells, Main.cell_length)]
+            if smilei_mpi_rank == 0:
+                different = [abs((a-b)/(a+b))>1e-10 for a,b in zip(Main.grid_length, old_grid_length)]
+                if any(different):
+                    print("\t[Python WARNING] Main.grid_length="+str(Main.grid_length)+" (was "+str(old_grid_length)+")")
+
+
         # Initialize timestep if not defined based on timestep_over_CFL
         if Main.timestep is None:
             if Main.timestep_over_CFL is None:
                 raise Exception("ERROR in the namelist in Main: timestep and timestep_over_CFL not defined")
             else:
-                if Main.cell_length is None:
-                    raise Exception("ERROR in the namelist in Main: cell_length must be defined in order to calculate timestep from timestep_over_CFL")
-
                 # Yee solver or Terzani solver
                 if Main.maxwell_solver in ['Yee','Terzani']:
-                    if (Main.geometry=="AMcylindrical"):
+                    if Main.geometry=="AMcylindrical":
                         alpha = [0.210486, 0.591305, 3.5234, 8.51041, 15.5059]
-                        if (Main.number_of_AM < 6):
+                        if Main.number_of_AM < 6:
                             alpha = 1. + alpha[Main.number_of_AM-1]
                         else:
                             alpha = (Main.number_of_AM-1)**2
                         Main.timestep = Main.timestep_over_CFL / math.sqrt(1./Main.cell_length[0]**2 + alpha/Main.cell_length[1]**2 )
-                        if (Main.maxwell_solver == "Terzani"):
+                        if Main.maxwell_solver == "Terzani":
                             print("WARNING CFL: The timestep has been set as for a Yee solver but the maximum stable timestep for the Terzani solver may be slightly smaller.")
                     else:
                         dim = int(Main.geometry[0])
@@ -294,35 +321,6 @@ class Main(SmileiSingleton):
                     raise Exception("timestep for WT cannot be larger than 0.5*min(dx,dy,dz)")
             else:
                 raise Exception("WT interpolation not implemented in geometry "+Main.geometry)
-
-        # Initialize simulation_time if not defined by the user
-        if Main.simulation_time is None:
-            if Main.number_of_timesteps is None:
-                raise Exception("ERROR in the namelist in Main: simulation_time and number_of_timesteps are not defined")
-            Main.simulation_time = Main.timestep * Main.number_of_timesteps
-
-        # Initialize grid_length if not defined based on number_of_cells and cell_length
-        if (    len(Main.grid_length + Main.number_of_cells) == 0
-             or len(Main.grid_length + Main.cell_length) == 0
-             or len(Main.number_of_cells + Main.cell_length) == 0
-             or len(Main.number_of_cells) * len(Main.grid_length) * len(Main.cell_length) != 0
-           ):
-                raise Exception("ERROR in the namelist in Main: you must define exactly two parameters among grid_length, number_of_cells and cell_length")
-
-        if len(Main.grid_length) == 0:
-            Main.grid_length = [a*b for a,b in zip(Main.number_of_cells, Main.cell_length)]
-
-        if len(Main.cell_length) == 0:
-            Main.cell_length = [a/b for a,b in zip(Main.grid_length, Main.number_of_cells)]
-
-        if len(Main.number_of_cells) == 0:
-            Main.number_of_cells = [int(round(float(a)/float(b))) for a,b in zip(Main.grid_length, Main.cell_length)]
-            old_grid_length = Main.grid_length
-            Main.grid_length = [a*b for a,b in zip(Main.number_of_cells, Main.cell_length)]
-            if smilei_mpi_rank == 0:
-                different = [abs((a-b)/(a+b))>1e-10 for a,b in zip(Main.grid_length, old_grid_length)]
-                if any(different):
-                    print("\t[Python WARNING] Main.grid_length="+str(Main.grid_length)+" (was "+str(old_grid_length)+")")
 
 class LoadBalancing(SmileiSingleton):
     """Load balancing parameters"""
