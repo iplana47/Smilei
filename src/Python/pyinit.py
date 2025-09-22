@@ -229,12 +229,6 @@ class Main(SmileiSingleton):
         # Load all arguments to Main()
         super(Main, self).__init__(**kwargs)
 
-        # Initialize simulation_time if not defined by the user
-        if Main.simulation_time is None:
-            if Main.number_of_timesteps is None:
-                raise Exception("ERROR in the namelist in Main: simulation_time and number_of_timesteps are not defined")
-            Main.simulation_time = Main.timestep * Main.number_of_timesteps
-
         # Initialize grid_length if not defined based on number_of_cells and cell_length
         if (    len(Main.grid_length + Main.number_of_cells) == 0
              or len(Main.grid_length + Main.cell_length) == 0
@@ -321,6 +315,12 @@ class Main(SmileiSingleton):
                     raise Exception("timestep for WT cannot be larger than 0.5*min(dx,dy,dz)")
             else:
                 raise Exception("WT interpolation not implemented in geometry "+Main.geometry)
+
+        # Initialize simulation_time if not defined by the user
+        if Main.simulation_time is None:
+            if Main.number_of_timesteps is None:
+                raise Exception("ERROR in the namelist in Main: simulation_time and number_of_timesteps are not defined")
+            Main.simulation_time = Main.timestep * Main.number_of_timesteps
 
 class LoadBalancing(SmileiSingleton):
     """Load balancing parameters"""
