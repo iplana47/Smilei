@@ -23,7 +23,7 @@ class Projector
 public:
     //! Creator for the Projector
     Projector( Params &, Patch * );
-    virtual ~Projector() {};
+    virtual ~Projector() = default;
     virtual void mv_win( unsigned int shift ) = 0;
     virtual void setMvWinLimits( unsigned int shift ) = 0;
 

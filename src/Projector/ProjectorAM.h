@@ -15,7 +15,7 @@ class ProjectorAM : public Projector
 public:
     //! Constructor for ProjectorAM
     ProjectorAM( Params &params, Patch *patch );
-    virtual ~ProjectorAM() {};
+    virtual ~ProjectorAM() = default;
     
     virtual void mv_win( unsigned int shift )
     {

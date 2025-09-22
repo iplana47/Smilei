@@ -49,37 +49,38 @@ CollisionalIonization::CollisionalIonization( CollisionalIonization *CI )
 
 // Static members
 vector<int> CollisionalIonization::DB_Z;
-vector<vector<vector<double> > > CollisionalIonization::DB_crossSection;
-vector<vector<vector<double> > > CollisionalIonization::DB_transferredEnergy;
-vector<vector<vector<double> > > CollisionalIonization::DB_lostEnergy;
+vector<double> CollisionalIonization::DB_crossSection;
+vector<double> CollisionalIonization::DB_transferredEnergy;
+vector<double> CollisionalIonization::DB_lostEnergy;
 
 // Initializes the databases (by patch master only)
 unsigned int CollisionalIonization::createDatabase( double reference_angular_frequency_SI )
 {
+    size_t offset = 0;
+    
     // Leave if the database already exists with same atomic number
     for( unsigned int i=0; i<DB_Z.size(); i++ ) {
         if( atomic_number == DB_Z[i] ) {
             return i;
         }
+        offset += DB_Z[i] * npoints;
     }
     
     // Otherwise, create the arrays:
     // For each ionization state, calculate the tables of integrated cross-sections
     // Pérez et al., Phys. Plasmas 19, 083104 (2012)
-    vector<vector<double> > cs; // cross section
-    vector<vector<double> > te; // transferred energy
-    vector<vector<double> > le; // lost energy
-    cs.resize( atomic_number );
-    te.resize( atomic_number );
-    le.resize( atomic_number );
+    DB_crossSection     .resize( offset + atomic_number * npoints, 0. );
+    DB_transferredEnergy.resize( offset + atomic_number * npoints, 0. );
+    DB_lostEnergy       .resize( offset + atomic_number * npoints, 0. );
+    vector<double> &cs = DB_crossSection; // cross section
+    vector<double> &te = DB_transferredEnergy; // transferred energy
+    vector<double> &le = DB_lostEnergy; // lost energy
     double e, ep, bp, up, ep2, betae2, betab2, betau2, s0, A1, A2, A3, sk, wk, ek;
     int N; // occupation number
     double normalization = 2.81794e-15 * reference_angular_frequency_SI / ( 2.*299792458. ); // r_e omega / 2c
     for( int Zstar=0; Zstar<atomic_number; Zstar++ ) { // For each ionization state
-        cs[Zstar].resize( npoints, 0. );
-        te[Zstar].resize( npoints, 0. );
-        le[Zstar].resize( npoints, 0. );
         for( int i=0; i<npoints; i++ ) { // For each incident electron energy
+            size_t loc = offset + Zstar * npoints + i; // location in the database
             ep = exp( double( i )/a2 ) / a1; // = incident electron energy
             N = 1;
             for( int k=0; k<atomic_number-Zstar; k++ ) { // For each orbital
@@ -107,28 +108,25 @@ unsigned int CollisionalIonization::createDatabase( double reference_angular_fre
                                 + 0.25*A2*( e-1. ) - A1*( e*log( e )-( e+1. )*log( 0.5*( e+1. ) ) ) );
                     ek = wk + sk;
                     // Sum these data to the total ones
-                    cs[Zstar][i] += sk;
-                    te[Zstar][i] += wk * bp;
-                    le[Zstar][i] += ek * bp;
+                    cs[loc] += sk;
+                    te[loc] += wk * bp;
+                    le[loc] += ek * bp;
                 }
                 // Reset occupation number for next level
                 N = 1;
             }
             // The transferred and lost energies are averages over the orbitals
-            if( cs[Zstar][i]>0. ) {
-                te[Zstar][i] /= cs[Zstar][i];
-                le[Zstar][i] /= cs[Zstar][i];
+            if( cs[loc]>0. ) {
+                te[loc] /= cs[loc];
+                le[loc] /= cs[loc];
             }
         }
     }
     
     // Add the new arrays to the static database
-    DB_Z                .push_back( atomic_number );
-    DB_crossSection     .push_back( cs );
-    DB_transferredEnergy.push_back( te );
-    DB_lostEnergy       .push_back( le );
+    DB_Z.push_back( atomic_number );
     
-    return DB_Z.size()-1;
+    return offset;
 }
 
 

@@ -15,7 +15,7 @@ class Projector1D : public Projector
 public:
     //! Constructor for Projector1D
     Projector1D( Params &params, Patch *patch );
-    virtual ~Projector1D() {};
+    virtual ~Projector1D() = default;
     virtual void mv_win( unsigned int shift )
     {
         i_domain_begin_ += shift;

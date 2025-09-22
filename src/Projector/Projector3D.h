@@ -15,7 +15,7 @@ class Projector3D : public Projector
 public:
     //! Constructor for Projector3D
     Projector3D( Params &params, Patch *patch );
-    virtual ~Projector3D() {};
+    virtual ~Projector3D() = default;
     
     virtual void mv_win( unsigned int shift )
     {

@@ -55,9 +55,9 @@ public:
             double K = D.dt_correction[i] * sqrt( D.gamma0[i]*D.gamma0[i]-1. )/gammai;
             
             // Fetch cross sections
-            const std::vector<std::vector<double> > & crossSection = DB_crossSection[dataBaseIndex];
-            const std::vector<std::vector<double> > & transferredEnergy = DB_transferredEnergy[dataBaseIndex];
-            const std::vector<std::vector<double> > & lostEnergy = DB_lostEnergy[dataBaseIndex];
+            const double * crossSection = &(DB_crossSection[dataBaseIndex]);
+            const double * transferredEnergy = &(DB_transferredEnergy[dataBaseIndex]);
+            const double * lostEnergy = &(DB_lostEnergy[dataBaseIndex]);
             
             // Loop for multiple ionization
             // k+1 is the number of ionizations
@@ -74,14 +74,14 @@ public:
                 if( x < npointsm1 ) { // if energy within table range, interpolate
                     const int j = int( x );
                     const double a = x - ( double )j;
-                    cs = ( crossSection[Zstar][j+1]-crossSection[Zstar][j] )*a + crossSection[Zstar][j];
-                    w  = ( transferredEnergy[Zstar][j+1]-transferredEnergy[Zstar][j] )*a + transferredEnergy[Zstar][j];
-                    e  = ( lostEnergy[Zstar][j+1]-lostEnergy[Zstar][j] )*a + lostEnergy[Zstar][j];
+                    cs = ( crossSection[Zstar*npoints+j+1]-crossSection[Zstar*npoints+j] )*a + crossSection[Zstar*npoints+j];
+                    w  = ( transferredEnergy[Zstar*npoints+j+1]-transferredEnergy[Zstar*npoints+j] )*a + transferredEnergy[Zstar*npoints+j];
+                    e  = ( lostEnergy[Zstar*npoints+j+1]-lostEnergy[Zstar*npoints+j] )*a + lostEnergy[Zstar*npoints+j];
                 } else { // if energy above table range, extrapolate
                     const double a = x - npointsm1;
-                    cs = ( crossSection[Zstar][npoints-1]-crossSection[Zstar][npoints-2] )*a + crossSection[Zstar][npoints-1];
-                    w  = transferredEnergy[Zstar][npoints-1];
-                    e  = lostEnergy[Zstar][npoints-1];
+                    cs = ( crossSection[Zstar*npoints+npoints-1]-crossSection[Zstar*npoints+npoints-2] )*a + crossSection[Zstar*npoints+npoints-1];
+                    w  = transferredEnergy[Zstar*npoints+npoints-1];
+                    e  = lostEnergy[Zstar*npoints+npoints-1];
                 }
                 if( e > D.gamma0[i]-1. ) {
                     break;
@@ -170,14 +170,7 @@ public:
     //! Coefficients used for interpolating the energy over a given initial list
     static const double a1, a2, npointsm1;
     static const int npoints;
-    
-    //! Local table of integrated cross-section
-    std::vector<std::vector<double> > *crossSection;
-    //! Local table of average secondary electron energy
-    std::vector<std::vector<double> > *transferredEnergy;
-    //! Local table of average incident electron energy lost
-    std::vector<std::vector<double> > *lostEnergy;
-    
+   
     //! New electrons temporary species
     Particles new_electrons;
     
@@ -195,11 +188,11 @@ private:
     //! Global table of atomic numbers
     static std::vector<int> DB_Z;
     //! Global table of integrated cross-section
-    static std::vector<std::vector<std::vector<double> > > DB_crossSection;
+    static std::vector<double> DB_crossSection;
     //! Global table of average secondary electron energy
-    static std::vector<std::vector<std::vector<double> > > DB_transferredEnergy;
+    static std::vector<double> DB_transferredEnergy;
     //! Global table of average incident electron energy lost
-    static std::vector<std::vector<std::vector<double> > > DB_lostEnergy;
+    static std::vector<double> DB_lostEnergy;
     
     //! True if first group of species is the electron
     // bool electronFirst;

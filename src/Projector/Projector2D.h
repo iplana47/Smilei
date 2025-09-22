@@ -15,7 +15,7 @@ class Projector2D : public Projector
 public:
     //! Constructor for Projector2D
     Projector2D( Params &params, Patch *patch );
-    virtual ~Projector2D() {};
+    virtual ~Projector2D() = default;
     
     virtual void mv_win( unsigned int shift )
     {
