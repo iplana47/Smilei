@@ -37,9 +37,9 @@ ElectroMagnBC3D_SM::ElectroMagnBC3D_SM( Params &params, Patch *patch, unsigned i
         std::vector<unsigned int> dims0 = { n_d[axis1_], n_d[axis2_] };
         std::vector<unsigned int> dims1 = { n_p[axis1_], n_d[axis2_] };
         std::vector<unsigned int> dims2 = { n_d[axis1_], n_p[axis2_] };
-        B_val[axis0_] = new Field2D( dims0, "B_val" );
-        B_val[axis1_] = new Field2D( dims1, "B_val" );
-        B_val[axis2_] = new Field2D( dims2, "B_val" );
+        B_val[axis0_] = new Field2D( dims0, "B_val0" );
+        B_val[axis1_] = new Field2D( dims1, "B_val1" );
+        B_val[axis2_] = new Field2D( dims2, "B_val2" );
 
         smilei::tools::gpu::HostDeviceMemoryManagement::DeviceAllocate( B_val[0]->data_, B_val[0]->number_of_points_ );
         smilei::tools::gpu::HostDeviceMemoryManagement::DeviceAllocate( B_val[1]->data_, B_val[1]->number_of_points_ );
