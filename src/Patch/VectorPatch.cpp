@@ -1048,7 +1048,6 @@ void VectorPatch::solveMaxwell( Params &params, SimWindow *simWindow, int itime,
             }
         }
         if( params.geometry != "AMcylindrical" ) {
-            if( params.is_spectral ) SyncVectorPatch::finalizeexchangeE( params, ( *this ) );
             SyncVectorPatch::finalizeexchangeB( params, ( *this ) );
         }
 
@@ -1128,10 +1127,8 @@ void VectorPatch::solveEnvelope( Params &params, SimWindow *simWindow, int, doub
 
         // Exchange |Ex|, because it cannot be computed in all ghost cells like |E|
         SyncVectorPatch::exchangeEnvEx( params, ( *this ), smpi );
-        // SyncVectorPatch::finalizeexchangeEnvEx( params, ( *this ) );
         // Exchange GradPhi
         SyncVectorPatch::exchangeGradPhi( params, ( *this ), smpi );
-        // SyncVectorPatch::finalizeexchangeGradPhi( params, ( *this ) );
 
         timers.envelope.update();
     }
@@ -1673,7 +1670,6 @@ void VectorPatch::solvePoisson( Params &params, SmileiMPI *smpi )
     }
 
     SyncVectorPatch::exchangeE( params, *this, smpi );
-    SyncVectorPatch::finalizeexchangeE( params, *this );
 
     // Centering of the electrostatic fields
     // -------------------------------------
@@ -2015,7 +2011,6 @@ void VectorPatch::solvePoissonAM( Params &params, SmileiMPI *smpi )
     // // Exchange the fields after the addition of the relativistic species fields
     for( unsigned int imode = 0 ; imode < params.nmodes_classical_Poisson_field_init ; imode++ ) {
         SyncVectorPatch::exchangeE( params, ( *this ), imode, smpi );
-        // SyncVectorPatch::finalizeexchangeE( params, ( *this ), imode ); // disable async, because of tags which is the same for all modes
     }
 
     MESSAGE( "Poisson equation solved" );
@@ -2295,8 +2290,6 @@ void VectorPatch::solveRelativisticPoisson( Params &params, SmileiMPI *smpi, dou
     SyncVectorPatch::finalizeExchangeAlongAllDirectionsNoOMP( listEy_rel, *this );
     SyncVectorPatch::exchangeAlongAllDirectionsNoOMP<double,Field>( listEz_rel, *this, smpi );
     SyncVectorPatch::finalizeExchangeAlongAllDirectionsNoOMP( listEz_rel, *this );
-    //SyncVectorPatch::exchangeE( params, *this, smpi );
-    //SyncVectorPatch::finalizeexchangeE( params, *this );
 
     // Force to zero the average value of electric field, as in traditional Poisson solver
     //// -------------------------------------
@@ -2791,7 +2784,6 @@ void VectorPatch::solveRelativisticPoissonAM( Params &params, SmileiMPI *smpi, d
     // // Exchange the fields after the addition of the relativistic species fields
     for( unsigned int imode = 0 ; imode < params.nmodes_rel_field_init ; imode++ ) {
         SyncVectorPatch::exchangeE( params, ( *this ), imode, smpi );
-        // SyncVectorPatch::finalizeexchangeE( params, ( *this ), imode ); // disable async, because of tags which is the same for all modes
     }
     for( unsigned int imode = 0 ; imode < params.nmodes_rel_field_init ; imode++ ) {
         SyncVectorPatch::exchangeB( params, ( *this ), imode, smpi );

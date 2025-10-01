@@ -635,98 +635,33 @@ void SyncVectorPatch::sumAllComponents( std::vector<Field *> &fields, VectorPatc
 
 void SyncVectorPatch::exchangeE( Params &params, VectorPatch &vecPatches, SmileiMPI *smpi )
 {
-    // full_B_exchange is true if (Buneman BC, Lehe, Bouchard or spectral solvers)
     // E is exchanged if spectral solver and/or at the end of initialisation of non-neutral plasma
-
-    if( !params.full_B_exchange ) {
-        SyncVectorPatch::exchangeAlongAllDirections<double,Field>( vecPatches.listEx_, vecPatches, smpi );
-        SyncVectorPatch::exchangeAlongAllDirections<double,Field>( vecPatches.listEy_, vecPatches, smpi );
-        SyncVectorPatch::exchangeAlongAllDirections<double,Field>( vecPatches.listEz_, vecPatches, smpi );
-    } else {
         SyncVectorPatch::exchangeSynchronizedPerDirection<double,Field>( vecPatches.listEx_, vecPatches, smpi );
         SyncVectorPatch::exchangeSynchronizedPerDirection<double,Field>( vecPatches.listEy_, vecPatches, smpi );
         SyncVectorPatch::exchangeSynchronizedPerDirection<double,Field>( vecPatches.listEz_, vecPatches, smpi );
-    }
-
-}
-
-void SyncVectorPatch::finalizeexchangeE( Params &params, VectorPatch &vecPatches )
-{
-    // full_B_exchange is true if (Buneman BC, Lehe, Bouchard or spectral solvers)
-    // E is exchange if spectral solver and/or at the end of initialisation of non-neutral plasma
-
-    if( !params.full_B_exchange ) {
-        SyncVectorPatch::finalizeExchangeAlongAllDirections( vecPatches.listEx_, vecPatches );
-        SyncVectorPatch::finalizeExchangeAlongAllDirections( vecPatches.listEy_, vecPatches );
-        SyncVectorPatch::finalizeExchangeAlongAllDirections( vecPatches.listEz_, vecPatches );
-    }
-    //else
-    //    done in exchangeSynchronizedPerDirection
 }
 
 void SyncVectorPatch::exchangeB( Params &params, VectorPatch &vecPatches, SmileiMPI *smpi )
 {
-    // full_B_exchange is true if (Buneman BC, Lehe, Bouchard or spectral solvers)
-
     if( vecPatches.listBx_[0]->dims_.size()==1 ) {
         // Exchange Bs0 : By_ and Bz_ (dual in X)
         SyncVectorPatch::exchangeAllComponentsAlongX( vecPatches.Bs0, vecPatches, smpi );
     } else {
-        if( params.full_B_exchange ) {
-            // Exchange Bx_ in Y then X
-            SyncVectorPatch::exchangeSynchronizedPerDirection<double,Field>( vecPatches.listBx_, vecPatches, smpi );
-            // Exchange By_ in Y then X
-            SyncVectorPatch::exchangeSynchronizedPerDirection<double,Field>( vecPatches.listBy_, vecPatches, smpi );
-            // Exchange Bz_ in Y then X
-            SyncVectorPatch::exchangeSynchronizedPerDirection<double,Field>( vecPatches.listBz_, vecPatches, smpi );
-
-        } else {
-            if( vecPatches.listBx_[0]->dims_.size()==2 ) {
-                // Exchange Bs0 : By_ and Bz_ (dual in X)
-                SyncVectorPatch::exchangeAllComponentsAlongX( vecPatches.Bs0, vecPatches, smpi );
-                // Exchange Bs1 : Bx_ and Bz_ (dual in Y)
-                SyncVectorPatch::exchangeAllComponentsAlongY( vecPatches.Bs1, vecPatches, smpi );
-            } else if( vecPatches.listBx_[0]->dims_.size()==3 ) {
-                // Exchange Bs0 : By_ and Bz_ (dual in X)
-                SyncVectorPatch::exchangeAllComponentsAlongX( vecPatches.Bs0, vecPatches, smpi );
-                // Exchange Bs1 : Bx_ and Bz_ (dual in Y)
-                SyncVectorPatch::exchangeAllComponentsAlongY( vecPatches.Bs1, vecPatches, smpi );
-                // Exchange Bs2 : Bx_ and By_ (dual in Z)
-                SyncVectorPatch::exchangeAllComponentsAlongZ( vecPatches.Bs2, vecPatches, smpi );
-            }
-        }
-    }
+        // Exchange Bx_ in Y then X
+        SyncVectorPatch::exchangeSynchronizedPerDirection<double,Field>( vecPatches.listBx_, vecPatches, smpi );
+        // Exchange By_ in Y then X
+        SyncVectorPatch::exchangeSynchronizedPerDirection<double,Field>( vecPatches.listBy_, vecPatches, smpi );
+        // Exchange Bz_ in Y then X
+        SyncVectorPatch::exchangeSynchronizedPerDirection<double,Field>( vecPatches.listBz_, vecPatches, smpi );
+   }
 }
 
 void SyncVectorPatch::finalizeexchangeB( Params &params, VectorPatch &vecPatches )
 {
-    // full_B_exchange is true if (Buneman BC, Lehe, Bouchard or spectral solvers)
-
     if( vecPatches.listBx_[0]->dims_.size()==1 ) {
         // Finalize exchange Bs0 : By_ and Bz_ (dual in X)
         SyncVectorPatch::finalizeExchangeAllComponentsAlongX( vecPatches );
-    } else if( vecPatches.listBx_[0]->dims_.size()==2 ) {
-        if( !params.full_B_exchange ) {
-            // Finalize exchange Bs0 : By_ and Bz_ (dual in X)
-            SyncVectorPatch::finalizeExchangeAllComponentsAlongX( vecPatches );
-            // Finalize exchange Bs1 : Bx_ and Bz_ (dual in Y)
-            SyncVectorPatch::finalizeExchangeAllComponentsAlongY( vecPatches );
-        }
-        //else
-        //    done in exchangeSynchronizedPerDirection
-    } else if( vecPatches.listBx_[0]->dims_.size()==3 ) {
-        if( !params.full_B_exchange ) {
-            // Finalize exchange Bs0 : By_ and Bz_ (dual in X)
-            SyncVectorPatch::finalizeExchangeAllComponentsAlongX( vecPatches );
-            // Finalize exchange Bs1 : Bx_ and Bz_ (dual in Y)
-            SyncVectorPatch::finalizeExchangeAllComponentsAlongY( vecPatches );
-            // Finalize exchange Bs2 : Bx_ and By_ (dual in Z)
-            SyncVectorPatch::finalizeExchangeAllComponentsAlongZ( vecPatches );
-        }
-        //else
-        //    done in exchangeSynchronizedPerDirection
-    }
-
+    } 
 }
 
 void SyncVectorPatch::exchangeJ( Params &, VectorPatch &vecPatches, SmileiMPI *smpi )
@@ -773,31 +708,6 @@ void SyncVectorPatch::exchangeBmBTIS3( Params &/*params*/, VectorPatch &vecPatch
     SyncVectorPatch::exchangeAlongAllDirections<complex<double>,cField>( vecPatches.listBt_mBTIS3[imode], vecPatches, smpi );
     SyncVectorPatch::finalizeExchangeAlongAllDirections( vecPatches.listBt_mBTIS3[imode], vecPatches );
 }
-
-// void SyncVectorPatch::finalizeexchangeB( Params &, VectorPatch &, int )
-// {
-// }
-// 
-// void SyncVectorPatch::finalizeexchangeE( Params &, VectorPatch &, int )
-// {
-// }
-
-
-//void SyncVectorPatch::exchangeB( Params &, VectorPatch &vecPatches, int imode, SmileiMPI *smpi )
-//{
-//
-//    SyncVectorPatch::exchangeComplex( vecPatches.listBl_[imode], vecPatches, smpi );
-//    SyncVectorPatch::exchangeComplex( vecPatches.listBr_[imode], vecPatches, smpi );
-//    SyncVectorPatch::exchangeComplex( vecPatches.listBt_[imode], vecPatches, smpi );
-//}
-
-//void SyncVectorPatch::finalizeexchangeB( Params &, VectorPatch &vecPatches, int imode )
-//{
-//
-//    SyncVectorPatch::finalizeexchangeComplex( vecPatches.listBl_[imode], vecPatches );
-//    SyncVectorPatch::finalizeexchangeComplex( vecPatches.listBr_[imode], vecPatches );
-//    SyncVectorPatch::finalizeexchangeComplex( vecPatches.listBt_[imode], vecPatches );
-//}
 
 void SyncVectorPatch::exchangeA( Params &params, VectorPatch &vecPatches, SmileiMPI *smpi )
 {
