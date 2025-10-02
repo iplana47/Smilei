@@ -58,6 +58,7 @@ Changes made in the repository (not released)
   * ``LaserGaussian3D`` was giving wrong amplitude with large incidence angle.
   * Fix bug in ``Screen`` with a cylindrical shape.
   * Fix PrescribedFields with MLMD.
+  * Field synchronization between patches is now done after application of boundary conditions and all points are systematically exchanged.
 
 * **Experimental**
 
