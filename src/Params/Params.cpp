@@ -223,11 +223,6 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
         Rand::gen = std::mt19937( random_seed );
     }
 
-    // communication pattern initialized as partial B exchange
-    full_B_exchange = false;
-    // communication pattern initialized as partial A, Phi exchange for envelope simulations
-    full_Envelope_exchange = true;
-
     // --------------
     // Stop & Restart
     // --------------
@@ -262,12 +257,9 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
     PyTools::extract( "maxwell_solver", maxwell_sol, "Main"   );
     is_spectral = false;
     is_pxr = false;
-    if( maxwell_sol == "Lehe" || maxwell_sol == "Bouchard" || maxwell_sol == "M4" ) {
-        full_B_exchange=true;
-    } else if( maxwell_sol == "spectral" ) {
+    if( maxwell_sol == "spectral" ) {
         is_spectral = true;
         is_pxr = true;
-        full_B_exchange = true;
     } else if( maxwell_sol == "picsar" ) {
         is_pxr = true;
     }
@@ -470,7 +462,6 @@ Params::Params( SmileiMPI *smpi, std::vector<std::string> namelistsFiles ) :
         open_boundaries[iDim].resize( 2, false );
         for( unsigned int j = 0; j < 2; j++ ) {
             if( EM_BCs[iDim][j] == "buneman" ) {
-                full_B_exchange = true;
                 open_boundaries[iDim][j] = true;
             } else if( EM_BCs[iDim][j] == "silver-muller" ) {
                 open_boundaries[iDim][j] = true;
@@ -1302,7 +1293,6 @@ void Params::compute()
     region_oversize = oversize;
     if( multiple_decomposition ) {
         multiple_decompose();
-        full_B_exchange = true;
     }
 }
 
@@ -1351,10 +1341,6 @@ void Params::setDimensions()
 // ---------------------------------------------------------------------------------------------------------------------
 void Params::print_init()
 {
-    if( full_B_exchange ) {
-        MESSAGE( 1, "All components of B are exchanged at synchronization" );
-    }
-
     TITLE( "Geometry: " << geometry );
     MESSAGE( 1, "Interpolation order : " <<  interpolation_order );
     if (use_BTIS3){

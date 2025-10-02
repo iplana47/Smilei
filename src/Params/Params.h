@@ -172,8 +172,6 @@ public:
     //! Maxium relativistic poisson error tolerated
     double relativistic_poisson_max_error;
 
-    //! Do we need to exchange full B (default=0 <=> only 2 components are exchanged by dimension)
-    bool full_B_exchange;
     //! Do we need to exchange full A,Phi,Chi (default=0 <=> only 2 components are exchanged by dimension)
     bool full_Envelope_exchange;
     

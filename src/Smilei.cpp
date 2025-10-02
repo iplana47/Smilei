@@ -368,7 +368,6 @@ int main( int argc, char *argv[] )
             if ( params.geometry != "AMcylindrical" ) {
                 DoubleGrids::syncFieldsOnRegion( vecPatches, region, params, &smpi );
                 SyncVectorPatch::exchangeE( params, region.vecPatch_, &smpi );
-                SyncVectorPatch::finalizeexchangeE( params, region.vecPatch_);
                 SyncVectorPatch::exchangeB( params, region.vecPatch_, &smpi );
                 SyncVectorPatch::finalizeexchangeB( params, region.vecPatch_);
             } else {
