@@ -45,7 +45,7 @@ def ft(t):
 Main(
     geometry = "3Dcartesian",
     maxwell_solver = "Bouchard",
-    maxwell_solver = "Yee",
+    #maxwell_solver = "Yee",
     custom_oversize = 4,
     timestep = t0/rest,
     number_of_timesteps = Tsim/l0*rest,
