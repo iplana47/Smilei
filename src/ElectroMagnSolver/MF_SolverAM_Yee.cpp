@@ -76,7 +76,7 @@ void MF_SolverAM_Yee::operator()( ElectroMagn *fields )
             if( imode==0 ) {
                 for( unsigned int i=0 ; i<nl_d ; i++ ) {
                     ( *Br )( i, oversize_r )=0;
-                    ( *Br )( i, 1 )=-( *Br )( i, 3 );
+                    ( *Br )( i, oversize_r-1 )=-( *Br )( i, oversize_r+1 );
                 }
                 for( unsigned int i=0 ; i<nl_d ; i++ ) {
                     ( *Bt )( i, oversize_r )= -( *Bt )( i, oversize_r+1 );
@@ -94,7 +94,7 @@ void MF_SolverAM_Yee::operator()( ElectroMagn *fields )
                 for( unsigned int i=1 ; i<nl_d-1 ; i++ ) {
                     ( *Br )( i, oversize_r )+=  Icpx*dt_ov_dr*( *El )( i, oversize_r+1 )
                                        +			dt_ov_dl*( ( *Et )( i, oversize_r )-( *Et )( i-1, oversize_r ) );
-                    ( *Br )( i, 1 )=( *Br )( i, 3 );
+                    ( *Br )( i, oversize_r-1 )=( *Br )( i, oversize_r+1 );
                 }
                 for( unsigned int i=0; i<nl_d ; i++ ) {
                     ( *Bt )( i, oversize_r )= ( *Bt )( i, oversize_r+1 ); // Non zero Bt mode 1 on axis.
@@ -106,7 +106,7 @@ void MF_SolverAM_Yee::operator()( ElectroMagn *fields )
                 }
                 for( unsigned int i=0 ; i<nl_d; i++ ) {
                     ( *Br )( i, oversize_r )= 0;
-                    ( *Br )( i, 1 )=-( *Br )( i, 3 );
+                    ( *Br )( i, oversize_r-1 )=-( *Br )( i, oversize_r+1 );
                 }
                 for( unsigned int  i=0 ; i<nl_d ; i++ ) {
                     ( *Bt )( i, oversize_r )= - ( *Bt )( i, oversize_r+1 );
