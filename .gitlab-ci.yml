@@ -14,7 +14,7 @@ install_gpu:
   tags:
     - ruche-ci-gpu
   only: 
-    - simplified_oversize
+    - develop
   script:
     - source /gpfs/users/prouveurc/myhdf5_env_smilei.sh
     # Move in test dir  -> NOT needed, by default the runner will give the order to git clone the repo and cd inside before our instructions (in "script")
@@ -29,8 +29,7 @@ test_gpu:
   tags:
     - ruche-ci-gpu
   only:
-    - simplified_oversize 
-    - simplified_oversize
+    - develop 
   script:
     - source /gpfs/users/prouveurc/myhdf5_env_smilei.sh
     - module load anaconda3/2022.10/gcc-11.2.0
