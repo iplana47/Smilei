@@ -1195,16 +1195,10 @@ void Params::compute()
         if (maxwell_sol == "Bouchard" && custom_oversize < 4 ) {
              ERROR_NAMELIST( "With `Bouchard` solver the oversize have to be greater than 4", LINK_NAMELIST + std::string("#main-variables") );
         }
-        //if( ! multiple_decomposition ) {
-            //oversize[i]  = std::max( interpolation_order, std::max( ( unsigned int )( spectral_solver_order[i]/2+1 ),custom_oversize ) ) + ( exchange_particles_each-1 );
-            oversize[i]  = std::max( interpolation_order, custom_oversize ) + ( exchange_particles_each-1 );
-            if( currentFilter_model == "customFIR" && oversize[i] < (currentFilter_kernelFIR.size()-1)/2 ) {
-                ERROR_NAMELIST( "With the `customFIR` current filter model, the ghost cell number (oversize) = " << oversize[i] << " have to be >= " << (currentFilter_kernelFIR.size()-1)/2 << ", the (kernelFIR size - 1)/2", LINK_NAMELIST + std::string("#current-filtering")  );
-            }
-        //} else {
-        //    if (i==0) cout << "multiple decomposition, order = " << interpolation_order << " custom_oversize = " << custom_oversize << " spectral_solver_order = " << spectral_solver_order[i] << endl;
-        //    oversize[i] = interpolation_order + ( exchange_particles_each-1 );
-        //}
+        oversize[i]  = std::max( interpolation_order, custom_oversize ) + ( exchange_particles_each-1 );
+        if( currentFilter_model == "customFIR" && oversize[i] < (currentFilter_kernelFIR.size()-1)/2 ) {
+            ERROR_NAMELIST( "With the `customFIR` current filter model, the ghost cell number (oversize) = " << oversize[i] << " have to be >= " << (currentFilter_kernelFIR.size()-1)/2 << ", the (kernelFIR size - 1)/2", LINK_NAMELIST + std::string("#current-filtering")  );
+        }
         global_size_[i] = patch_size_[i];
         patch_size_[i] /= number_of_patches[i];
         if( global_size_[i]%number_of_patches[i] !=0 ) {
