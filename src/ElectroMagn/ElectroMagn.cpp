@@ -536,9 +536,9 @@ void ElectroMagn::applyPrescribedFields( Patch *patch, double time )
                 cField2D *El = ( static_cast<ElectroMagnAM *>( fields ) )->El_[imode];
                 cField2D *Er = ( static_cast<ElectroMagnAM *>( fields ) )->Er_[imode];
                 cField2D *Et = ( static_cast<ElectroMagnAM *>( fields ) )->Et_[imode];
-                cField2D *Bl = ( static_cast<ElectroMagnAM *>( fields ) )->Bl_[imode];
-                cField2D *Br = ( static_cast<ElectroMagnAM *>( fields ) )->Br_[imode];
-                cField2D *Bt = ( static_cast<ElectroMagnAM *>( fields ) )->Bt_[imode];
+                cField2D *Bl = ( static_cast<ElectroMagnAM *>( fields ) )->Bl_m[imode];
+                cField2D *Br = ( static_cast<ElectroMagnAM *>( fields ) )->Br_m[imode];
+                cField2D *Bt = ( static_cast<ElectroMagnAM *>( fields ) )->Bt_m[imode];
                 
                 // Conditions on axis for electric and magnetic fields
                 if( imode==0 ) {
@@ -575,7 +575,7 @@ void ElectroMagn::applyPrescribedFields( Patch *patch, double time )
                     }
                     for( unsigned int i=0 ; i<nl_p  ; i++ ) {
                         // We assume the prescribed fields are solution of maxwell's equations on axis
-                        //( *Et )( i, oversize_r )= -Icpx/8.*( 9.*( *Er )( i, oversize_r+1 )-( *Er )( i, oversize_r+2 ) );// div( E mode 1) = 0 on axis.
+                        ( *Et )( i, oversize_r )= -Icpx/8.*( 9.*( *Er )( i, oversize_r+1 )-( *Er )( i, oversize_r+2 ) );// div( E mode 1) = 0 on axis.
                         ( *Et )( i, oversize_r-1 )=( *Et )( i, oversize_r+1 );
                     }
                     for( unsigned int i=0 ; i<nl_p ; i++ ) {
