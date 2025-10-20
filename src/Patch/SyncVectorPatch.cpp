@@ -1213,6 +1213,16 @@ void SyncVectorPatch::exchangeSynchronizedPerDirection( std::vector<Field *> fie
                 field2 = static_cast<F *>( fields[ipatch] );
                 pt1 = &( *field1 )( size[2] );
                 pt2 = &( *field2 )( 0 );
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
+                int ptsize = vecPatches.B2_localz[ipatch]->size();
+                int size2 = size[2];
+                #pragma acc parallel present(pt1[0-size2:ptsize],pt2[0:ptsize])
+                #pragma acc loop gang worker vector
+#elif defined( SMILEI_ACCELERATOR_GPU_OMP )
+                const int ptsize = ( nx_ * ny_ * nz_ ) - ( ny_ * nz_ ) + ( ny_ * nz_ ) - nz_ + oversize[2];
+                #pragma omp target
+                #pragma omp teams distribute parallel for collapse( 3 )
+#endif
                 //for (unsigned int in = oversize[0] ; in < nx_-oversize[0]; in ++){
                 for( unsigned int in = 0 ; in < nx_ ; in ++ ) {
                     unsigned int i = in * ny_*nz_;
@@ -1275,6 +1285,16 @@ void SyncVectorPatch::exchangeSynchronizedPerDirection( std::vector<Field *> fie
                 field2 = static_cast<F *>( fields[ipatch] );
                 pt1 = &( *field1 )( size[1]*nz_ );
                 pt2 = &( *field2 )( 0 );
+#ifdef SMILEI_ACCELERATOR_GPU_OACC
+                int ptsize = vecPatches.B1_localy[ipatch]->size();
+                int size1 = size[1];
+                #pragma acc parallel present(pt1[0-size1*nz_:ptsize],pt2[0:ptsize])
+                #pragma acc loop gang worker vector
+#elif defined( SMILEI_ACCELERATOR_GPU_OMP )
+                const int ptsize = ( nx_ * ny_ * nz_ ) - ( ny_ * nz_ ) + oversize[1] * nz_ + gsp[1] * nz_;
+    #pragma omp target
+    #pragma omp teams distribute parallel for collapse( 2 )
+#endif
                 for( unsigned int in = 0 ; in < nx_ ; in ++ ) {
                     //for (unsigned int in = oversize[0] ; in < nx_-oversize[0] ; in ++){ // <== This doesn't work. Why ??
                     unsigned int i = in * ny_*nz_;
@@ -1324,6 +1344,9 @@ void SyncVectorPatch::exchangeSynchronizedPerDirection( std::vector<Field *> fie
     }
 
 
+    const bool is_memory_on_device = vecPatches.B_localx.size() > 0 &&
+                                     smilei::tools::gpu::HostDeviceMemoryManagement::IsHostPointerMappedOnDevice( &( vecPatches.B_localx[0]->data_[0] ) );
+
 
     gsp[0] = ( oversize[0] + 1 + fields[0]->isDual_[0] ); //Ghost size primal
 
@@ -1335,8 +1358,18 @@ void SyncVectorPatch::exchangeSynchronizedPerDirection( std::vector<Field *> fie
             field2 = static_cast<F *>( fields[ipatch] );
             pt1 = &( *field1 )( ( size[0] )*ny_*nz_ );
             pt2 = &( *field2 )( 0 );
-            memcpy( pt2, pt1, oversize[0]*ny_*nz_*sizeof( T ) );
-            memcpy( pt1+gsp[0]*ny_*nz_, pt2+gsp[0]*ny_*nz_, oversize[0]*ny_*nz_*sizeof( T ) );
+            if( is_memory_on_device ) {
+                smilei::tools::gpu::HostDeviceMemoryManagement::DeviceMemoryCopy( smilei::tools::gpu::HostDeviceMemoryManagement::GetDevicePointer( pt2 ),
+                                                                                    smilei::tools::gpu::HostDeviceMemoryManagement::GetDevicePointer( pt1 ),
+                                                                                    oversize[0] * ny_ * nz_ );
+
+                smilei::tools::gpu::HostDeviceMemoryManagement::DeviceMemoryCopy( smilei::tools::gpu::HostDeviceMemoryManagement::GetDevicePointer( pt1 ) + gsp[0] * ny_ * nz_,
+                                                                                    smilei::tools::gpu::HostDeviceMemoryManagement::GetDevicePointer( pt2 ) + gsp[0] * ny_ * nz_,
+                                                                                    oversize[0] * ny_ * nz_ );
+            } else {
+                memcpy( pt2, pt1, oversize[0]*ny_*nz_*sizeof( T ) );
+                memcpy( pt1+gsp[0]*ny_*nz_, pt2+gsp[0]*ny_*nz_, oversize[0]*ny_*nz_*sizeof( T ) );
+            }    
         } // End if ( MPI_me_ == MPI_neighbor_[0][0] )
 
     } // End for( ipatch )
