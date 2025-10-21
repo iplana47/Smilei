@@ -81,6 +81,7 @@ As an example of a "simple" openmpi installation
 Openmpi dependencies such as zlib, hwloc and libevent should first be compiled with nvc++ 
 
 .. code:: bash
+  
   export cuda=PATH_TO_YOUR_NVHPC_FOLDER/Linux_x86_64/24.5/cuda
   wget https://download.open-mpi.org/release/open-mpi/v4.1/openmpi-4.1.5.tar.gz
   tar -xzf openmpi-4.1.5.tar.gz
