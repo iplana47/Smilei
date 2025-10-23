@@ -96,6 +96,6 @@ DiagScalar(every=1)
 DiagFields(
     every = 2,
     flush_every=10,
-    fields = ['Ex', 'Ey', 'Ez','Jx','Jy','Jz'],
+    fields = ['Ex', 'Ey', 'Ez','Bx','By','Bz','Jx','Jy','Jz'],
     subgrid = s_[::1,::1,::1]
 )
