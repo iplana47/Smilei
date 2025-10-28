@@ -1837,12 +1837,10 @@ void ElectroMagnAM::applyExternalFields( Patch *patch )
 {
 #ifdef _TODO_AM
 #endif
-    int Nmodes = El_.size();
     std::vector<bool> input, copy;
-    
     Field *field;
  
-    for( int imode=0; imode<Nmodes; imode++ ) {
+    for( int imode=0; imode<nmodes; imode++ ) {
         input = {false, false, false};
         copy = {true, true, true};
         for( vector<ExtField>::iterator extfield=extFields.begin(); extfield!=extFields.end(); extfield++ ) {
@@ -1902,9 +1900,8 @@ void ElectroMagnAM::compute_B_m_fromEB()
     const unsigned int nl_d = dimDual[0];
     // const unsigned int nr_p = dimPrim[1];
     const unsigned int nr_d = dimDual[1];
-    const unsigned int Nmodes = El_.size();
 
-    for( unsigned int imode=0 ; imode<Nmodes ; imode++ ) {
+    for( unsigned int imode=0 ; imode<nmodes ; imode++ ) {
         for( unsigned int i=0 ; i<nl_p;  i++ ) {
             #pragma omp simd
             for( unsigned int j=1+isYmin*2 ; j<nr_d-1 ; j++ ) {

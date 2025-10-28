@@ -521,6 +521,103 @@ void ElectroMagn::applyPrescribedFields( Patch *patch, double time )
             applyPrescribedField( allFields[pf->index], pf->profile, patch, time );
         }
     }
+
+    //if AM, apply boundary conditions on fields "below axis" to account for prescribed modifications
+    if( dynamic_cast<ElectroMagnAM *>( patch->EMfields ) ) {
+        ElectroMagnAM *fields = static_cast<ElectroMagnAM *>( patch->EMfields );
+        const unsigned int nl_p = fields->dimPrim[0];
+        const unsigned int nl_d = fields->dimDual[0];
+        const unsigned int nr_p = fields->dimPrim[1];
+        const unsigned int nr_d = fields->dimDual[1];
+        bool isYmin = fields->isYmin;
+        int oversize_r = fields->oversize[1];
+        if( isYmin ) { 
+            for( unsigned int imode=0 ; imode < (*fields).nmodes ; imode++ ) {
+                cField2D *El = ( static_cast<ElectroMagnAM *>( fields ) )->El_[imode];
+                cField2D *Er = ( static_cast<ElectroMagnAM *>( fields ) )->Er_[imode];
+                cField2D *Et = ( static_cast<ElectroMagnAM *>( fields ) )->Et_[imode];
+                cField2D *Bl = ( static_cast<ElectroMagnAM *>( fields ) )->Bl_m[imode];
+                cField2D *Br = ( static_cast<ElectroMagnAM *>( fields ) )->Br_m[imode];
+                cField2D *Bt = ( static_cast<ElectroMagnAM *>( fields ) )->Bt_m[imode];
+                
+                // Conditions on axis for electric and magnetic fields
+                if( imode==0 ) {
+                    for( unsigned int i=0 ; i<nl_p  ; i++ ) {
+                        //( *Et )( i, oversize_r )=0; //We assume this conditions is well matched by the presribed fields already
+                        ( *Et )( i, oversize_r-1 )=-( *Et )( i, oversize_r+1 );
+                    }
+                    for( unsigned int i=0 ; i<nl_p  ; i++ ) {
+                        ( *Er )( i, oversize_r )= -( *Er )( i, oversize_r+1 );
+                    }
+                    for( unsigned int i=0 ; i<nl_d ; i++ ) {
+                        // We assume the prescribed fields are solution of maxwell's equations on axis
+                        //( *El )( i, oversize_r )+= 4.*dt_ov_dr*( *Bt )( i, oversize_r+1 )-dt*( *Jl )( i, oversize_r );
+                        ( *El )( i, oversize_r-1 )=( *El )( i, oversize_r+1 );
+                    }
+                    for( unsigned int i=0 ; i<nl_d ; i++ ) {
+                        //( *Br )( i, oversize_r )=0;//We assume this conditions is well matched by the presribed fields already
+                        ( *Br )( i, oversize_r-1 )=-( *Br )( i, oversize_r+1 );
+                    }
+                    for( unsigned int i=0 ; i<nl_d ; i++ ) {
+                        ( *Bt )( i, oversize_r )= -( *Bt )( i, oversize_r+1 );
+                    }
+                    for( unsigned int i=0 ; i<nl_p ; i++ ) {
+                        ( *Bl )( i, oversize_r )= ( *Bl )( i, oversize_r+1 );
+                    }
+
+                } else if( imode==1 ) {
+                    for( unsigned int i=0 ; i<nl_d  ; i++ ) {
+                        //( *El )( i, oversize_r )= 0;//We assume this conditions is well matched by the presribed fields already
+                        ( *El )( i, oversize_r-1 )=-( *El )( i, oversize_r+1 );
+                    }
+                    for( unsigned int i=0 ; i<nl_p  ; i++ ) {
+                        ( *Et )( i, oversize_r )= -Icpx/8.*( 9.*( *Er )( i, oversize_r+1 )-( *Er )( i, oversize_r+2 ) );// div( E mode 1) = 0 on axis.
+                        ( *Et )( i, oversize_r-1 )=( *Et )( i, oversize_r+1 );
+                    }
+                    for( unsigned int i=0 ; i<nl_p ; i++ ) {
+                        ( *Er )( i, oversize_r ) = ( *Er )( i, oversize_r+1 );
+                    }
+                    for( unsigned int i=0 ; i<nl_p  ; i++ ) {
+                        ( *Bl )( i, oversize_r )= -( *Bl )( i, oversize_r+1 ); // Zero Bl mode 1 on axis.
+                    }
+
+                    for( unsigned int i=1 ; i<nl_d-1 ; i++ ) {
+                        // We assume the prescribed fields are solution of maxwell's equations on axis
+                        //( *Br )( i, oversize_r )+=  Icpx*dt_ov_dr*( *El )( i, oversize_r+1 )
+                          //                 +			dt_ov_dl*( ( *Et )( i, oversize_r )-( *Et )( i-1, oversize_r ) );
+                        ( *Br )( i, 1 )=( *Br )( i, 3 );
+                    }
+                    for( unsigned int i=0; i<nl_d ; i++ ) {
+                        ( *Bt )( i, oversize_r )= ( *Bt )( i, oversize_r+1 ); // Non zero Bt mode 1 on axis.
+                    }
+
+                } else { // mode > 1
+                    for( unsigned int  i=0 ; i<nl_d; i++ ) {
+                        //( *El )( i, oversize_r )= 0;//We assume this conditions is well matched by the presribed fields already
+                        ( *El )( i, oversize_r-1 )=-( *El )( i, oversize_r+1 );
+                    }
+                    for( unsigned int  i=0 ; i<nl_p; i++ ) {
+                        ( *Er )( i, oversize_r )= -( *Er )( i, oversize_r+1 );
+                    }
+                    for( unsigned int i=0 ; i<nl_p; i++ ) {
+                        //( *Et )( i, oversize_r )= 0;//We assume this conditions is well matched by the presribed fields already
+                        ( *Et )( i, oversize_r-1 )=-( *Et )( i, oversize_r+1 );
+                    }
+                    for( unsigned int  i=0 ; i<nl_p; i++ ) {
+                        ( *Bl )( i, oversize_r )= -( *Bl )( i, oversize_r+1 );
+                    }
+                    for( unsigned int i=0 ; i<nl_d; i++ ) {
+                        //( *Br )( i, oversize_r )= 0;//We assume this conditions is well matched by the presribed fields already
+                        ( *Br )( i, oversize_r-1 )=-( *Br )( i, oversize_r+1 );
+                    }
+                    for( unsigned int  i=0 ; i<nl_d ; i++ ) {
+                        ( *Bt )( i, oversize_r )= - ( *Bt )( i, oversize_r+1 );
+                    }
+
+                }
+            }
+        }
+    }
 }
 
 void ElectroMagn::resetPrescribedFields()
