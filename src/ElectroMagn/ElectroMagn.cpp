@@ -543,8 +543,7 @@ void ElectroMagn::applyPrescribedFields( Patch *patch, double time )
                 // Conditions on axis for electric and magnetic fields
                 if( imode==0 ) {
                     for( unsigned int i=0 ; i<nl_p  ; i++ ) {
-                        if ( ( *Et )( i, oversize_r ) != 0. ) cout << "Warning prescribed Et mode 0 is non zero on axis " << ( *Et )( i, oversize_r ) << endl;
-                        //( *Et )( i, oversize_r )=0;
+                        //( *Et )( i, oversize_r )=0; //We assume this conditions is well matched by the presribed fields already
                         ( *Et )( i, oversize_r-1 )=-( *Et )( i, oversize_r+1 );
                     }
                     for( unsigned int i=0 ; i<nl_p  ; i++ ) {
@@ -556,8 +555,7 @@ void ElectroMagn::applyPrescribedFields( Patch *patch, double time )
                         ( *El )( i, oversize_r-1 )=( *El )( i, oversize_r+1 );
                     }
                     for( unsigned int i=0 ; i<nl_d ; i++ ) {
-                        if ( ( *Br )( i, oversize_r ) != 0. ) cout << "Warning prescribed Br mode 0 is non zero on axis " << ( *Br )( i, oversize_r ) << endl;
-                        //( *Br )( i, oversize_r )=0;
+                        //( *Br )( i, oversize_r )=0;//We assume this conditions is well matched by the presribed fields already
                         ( *Br )( i, oversize_r-1 )=-( *Br )( i, oversize_r+1 );
                     }
                     for( unsigned int i=0 ; i<nl_d ; i++ ) {
@@ -569,12 +567,10 @@ void ElectroMagn::applyPrescribedFields( Patch *patch, double time )
 
                 } else if( imode==1 ) {
                     for( unsigned int i=0 ; i<nl_d  ; i++ ) {
-                        if ( ( *El )( i, oversize_r ) != 0. ) cout << "Warning prescribed El mode 1 is non zero on axis " << ( *El )( i, oversize_r ) << endl;
-                        //( *El )( i, oversize_r )= 0;
+                        //( *El )( i, oversize_r )= 0;//We assume this conditions is well matched by the presribed fields already
                         ( *El )( i, oversize_r-1 )=-( *El )( i, oversize_r+1 );
                     }
                     for( unsigned int i=0 ; i<nl_p  ; i++ ) {
-                        // We assume the prescribed fields are solution of maxwell's equations on axis
                         ( *Et )( i, oversize_r )= -Icpx/8.*( 9.*( *Er )( i, oversize_r+1 )-( *Er )( i, oversize_r+2 ) );// div( E mode 1) = 0 on axis.
                         ( *Et )( i, oversize_r-1 )=( *Et )( i, oversize_r+1 );
                     }
@@ -597,24 +593,21 @@ void ElectroMagn::applyPrescribedFields( Patch *patch, double time )
 
                 } else { // mode > 1
                     for( unsigned int  i=0 ; i<nl_d; i++ ) {
-                        if ( ( *El )( i, oversize_r ) != 0. ) cout << "Warning prescribed El mode" << imode << " is non zero on axis " << ( *El )( i, oversize_r ) << endl;
-                        //( *El )( i, oversize_r )= 0;
+                        //( *El )( i, oversize_r )= 0;//We assume this conditions is well matched by the presribed fields already
                         ( *El )( i, oversize_r-1 )=-( *El )( i, oversize_r+1 );
                     }
                     for( unsigned int  i=0 ; i<nl_p; i++ ) {
                         ( *Er )( i, oversize_r )= -( *Er )( i, oversize_r+1 );
                     }
                     for( unsigned int i=0 ; i<nl_p; i++ ) {
-                        if ( ( *Et )( i, oversize_r ) != 0. ) cout << "Warning prescribed Et mode" << imode << " is non zero on axis " << ( *Et )( i, oversize_r ) << endl;
-                        //( *Et )( i, oversize_r )= 0;
+                        //( *Et )( i, oversize_r )= 0;//We assume this conditions is well matched by the presribed fields already
                         ( *Et )( i, oversize_r-1 )=-( *Et )( i, oversize_r+1 );
                     }
                     for( unsigned int  i=0 ; i<nl_p; i++ ) {
                         ( *Bl )( i, oversize_r )= -( *Bl )( i, oversize_r+1 );
                     }
                     for( unsigned int i=0 ; i<nl_d; i++ ) {
-                        if ( ( *Br )( i, oversize_r ) != 0. ) cout << "Warning prescribed Br mode" << imode << " is non zero on axis " << ( *Br )( i, oversize_r ) << endl;
-                        //( *Br )( i, oversize_r )= 0;
+                        //( *Br )( i, oversize_r )= 0;//We assume this conditions is well matched by the presribed fields already
                         ( *Br )( i, oversize_r-1 )=-( *Br )( i, oversize_r+1 );
                     }
                     for( unsigned int  i=0 ; i<nl_d ; i++ ) {
