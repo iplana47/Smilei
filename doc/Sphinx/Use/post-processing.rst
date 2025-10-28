@@ -242,8 +242,12 @@ Open a Probe diagnostic
   * ``field``: name of the field (``"Bx"``, ``"By"``, ``"Bz"``, ``"Ex"``, ``"Ey"``, ``"Ez"``, ``"Jx"``, ``"Jy"``, ``"Jz"`` or ``"Rho"``).
      | If not given, a list of available fields is printed.
      | The string can also be an operation between several fields, such as ``"Jx+Jy"``.
-  * ``subset`` and ``average`` are very similar to those of :py:meth:`Field`, but they can only have the axes: ``"axis1"``, ``"axis2"`` and ``"axis3"``.
-    For instance, ``average={"axis1":"all"}``. Note that the axes are not necessarily :math:`x`, :math:`y` or :math:`z` because the probe mesh is arbitrary.
+  * ``subset`` and ``average`` are very similar to those of 
+    :py:meth:`Field`, but they can only have the axes: ``"axis1"``, ``"axis2"`` and ``"axis3"``.
+    For instance, ``average={"axis1":"all"}``. Note that the axes are not necessarily
+    equal to :math:`x`, :math:`y` or :math:`z` because the probe mesh is arbitrary.
+    
+    | **WARNING:** UNLIKE :py:meth:`Field`, THE LOCATIONS ARE RELATIVE TO THE PROBE'S :py:data:`origin`, NOT TO THE OVERALL ORIGIN.
   * See also :ref:`otherkwargs`
 
 **Example**::
@@ -319,7 +323,7 @@ Open a Screen diagnostic
 Open a RadiationSpectrum diagnostic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. py:method:: ParticleBinning(diagNumber=None, timesteps=None, subset=None, average=None, units=[""], data_log=False, data_transform=None, **kwargs)
+.. py:method:: RadiationSpectrum(diagNumber=None, timesteps=None, subset=None, average=None, units=[""], data_log=False, data_transform=None, **kwargs)
 
   * ``timesteps`` (or ``timestep_indices``), ``units``, ``data_log``, ``data_transform``, ``export_dir``: same as before.
   * ``diagNumber``, ``subset`` and ``average``: identical to that of ParticleBinning diagnostics.
