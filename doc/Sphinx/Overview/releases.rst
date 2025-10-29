@@ -26,6 +26,7 @@ Changes made in the repository (not released)
 * **Ported to GPU**:
 
   * Collisions (without ionization or nuclear reaction)
+  * 3D scheme for Bouchard Maxwell-Faraday solver (without particles)
 
 * **Features**:
 
@@ -119,6 +120,8 @@ Release 5.1
   * ``dump_minutes`` often failed to write some checkpoint files.
   * ``"auto"`` limits in ``ParticleBinning`` could fail with only one side on ``"auto"``.
   * CFL condition is more accurately determined in ``AMcylindrical`` and the feature ``timestep_over_CFL`` should be more reliable in that geometry.
+  * Fixed scheme for 3D Bouchard Maxwell-Faraday solver on CPU.
+
 
 ----
 
