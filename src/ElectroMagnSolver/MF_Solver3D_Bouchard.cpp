@@ -22,9 +22,9 @@ MF_Solver3D_Bouchard::MF_Solver3D_Bouchard( Params &params )
     double dt_ov_dz  = dt/dz;
     //Not necessary to have dx=dy=dz, but dispersion law are modify
     //In particular if dz >> dx,dy then solver become like the 2d solver
-    //if( (dx!=dy)||(dx!=dz)||(dy!=dz) ) {
-    //    ERROR( "Bouchard solver requires the same cell-length in x, y and z directions" );
-    //}
+    if( (dx!=dy)||(dx!=dz)||(dy!=dz) ) {
+        WARNING( "Bouchard solver was tested with the same cell-length in x, y and z directions" );
+    }
     if( dx_ov_dt!=2 ) {
         WARNING( "Bouchard solver requires dx/dt = 2 (Magical Timestep)" );
     }
@@ -76,39 +76,32 @@ void MF_Solver3D_Bouchard::operator()( ElectroMagn* fields )
     const unsigned int nz_p = fields->dimPrim[2];
     const unsigned int nz_d = fields->dimDual[2];
     // Static-cast of the fields
-    Field3D *Ex3D = static_cast<Field3D *>( fields->Ex_ );
-    Field3D *Ey3D = static_cast<Field3D *>( fields->Ey_ );
-    Field3D *Ez3D = static_cast<Field3D *>( fields->Ez_ );
-    Field3D *Bx3D = static_cast<Field3D *>( fields->Bx_ );
-    Field3D *By3D = static_cast<Field3D *>( fields->By_ );
-    Field3D *Bz3D = static_cast<Field3D *>( fields->Bz_ );
+    //Field3D *Ex3D = static_cast<Field3D *>( fields->Ex_ );
+    //Field3D *Ey3D = static_cast<Field3D *>( fields->Ey_ );
+    //Field3D *Ez3D = static_cast<Field3D *>( fields->Ez_ );
+    //Field3D *Bx3D = static_cast<Field3D *>( fields->Bx_ );
+    //Field3D *By3D = static_cast<Field3D *>( fields->By_ );
+    //Field3D *Bz3D = static_cast<Field3D *>( fields->Bz_ );
 
     //ElectroMagn3D *EM3D = static_cast<ElectroMagn3D *>( fields );
 
-    //Field3D* Ex3D;
-    //Field3D* Ey3D;
-    //Field3D* Ez3D;
-    //if (isEFilterApplied) {
-    //    Ex3D = static_cast<Field3D*>(fields->filter_->Ex_[0]);
-    //    Ey3D = static_cast<Field3D*>(fields->filter_->Ey_[0]);
-    //    Ez3D = static_cast<Field3D*>(fields->filter_->Ez_[0]);
-    //} else {
-    //    Ex3D = static_cast<Field3D*>(fields->Ex_);
-    //    Ey3D = static_cast<Field3D*>(fields->Ey_);
-    //    Ez3D = static_cast<Field3D*>(fields->Ez_);
-    //}
-    //Field3D* Bx3D = static_cast<Field3D*>(fields->Bx_);
-    //Field3D* By3D = static_cast<Field3D*>(fields->By_);
-    //Field3D* Bz3D = static_cast<Field3D*>(fields->Bz_);
-
-    // - dB/dt = D x E
-    //
-    //     Bx        Dx   Ex     Bx += dt ( Dz Ey - Dy Ez )
-    // - d By / dt = Dy x Ey <=> By += dt ( Dx Ez - Dz Ex )
-    //     Bz        Dz   Ez     Bz += dt ( Dy Ex - Dx Ey )
+    Field3D* Ex3D;
+    Field3D* Ey3D;
+    Field3D* Ez3D;
+    if (isEFilterApplied) {
+        Ex3D = static_cast<Field3D*>(fields->filter_->Ex_[0]);
+        Ey3D = static_cast<Field3D*>(fields->filter_->Ey_[0]);
+        Ez3D = static_cast<Field3D*>(fields->filter_->Ez_[0]);
+    } else {
+        Ex3D = static_cast<Field3D*>(fields->Ex_);
+        Ey3D = static_cast<Field3D*>(fields->Ey_);
+        Ez3D = static_cast<Field3D*>(fields->Ez_);
+    }
+    Field3D* Bx3D = static_cast<Field3D*>(fields->Bx_);
+    Field3D* By3D = static_cast<Field3D*>(fields->By_);
+    Field3D* Bz3D = static_cast<Field3D*>(fields->Bz_);    
 
     // Magnetic field Bx^(p,d,d)
-    // Bx += dt ( Dz Ey - Dy Ez )
     for( unsigned int i=1 ; i<nx_p-1;  i++ ) {
         for( unsigned int j=2 ; j<ny_d-2 ; j++ ) {
             for( unsigned int k=2 ; k<nz_d-2 ; k++ ) {
@@ -125,15 +118,7 @@ void MF_Solver3D_Bouchard::operator()( ElectroMagn* fields )
         }
     }
 
-    //x->y
-    //y->z
-    //z->x
-    //i->j
-    //j->k
-    //k->i
-
     // Magnetic field By^(d,p,d)
-    // By += dt ( Dx Ez - Dz Ex )
     for( unsigned int i=2 ; i<nx_d-2 ; i++ ) {
         for( unsigned int j=1 ; j<ny_p-1 ; j++ ) {
             for( unsigned int k=2 ; k<nz_d-2 ; k++ ) {
@@ -149,15 +134,7 @@ void MF_Solver3D_Bouchard::operator()( ElectroMagn* fields )
         }
     }
 
-    //y->z
-    //z->x
-    //x->y
-    //j->k
-    //k->i
-    //i->j
-
     // Magnetic field Bz^(d,d,p)
-    // Bz += dt ( Dy Ex - Dx Ey )
     for( unsigned int i=2 ; i<nx_d-2 ; i++ ) {
         for( unsigned int j=2 ; j<ny_d-2 ; j++ ) {
             for( unsigned int k=1 ; k<nz_p-1 ; k++ ) {
@@ -173,229 +150,114 @@ void MF_Solver3D_Bouchard::operator()( ElectroMagn* fields )
         }
     }
 
-    /**
+    //Additional boundaries treatment on the primal direction of each B field
+    
+      
+    // at Xmin+dx - treat using simple discretization of the curl (will be overwritten if not at the xmin-border)
+    // Magnetic field By^(d,p,d)
+    for( unsigned int j=0 ; j<ny_p ; j++ ) {
+        for( unsigned int k=2 ; k<nz_d-2 ; k++ ) {
+            ( *By3D )( 1, j, k ) += -dt_ov_dz * ( ( *Ex3D )( 1, j, k ) - ( *Ex3D )( 1, j, k-1 ) ) + dt_ov_dx * ( ( *Ez3D )( 1, j, k ) - ( *Ez3D )( 0, j, k ) );
+        }
+    }
 
-    // Yee Model
+    // at Xmin+dx - treat using simple discretization of the curl (will be overwritten if not at the xmin-border)
+    // Magnetic field Bz^(d,d,p)
+    for( unsigned int j=2 ; j<ny_d-2 ; j++ ) {
+        for( unsigned int k=0 ; k<nz_p ; k++ ) {
+            ( *Bz3D )( 1, j, k ) += -dt_ov_dx * ( ( *Ey3D )( 1, j, k ) - ( *Ey3D )( 0, j, k ) ) + dt_ov_dy * ( ( *Ex3D )( 1, j, k ) - ( *Ex3D )( 1, j-1, k ) );
+        }
+    }
+
+
+    // at Xmax-dx - treat using simple discretization of the curl (will be overwritten if not at the xmax-border)
+    // Magnetic field By^(d,p,d)
+    for( unsigned int j=0 ; j<ny_p ; j++ ) {
+        for( unsigned int k=2 ; k<nz_d-2 ; k++ ) {
+            ( *By3D )( nx_d-2, j, k ) += -dt_ov_dz * ( ( *Ex3D )( nx_d-2, j, k ) - ( *Ex3D )( nx_d-2, j, k-1 ) ) + dt_ov_dx * ( ( *Ez3D )( nx_d-2, j, k ) - ( *Ez3D )( nx_d-3, j, k ) );
+        }
+    }
+    // at Xmax-dx - treat using simple discretization of the curl (will be overwritten if not at the xmax-border)
+    // Magnetic field Bz^(d,d,p)
+    for( unsigned int j=2 ; j<ny_d-2 ; j++ ) {
+        for( unsigned int k=0 ; k<nz_p ; k++ ) {
+            ( *Bz3D )( nx_d-2, j, k ) += -dt_ov_dx * ( ( *Ey3D )( nx_d-2, j, k ) - ( *Ey3D )( nx_d-3, j, k ) ) + dt_ov_dy * ( ( *Ex3D )( nx_d-2, j, k ) - ( *Ex3D )( nx_d-2, j-1, k ) );
+        }
+    }
+
+    //At Ymin
+    //Additional boundaries treatment for j=1 and j=nx_d-2 for Bx and Bz
+    // Magnetic field Bx^(p,d,d)
+    for( unsigned int i=0 ; i<nx_p;  i++ ) {
+        for( unsigned int k=2 ; k<nz_d-2 ; k++ ) {
+            unsigned int j=1 ;
+            ( *Bx3D )( i, j, k ) += -dt_ov_dy * ( ( *Ez3D )( i, j, k ) - ( *Ez3D )( i, j-1, k ) ) + dt_ov_dz * ( ( *Ey3D )( i, j, k ) - ( *Ey3D )( i, j, k-1 ) );
+        }
+    }
+
+    // Magnetic field Bz^(d,d,p)
+    for( unsigned int i=2 ; i<nx_d-2 ; i++ ) {
+        for( unsigned int k=0 ; k<nz_p ; k++ ) {
+            unsigned int j=1 ;
+            ( *Bz3D )( i, j, k ) += -dt_ov_dx * ( ( *Ey3D )( i, j, k ) - ( *Ey3D )( i-1, j, k ) ) + dt_ov_dy * ( ( *Ex3D )( i, j, k ) - ( *Ex3D )( i, j-1, k ) );
+        }
+    }
+
+    //At Ymax
+    //Additional boundaries treatment for j=1 and j=nx_d-2 for Bx and Bz
 
     // Magnetic field Bx^(p,d,d)
     for( unsigned int i=0 ; i<nx_p;  i++ ) {
-        for( unsigned int j=1 ; j<ny_d-1 ; j++ ) {
-            for( unsigned int k=1 ; k<nz_d-1 ; k++ ) {
-                ( *Bx3D )( i, j, k ) += -dt_ov_dy * ( ( *Ez3D )( i, j, k ) - ( *Ez3D )( i, j-1, k ) ) + dt_ov_dz * ( ( *Ey3D )( i, j, k ) - ( *Ey3D )( i, j, k-1 ) );
-            }
+        for( unsigned int k=2 ; k<nz_d-2 ; k++ ) {
+            unsigned int j=ny_d-2 ;
+            ( *Bx3D )( i, j, k ) += -dt_ov_dy * ( ( *Ez3D )( i, j, k ) - ( *Ez3D )( i, j-1, k ) ) + dt_ov_dz * ( ( *Ey3D )( i, j, k ) - ( *Ey3D )( i, j, k-1 ) );
         }
     }
-    
-    // Magnetic field By^(d,p,d)
-    for( unsigned int i=1 ; i<nx_d-1 ; i++ ) {
-        for( unsigned int j=0 ; j<ny_p ; j++ ) {
-            for( unsigned int k=1 ; k<nz_d-1 ; k++ ) {
-                ( *By3D )( i, j, k ) += -dt_ov_dz * ( ( *Ex3D )( i, j, k ) - ( *Ex3D )( i, j, k-1 ) ) + dt_ov_dx * ( ( *Ez3D )( i, j, k ) - ( *Ez3D )( i-1, j, k ) );
-            }
-        }
-    }
-    
+
     // Magnetic field Bz^(d,d,p)
-    for( unsigned int i=1 ; i<nx_d-1 ; i++ ) {
-        for( unsigned int j=1 ; j<ny_d-1 ; j++ ) {
-            for( unsigned int k=0 ; k<nz_p ; k++ ) {
-                ( *Bz3D )( i, j, k ) += -dt_ov_dx * ( ( *Ey3D )( i, j, k ) - ( *Ey3D )( i-1, j, k ) ) + dt_ov_dy * ( ( *Ex3D )( i, j, k ) - ( *Ex3D )( i, j-1, k ) );
-            }
+    for( unsigned int i=2 ; i<nx_d-2 ; i++ ) {
+        for( unsigned int k=0 ; k<nz_p ; k++ ) {
+            unsigned int j=ny_d-2 ;
+            ( *Bz3D )( i, j, k ) += -dt_ov_dx * ( ( *Ey3D )( i, j, k ) - ( *Ey3D )( i-1, j, k ) ) + dt_ov_dy * ( ( *Ex3D )( i, j, k ) - ( *Ex3D )( i, j-1, k ) );
         }
     }
 
-    **/
+    //At Zmin
+    //Additional boundaries treatment for k=1 and k=nx_d-2 for Bx and By
 
-    //Additional boundaries treatment on the primal direction of each B field
-    
-    //if( EM3D->isXmin ) {
-        // At Xmin
-        //Additional boundaries treatment for i=1 and i=nx_d-2 for By and Bz
-
-        // at Xmin+dx - treat using simple discretization of the curl (will be overwritten if not at the xmin-border)
-        // Magnetic field Bx^(p,d,d)
-        // Pas besoin de Bx ici peut etre car sur le bord x pas de derive en x
-        /**
-        for( unsigned int j=1 ; j<ny_d-1 ; j++ ) {
-            for( unsigned int k=1 ; k<nz_d-1 ; k++ ) {
-                ( *Bx3D )( 0, j, k ) += -dt_ov_dy * ( ( *Ez3D )( 0, j, k ) - ( *Ez3D )( 0, j-1, k ) ) + dt_ov_dz * ( ( *Ey3D )( 0, j, k ) - ( *Ey3D )( 0, j, k-1 ) );
-            }
-        }
-        **/
-        
-        // at Xmin+dx - treat using simple discretization of the curl (will be overwritten if not at the xmin-border)
-        // Magnetic field By^(d,p,d)
-        for( unsigned int j=0 ; j<ny_p ; j++ ) {
-            for( unsigned int k=2 ; k<nz_d-2 ; k++ ) {
-                ( *By3D )( 1, j, k ) += -dt_ov_dz * ( ( *Ex3D )( 1, j, k ) - ( *Ex3D )( 1, j, k-1 ) ) + dt_ov_dx * ( ( *Ez3D )( 1, j, k ) - ( *Ez3D )( 0, j, k ) );
-            }
-        }
-
-        // at Xmin+dx - treat using simple discretization of the curl (will be overwritten if not at the xmin-border)
-        // Magnetic field Bz^(d,d,p)
+    // Magnetic field Bx^(p,d,d)
+    for( unsigned int i=0 ; i<nx_p;  i++ ) {
         for( unsigned int j=2 ; j<ny_d-2 ; j++ ) {
-            for( unsigned int k=0 ; k<nz_p ; k++ ) {
-                ( *Bz3D )( 1, j, k ) += -dt_ov_dx * ( ( *Ey3D )( 1, j, k ) - ( *Ey3D )( 0, j, k ) ) + dt_ov_dy * ( ( *Ex3D )( 1, j, k ) - ( *Ex3D )( 1, j-1, k ) );
-            }
+            unsigned int k=1 ;
+            ( *Bx3D )( i, j, k ) += -dt_ov_dy * ( ( *Ez3D )( i, j, k ) - ( *Ez3D )( i, j-1, k ) ) + dt_ov_dz * ( ( *Ey3D )( i, j, k ) - ( *Ey3D )( i, j, k-1 ) );
         }
-    //}
+    }
 
-    //if( EM3D->isXmax ) {
-        // At Xmax
-        //Additional boundaries treatment for i=1 and i=nx_d-2 for By and Bz
-
-        // at Xmax-dx - treat using simple discretization of the curl (will be overwritten if not at the xmax-border)
-        // Magnetic field Bx^(p,d,d)
-        // Pas besoin de Bx ici peut etre car sur le bord x pas de derive en x
-        /**
-        for( unsigned int j=1 ; j<ny_d-1 ; j++ ) {
-            for( unsigned int k=1 ; k<nz_d-1 ; k++ ) {
-                ( *Bx3D )( nx_p-1, j, k ) += -dt_ov_dy * ( ( *Ez3D )( nx_p-1, j, k ) - ( *Ez3D )( nx_p-1, j-1, k ) ) + dt_ov_dz * ( ( *Ey3D )( nx_p-1, j, k ) - ( *Ey3D )( nx_p-1, j, k-1 ) );
-            }
-        }
-        **/
-        // at Xmax-dx - treat using simple discretization of the curl (will be overwritten if not at the xmax-border)
-        // Magnetic field By^(d,p,d)
+    // Magnetic field By^(d,p,d)
+    for( unsigned int i=2 ; i<nx_d-2 ; i++ ) {
         for( unsigned int j=0 ; j<ny_p ; j++ ) {
-            for( unsigned int k=2 ; k<nz_d-2 ; k++ ) {
-                ( *By3D )( nx_d-2, j, k ) += -dt_ov_dz * ( ( *Ex3D )( nx_d-2, j, k ) - ( *Ex3D )( nx_d-2, j, k-1 ) ) + dt_ov_dx * ( ( *Ez3D )( nx_d-2, j, k ) - ( *Ez3D )( nx_d-3, j, k ) );
-            }
+            unsigned int k=1 ;
+            ( *By3D )( i, j, k ) += -dt_ov_dz * ( ( *Ex3D )( i, j, k ) - ( *Ex3D )( i, j, k-1 ) ) + dt_ov_dx * ( ( *Ez3D )( i, j, k ) - ( *Ez3D )( i-1, j, k ) );
         }
-        // at Xmax-dx - treat using simple discretization of the curl (will be overwritten if not at the xmax-border)
-        // Magnetic field Bz^(d,d,p)
+    }
+
+    //At Zmax
+    //Additional boundaries treatment for k=1 and k=nx_d-2 for Bx and By
+
+    // Magnetic field Bx^(p,d,d)
+    for( unsigned int i=0 ; i<nx_p;  i++ ) {
         for( unsigned int j=2 ; j<ny_d-2 ; j++ ) {
-            for( unsigned int k=0 ; k<nz_p ; k++ ) {
-                ( *Bz3D )( nx_d-2, j, k ) += -dt_ov_dx * ( ( *Ey3D )( nx_d-2, j, k ) - ( *Ey3D )( nx_d-3, j, k ) ) + dt_ov_dy * ( ( *Ex3D )( nx_d-2, j, k ) - ( *Ex3D )( nx_d-2, j-1, k ) );
-            }
+            unsigned int k=nz_d-2 ;
+            ( *Bx3D )( i, j, k ) += -dt_ov_dy * ( ( *Ez3D )( i, j, k ) - ( *Ez3D )( i, j-1, k ) ) + dt_ov_dz * ( ( *Ey3D )( i, j, k ) - ( *Ey3D )( i, j, k-1 ) );
         }
-    //}
+    }
 
-    //if( EM3D->isYmin ) {
-        //At Ymin
-        //Additional boundaries treatment for j=1 and j=nx_d-2 for Bx and Bz
-
-        // Magnetic field Bx^(p,d,d)
-        for( unsigned int i=0 ; i<nx_p;  i++ ) {
-            for( unsigned int k=2 ; k<nz_d-2 ; k++ ) {
-                unsigned int j=1 ;
-                ( *Bx3D )( i, j, k ) += -dt_ov_dy * ( ( *Ez3D )( i, j, k ) - ( *Ez3D )( i, j-1, k ) ) + dt_ov_dz * ( ( *Ey3D )( i, j, k ) - ( *Ey3D )( i, j, k-1 ) );
-            }
+    // Magnetic field By^(d,p,d)
+    for( unsigned int i=2 ; i<nx_d-2 ; i++ ) {
+        for( unsigned int j=0 ; j<ny_p ; j++ ) {
+            unsigned int k=nz_d-2 ;
+            ( *By3D )( i, j, k ) += -dt_ov_dz * ( ( *Ex3D )( i, j, k ) - ( *Ex3D )( i, j, k-1 ) ) + dt_ov_dx * ( ( *Ez3D )( i, j, k ) - ( *Ez3D )( i-1, j, k ) );
         }
-
-        // Magnetic field By^(d,p,d)
-        // Pas besoin de By ici peut etre car sur le bord y pas de derive en y
-        /**
-        for( unsigned int i=2 ; i<nx_d-2 ; i++ ) { //Cases i=1 and i=nx_d-2 are treated later for all required j and k.
-            unsigned int j=0 ;
-            for( unsigned int k=1 ; k<nz_d-1 ; k++ ) {
-                ( *By3D )( i, j, k ) += -dt_ov_dz * ( ( *Ex3D )( i, j, k ) - ( *Ex3D )( i, j, k-1 ) ) + dt_ov_dx * ( ( *Ez3D )( i, j, k ) - ( *Ez3D )( i-1, j, k ) );
-            }
-        }
-        **/
-
-        // Magnetic field Bz^(d,d,p)
-        for( unsigned int i=2 ; i<nx_d-2 ; i++ ) {
-            for( unsigned int k=0 ; k<nz_p ; k++ ) {
-                unsigned int j=1 ;
-                ( *Bz3D )( i, j, k ) += -dt_ov_dx * ( ( *Ey3D )( i, j, k ) - ( *Ey3D )( i-1, j, k ) ) + dt_ov_dy * ( ( *Ex3D )( i, j, k ) - ( *Ex3D )( i, j-1, k ) );
-            }
-        }
-    //}
-
-    //if( EM3D->isYmax ) {
-        //At Ymax
-        //Additional boundaries treatment for j=1 and j=nx_d-2 for Bx and Bz
-
-        // Magnetic field Bx^(p,d,d)
-        for( unsigned int i=0 ; i<nx_p;  i++ ) {
-            for( unsigned int k=2 ; k<nz_d-2 ; k++ ) {
-                unsigned int j=ny_d-2 ;
-                ( *Bx3D )( i, j, k ) += -dt_ov_dy * ( ( *Ez3D )( i, j, k ) - ( *Ez3D )( i, j-1, k ) ) + dt_ov_dz * ( ( *Ey3D )( i, j, k ) - ( *Ey3D )( i, j, k-1 ) );
-            }
-        }
-
-        // Magnetic field By^(d,p,d)
-        // Pas besoin de By ici peut etre car sur le bord y pas de derive en y
-        /**
-        for( unsigned int i=2 ; i<nx_d-2 ; i++ ) { //Cases i=1 and i=nx_d-2 are treated later for all required j and k
-            unsigned int j=ny_p-1 ;
-            for( unsigned int k=1 ; k<nz_d-1 ; k++ ) {
-                ( *By3D )( i, j, k ) += -dt_ov_dz * ( ( *Ex3D )( i, j, k ) - ( *Ex3D )( i, j, k-1 ) ) + dt_ov_dx * ( ( *Ez3D )( i, j, k ) - ( *Ez3D )( i-1, j, k ) );
-            }
-        }
-        **/
-
-        // Magnetic field Bz^(d,d,p)
-        for( unsigned int i=2 ; i<nx_d-2 ; i++ ) {
-            for( unsigned int k=0 ; k<nz_p ; k++ ) {
-                unsigned int j=ny_d-2 ;
-                ( *Bz3D )( i, j, k ) += -dt_ov_dx * ( ( *Ey3D )( i, j, k ) - ( *Ey3D )( i-1, j, k ) ) + dt_ov_dy * ( ( *Ex3D )( i, j, k ) - ( *Ex3D )( i, j-1, k ) );
-            }
-        }
-    //}
-
-    //if( EM3D->isZmin ) {
-        //At Zmin
-        //Additional boundaries treatment for k=1 and k=nx_d-2 for Bx and By
-
-        // Magnetic field Bx^(p,d,d)
-        for( unsigned int i=0 ; i<nx_p;  i++ ) {
-            for( unsigned int j=2 ; j<ny_d-2 ; j++ ) {
-                unsigned int k=1 ;
-                ( *Bx3D )( i, j, k ) += -dt_ov_dy * ( ( *Ez3D )( i, j, k ) - ( *Ez3D )( i, j-1, k ) ) + dt_ov_dz * ( ( *Ey3D )( i, j, k ) - ( *Ey3D )( i, j, k-1 ) );
-            }
-        }
-
-        // Magnetic field By^(d,p,d)
-        for( unsigned int i=2 ; i<nx_d-2 ; i++ ) {
-            for( unsigned int j=0 ; j<ny_p ; j++ ) {
-                unsigned int k=1 ;
-                ( *By3D )( i, j, k ) += -dt_ov_dz * ( ( *Ex3D )( i, j, k ) - ( *Ex3D )( i, j, k-1 ) ) + dt_ov_dx * ( ( *Ez3D )( i, j, k ) - ( *Ez3D )( i-1, j, k ) );
-            }
-        }
-
-        // Magnetic field Bz^(d,d,p)
-        // Pas besoin de Bz ici peut etre car sur le bord z pas de derive en z
-        /**
-        for( unsigned int i=2 ; i<nx_d-2 ; i++ ) { //Cases i=1 and i=nx_d-2 are treated later for all required j and k
-            unsigned int k=0 ;
-            for( unsigned int j=1 ; j<ny_d-1 ; j++ ) {
-                ( *Bz3D )( i, j, k ) += -dt_ov_dx * ( ( *Ey3D )( i, j, k ) - ( *Ey3D )( i-1, j, k ) ) + dt_ov_dy * ( ( *Ex3D )( i, j, k ) - ( *Ex3D )( i, j-1, k ) );
-            }
-        }
-        **/
-    //}
-
-    //if( EM3D->isZmax ) {
-        //At Zmax
-        //Additional boundaries treatment for k=1 and k=nx_d-2 for Bx and By
-
-        // Magnetic field Bx^(p,d,d)
-        for( unsigned int i=0 ; i<nx_p;  i++ ) {
-            for( unsigned int j=2 ; j<ny_d-2 ; j++ ) {
-                unsigned int k=nz_d-2 ;
-                ( *Bx3D )( i, j, k ) += -dt_ov_dy * ( ( *Ez3D )( i, j, k ) - ( *Ez3D )( i, j-1, k ) ) + dt_ov_dz * ( ( *Ey3D )( i, j, k ) - ( *Ey3D )( i, j, k-1 ) );
-            }
-        }
-
-        // Magnetic field By^(d,p,d)
-        for( unsigned int i=2 ; i<nx_d-2 ; i++ ) {
-            for( unsigned int j=0 ; j<ny_p ; j++ ) {
-                unsigned int k=nz_d-2 ;
-                ( *By3D )( i, j, k ) += -dt_ov_dz * ( ( *Ex3D )( i, j, k ) - ( *Ex3D )( i, j, k-1 ) ) + dt_ov_dx * ( ( *Ez3D )( i, j, k ) - ( *Ez3D )( i-1, j, k ) );
-            }
-        }
-
-        // Magnetic field Bz^(d,d,p)
-        // Pas besoin de Bz ici peut etre car sur le bord z pas de derive en z
-        /**
-        for( unsigned int i=2 ; i<nx_d-2 ; i++ ) { //Cases i=1 and i=nx_d-2 are treated later for all required j and k
-            unsigned int k=nz_p-1 ;
-            for( unsigned int j=1 ; j<ny_d-1 ; j++ ) {
-                ( *Bz3D )( i, j, k ) += -dt_ov_dx * ( ( *Ey3D )( i, j, k ) - ( *Ey3D )( i-1, j, k ) ) + dt_ov_dy * ( ( *Ex3D )( i, j, k ) - ( *Ex3D )( i, j-1, k ) );
-            }
-        }
-        **/
-    //}
+    }
 
 }//END solveMaxwellFaraday
