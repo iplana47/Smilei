@@ -23,10 +23,10 @@ MF_Solver3D_Bouchard::MF_Solver3D_Bouchard( Params &params )
     //Not necessary to have dx=dy=dz, but dispersion law are modify
     //In particular if dz >> dx,dy then solver become like the 2d solver
     if( (dx!=dy)||(dx!=dz)||(dy!=dz) ) {
-        WARNING( "Bouchard solver was tested with the same cell-length in x, y and z directions" );
+        WARNING( "Bouchard solver works best with identical cell-lengths in all directions" );
     }
     if( dx_ov_dt!=2 ) {
-        WARNING( "Bouchard solver requires dx/dt = 2 (Magical Timestep)" );
+        WARNING( "Bouchard solver requires dx/dt = 2 (Magic Timestep)" );
     }
 
     double delta = -0.0916500000000000;//0.1222*(1-pow (2.,2))/4. ;
@@ -75,15 +75,6 @@ void MF_Solver3D_Bouchard::operator()( ElectroMagn* fields )
     const unsigned int ny_d = fields->dimDual[1];
     const unsigned int nz_p = fields->dimPrim[2];
     const unsigned int nz_d = fields->dimDual[2];
-    // Static-cast of the fields
-    //Field3D *Ex3D = static_cast<Field3D *>( fields->Ex_ );
-    //Field3D *Ey3D = static_cast<Field3D *>( fields->Ey_ );
-    //Field3D *Ez3D = static_cast<Field3D *>( fields->Ez_ );
-    //Field3D *Bx3D = static_cast<Field3D *>( fields->Bx_ );
-    //Field3D *By3D = static_cast<Field3D *>( fields->By_ );
-    //Field3D *Bz3D = static_cast<Field3D *>( fields->Bz_ );
-
-    //ElectroMagn3D *EM3D = static_cast<ElectroMagn3D *>( fields );
 
     Field3D* Ex3D;
     Field3D* Ey3D;
