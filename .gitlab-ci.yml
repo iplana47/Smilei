@@ -30,7 +30,6 @@ test_gpu:
     - ruche-ci-gpu
   only:
     - develop 
-    - develop
   script:
     - source /gpfs/users/prouveurc/myhdf5_env_smilei.sh
     - module load anaconda3/2022.10/gcc-11.2.0

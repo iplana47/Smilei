@@ -49,6 +49,8 @@ public:
     double Dz  ;
     
 protected:
+    // Check if time filter is applied or not
+    bool isEFilterApplied;
 
 };//END class
 
