@@ -1141,23 +1141,40 @@ void SyncVectorPatch::exchangeSynchronizedPerDirection( std::vector<Field *> fie
                 field2 = static_cast<F *>( fields[ipatch] );
                 pt1 = &( *field1 )( size[2] );
                 pt2 = &( *field2 )( 0 );
+                if (smilei::tools::gpu::HostDeviceMemoryManagement::IsHostPointerMappedOnDevice( &( vecPatches.B_localx[0]->data_[0] ) )){
 #ifdef SMILEI_ACCELERATOR_GPU_OACC
-                int size2 = size[2];
-                #pragma acc parallel present(pt1[0:size2],pt2[0:size2]) //-size2
-                #pragma acc loop gang worker vector
+                    int ptsize = vecPatches.B2_localz[ipatch]->size();
+                    int size2 = size[2];
+                    #pragma acc parallel present(pt1[0-size2:ptsize],pt2[0:ptsize])
+                    #pragma acc loop gang worker vector
 #elif defined( SMILEI_ACCELERATOR_GPU_OMP )
-                #pragma omp target
-                #pragma omp teams distribute parallel for collapse( 3 )
+                    const int ptsize = ( nx_ * ny_ * nz_ ) - ( ny_ * nz_ ) + ( ny_ * nz_ ) - nz_ + oversize[2];
+                    #pragma omp target
+                    #pragma omp teams distribute parallel for collapse( 3 )
 #endif
-                //for (unsigned int in = oversize[0] ; in < nx_-oversize[0]; in ++){
-                for( unsigned int in = 0 ; in < nx_ ; in ++ ) {
-                    unsigned int i = in * ny_*nz_;
-                    //for (unsigned int jn = oversize[1] ; jn < ny_-oversize[1] ; jn ++){
-                    for( unsigned int jn = 0 ; jn < ny_ ; jn ++ ) {
-                        unsigned int j = jn *nz_;
-                        for( unsigned int k = 0 ; k < oversize[2] ; k++ ) {
-                            pt2[i+j+k] = pt1[i+j+k] ;
-                            pt1[i+j+k+gsp[2]] = pt2[i+j+k+gsp[2]] ;
+                    //for (unsigned int in = oversize[0] ; in < nx_-oversize[0]; in ++){
+                    for( unsigned int in = 0 ; in < nx_ ; in ++ ) {
+                        unsigned int i = in * ny_*nz_;
+                        //for (unsigned int jn = oversize[1] ; jn < ny_-oversize[1] ; jn ++){
+                        for( unsigned int jn = 0 ; jn < ny_ ; jn ++ ) {
+                            unsigned int j = jn *nz_;
+                            for( unsigned int k = 0 ; k < oversize[2] ; k++ ) {
+                                pt2[i+j+k] = pt1[i+j+k] ;
+                                pt1[i+j+k+gsp[2]] = pt2[i+j+k+gsp[2]] ;
+                            }
+                        }
+                    }
+                }else{  // cpu communication sync since no device pointer
+                    //for (unsigned int in = oversize[0] ; in < nx_-oversize[0]; in ++){
+                    for( unsigned int in = 0 ; in < nx_ ; in ++ ) {
+                        unsigned int i = in * ny_*nz_;
+                        //for (unsigned int jn = oversize[1] ; jn < ny_-oversize[1] ; jn ++){
+                        for( unsigned int jn = 0 ; jn < ny_ ; jn ++ ) {
+                            unsigned int j = jn *nz_;
+                            for( unsigned int k = 0 ; k < oversize[2] ; k++ ) {
+                                pt2[i+j+k] = pt1[i+j+k] ;
+                                pt1[i+j+k+gsp[2]] = pt2[i+j+k+gsp[2]] ;
+                            }
                         }
                     }
                 }
@@ -1211,21 +1228,35 @@ void SyncVectorPatch::exchangeSynchronizedPerDirection( std::vector<Field *> fie
                 field2 = static_cast<F *>( fields[ipatch] );
                 pt1 = &( *field1 )( size[1]*nz_ );
                 pt2 = &( *field2 )( 0 );
+                if (smilei::tools::gpu::HostDeviceMemoryManagement::IsHostPointerMappedOnDevice( &( vecPatches.B_localx[0]->data_[0] ) )){
 #ifdef SMILEI_ACCELERATOR_GPU_OACC
-                int size1 = size[1];
-                #pragma acc parallel present(pt1[0:size1],pt2[0:size1]) 
-                #pragma acc loop gang worker vector
+                    int ptsize = vecPatches.B1_localy[ipatch]->size();
+                    int size1 = size[1];
+                    #pragma acc parallel present(pt1[0-size1*nz_:ptsize],pt2[0:ptsize])
+                    #pragma acc loop gang worker vector
 #elif defined( SMILEI_ACCELERATOR_GPU_OMP )
-                #pragma omp target
-                #pragma omp teams distribute parallel for collapse( 2 )
+                    const int ptsize = ( nx_ * ny_ * nz_ ) - ( ny_ * nz_ ) + oversize[1] * nz_ + gsp[1] * nz_;
+                    #pragma omp target
+                    #pragma omp teams distribute parallel for collapse( 2 )
 #endif
-                for( unsigned int in = 0 ; in < nx_ ; in ++ ) {
-                    //for (unsigned int in = oversize[0] ; in < nx_-oversize[0] ; in ++){ // <== This doesn't work. Why ??
-                    unsigned int i = in * ny_*nz_;
-                    for( unsigned int j = 0 ; j < oversize[1]*nz_ ; j++ ) {
-                        // Rewrite with memcpy ?
-                        pt2[i+j] = pt1[i+j] ;
-                        pt1[i+j+gsp[1]*nz_] = pt2[i+j+gsp[1]*nz_] ;
+                    for( unsigned int in = 0 ; in < nx_ ; in ++ ) {
+                        //for (unsigned int in = oversize[0] ; in < nx_-oversize[0] ; in ++){ // <== This doesn't work. Why ??
+                        unsigned int i = in * ny_*nz_;
+                        for( unsigned int j = 0 ; j < oversize[1]*nz_ ; j++ ) {
+                            // Rewrite with memcpy ?
+                            pt2[i+j] = pt1[i+j] ;
+                            pt1[i+j+gsp[1]*nz_] = pt2[i+j+gsp[1]*nz_] ;
+                        }
+                    }
+                }else{  // cpu communication sync since no device pointer
+                    for( unsigned int in = 0 ; in < nx_ ; in ++ ) {
+                        //for (unsigned int in = oversize[0] ; in < nx_-oversize[0] ; in ++){ // <== This doesn't work. Why ??
+                        unsigned int i = in * ny_*nz_;
+                        for( unsigned int j = 0 ; j < oversize[1]*nz_ ; j++ ) {
+                            // Rewrite with memcpy ?
+                            pt2[i+j] = pt1[i+j] ;
+                            pt1[i+j+gsp[1]*nz_] = pt2[i+j+gsp[1]*nz_] ;
+                        }
                     }
                 }
             } // End if ( MPI_me_ == MPI_neighbor_[1][0] )
