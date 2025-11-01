@@ -1095,6 +1095,13 @@ void SyncVectorPatch::exchangeSynchronizedPerDirection( std::vector<Field *> fie
         }
     }
 
+#if defined( SMILEI_ACCELERATOR_GPU )
+    const bool is_memory_on_device = vecPatches.B_localx.size() > 0 &&
+                                     smilei::tools::gpu::HostDeviceMemoryManagement::IsHostPointerMappedOnDevice( &( vecPatches.B_localx[0]->data_[0] ) );
+#else
+    const bool is_memory_on_device = false;
+#endif
+
     if( fields[0]->dims_.size()>2 ) {
 
         // Dimension 2
@@ -1141,7 +1148,7 @@ void SyncVectorPatch::exchangeSynchronizedPerDirection( std::vector<Field *> fie
                 field2 = static_cast<F *>( fields[ipatch] );
                 pt1 = &( *field1 )( size[2] );
                 pt2 = &( *field2 )( 0 );
-                if (smilei::tools::gpu::HostDeviceMemoryManagement::IsHostPointerMappedOnDevice( &( vecPatches.B_localx[0]->data_[0] ) )){
+                if (is_memory_on_device){
 #ifdef SMILEI_ACCELERATOR_GPU_OACC
                     int ptsize = vecPatches.B2_localz[ipatch]->size();
                     int size2 = size[2];
@@ -1228,7 +1235,7 @@ void SyncVectorPatch::exchangeSynchronizedPerDirection( std::vector<Field *> fie
                 field2 = static_cast<F *>( fields[ipatch] );
                 pt1 = &( *field1 )( size[1]*nz_ );
                 pt2 = &( *field2 )( 0 );
-                if (smilei::tools::gpu::HostDeviceMemoryManagement::IsHostPointerMappedOnDevice( &( vecPatches.B_localx[0]->data_[0] ) )){
+                if (is_memory_on_device){
 #ifdef SMILEI_ACCELERATOR_GPU_OACC
                     int ptsize = vecPatches.B1_localy[ipatch]->size();
                     int size1 = size[1];
@@ -1297,11 +1304,6 @@ void SyncVectorPatch::exchangeSynchronizedPerDirection( std::vector<Field *> fie
             }
         }
     }
-
-
-    const bool is_memory_on_device = vecPatches.B_localx.size() > 0 &&
-                                     smilei::tools::gpu::HostDeviceMemoryManagement::IsHostPointerMappedOnDevice( &( vecPatches.B_localx[0]->data_[0] ) );
-
 
     gsp[0] = ( oversize[0] + 1 + fields[0]->isDual_[0] ); //Ghost size primal
 
