@@ -1223,7 +1223,7 @@ void SyncVectorPatch::exchangeSynchronizedPerDirection( std::vector<Field *> fie
 #ifdef SMILEI_ACCELERATOR_GPU_OACC
                 //int ptsize = vecPatches.B1_localy[ipatch]->size();
                 //int size1 = size[1];
-                #pragma acc parallel if(is_memory_on_device) present(pt1[0-size1*nz_:ptsize],pt2[0:ptsize])//present(pt1,pt2)  //(pt1[0-size1*nz_:ptsize],pt2[0:ptsize])//-size1*nz_
+                #pragma acc parallel if(is_memory_on_device) present(pt1,pt2)  //(pt1[0-size1*nz_:ptsize],pt2[0:ptsize])//-size1*nz_
                 #pragma acc loop gang worker vector
 #elif defined( SMILEI_ACCELERATOR_GPU_OMP )
                 //const int ptsize = ( nx_ * ny_ * nz_ ) - ( ny_ * nz_ ) + oversize[1] * nz_ + gsp[1] * nz_;
