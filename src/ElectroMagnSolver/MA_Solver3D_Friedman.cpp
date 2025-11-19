@@ -38,8 +38,8 @@ void MA_Solver3D_Friedman::operator()( ElectroMagn *fields )
     double *Jz3D  = &(fields->Jz_->data_[0]);
 
     double *Ex_f  = &( fields->filter_->Ex_[0]->data_[0] );
-    double *Ey_f  = &( fields->filter_->Ex_[1]->data_[0] );
-    double *Ez_f  = &( fields->filter_->Ex_[2]->data_[0] );
+    double *Ey_f  = &( fields->filter_->Ey_[0]->data_[0] );
+    double *Ez_f  = &( fields->filter_->Ez_[0]->data_[0] );
     double *Ex_m1 = &( fields->filter_->Ex_[1]->data_[0] );
     double *Ey_m1 = &( fields->filter_->Ey_[1]->data_[0] );
     double *Ez_m1 = &( fields->filter_->Ez_[1]->data_[0] );
