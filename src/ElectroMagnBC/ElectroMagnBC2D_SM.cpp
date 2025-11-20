@@ -69,9 +69,8 @@ ElectroMagnBC2D_SM::ElectroMagnBC2D_SM( Params &params, Patch *patch, unsigned i
 
 ElectroMagnBC2D_SM::~ElectroMagnBC2D_SM()
 {
-    for( auto B: B_val ){
+    for( auto &B: B_val ){ // need to reference B to get the pointer we want to delete
         smilei::tools::gpu::HostDeviceMemoryManagement::DeviceFree( B.data(), B.size() );
-        //delete[] B;
     }
 }
 
@@ -107,13 +106,11 @@ void ElectroMagnBC2D_SM::save_fields( Field *my_field, Patch *patch )
 
 void ElectroMagnBC2D_SM::disableExternalFields()
 {
-    smilei::tools::gpu::HostDeviceMemoryManagement::DeviceFree( B_val[0].data(), B_val[0].size() );
-    smilei::tools::gpu::HostDeviceMemoryManagement::DeviceFree( B_val[1].data(), B_val[1].size() );
-    smilei::tools::gpu::HostDeviceMemoryManagement::DeviceFree( B_val[2].data(), B_val[2].size() );
-    
-    B_val[0].resize( 0 );
-    B_val[1].resize( 0 );
-    B_val[2].resize( 0 );
+    for( auto &B: B_val ){ // need to reference B to get the pointer we want to delete
+        smilei::tools::gpu::HostDeviceMemoryManagement::DeviceFree( B.data(), B.size() );
+        B.resize(0);
+    }
+
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
