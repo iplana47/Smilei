@@ -1529,6 +1529,13 @@ void Params::print_parallelism_params( SmileiMPI *smpi )
         }
         MESSAGE( 1, ps.str() );
 
+        ostringstream os;
+        os << "Number of ghost cells per side: " << oversize[0];
+        for( unsigned int iDim=1 ; iDim<nDim_field ; iDim++ ) {
+            os << " " << oversize[iDim];
+        }
+        MESSAGE( 1, os.str() );
+
         MESSAGE( 1, "Dynamic load balancing: " << load_balancing_time_selection->info() );
     }
 
