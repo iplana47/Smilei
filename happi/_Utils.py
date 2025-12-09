@@ -674,11 +674,13 @@ class _multiPlotUtil(object):
 				)
 	
 	def staticPlot(self):
+		save = SaveAs(self.saveAs, self.fig, self.dpi)
 		for Diag in self.Diags:
 			Diag._plotOnAxes(Diag._ax, Diag.getTimesteps()[-1])
 		self.legend()
 		self.plt.draw()
 		self.plt.pause(0.00001)
+		save.frame()
 	
 	def twinOptions(self, Diag):
 		if self.sameAxes:
