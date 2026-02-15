@@ -47,17 +47,24 @@ const INITIAL_TABLES = [
 ];
 
 export const seedDatabase = async () => {
-    // Seed Menu
-    for (const category in MENU_DATA) {
-        for (const item of MENU_DATA[category]) {
-            await setDoc(doc(db, 'menu', item.id), item);
+    try {
+        console.log('Starting seed...');
+        // Seed Menu
+        for (const category in MENU_DATA) {
+            for (const item of MENU_DATA[category]) {
+                await setDoc(doc(db, 'menu', item.id), item);
+            }
         }
-    }
 
-    // Seed Tables
-    for (const table of INITIAL_TABLES) {
-        await setDoc(doc(db, 'tables', table.id), table);
-    }
+        // Seed Tables
+        for (const table of INITIAL_TABLES) {
+            await setDoc(doc(db, 'tables', table.id), table);
+        }
 
-    console.log('Database seeded successfully!');
+        console.log('Database seeded successfully!');
+        alert('¡Base de datos inicializada con éxito!');
+    } catch (error) {
+        console.error('Error seeding database:', error);
+        alert('Error al inicializar: ' + error.message);
+    }
 };
