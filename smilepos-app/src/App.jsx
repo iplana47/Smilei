@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Utensils,
   ChefHat,
@@ -34,7 +34,10 @@ import {
   Send,
   Banknote,
   Wallet,
-  Divide
+  Divide,
+  Move,
+  Save,
+  PenLine
 } from 'lucide-react';
 import { db } from './firebase';
 import { collection, onSnapshot, doc, updateDoc, setDoc, query, getDocs, deleteDoc } from 'firebase/firestore';
@@ -100,13 +103,7 @@ const getPlatformColor = (platform) => {
 
 // --- COMPONENTES ---
 
-const TableStatusIcon = ({ active, icon: Icon, colorClass }) => (
-  <div className={`p-1.5 rounded-full transition-all duration-300 ${active ? colorClass + ' scale-110 shadow-lg' : 'bg-slate-800/50 text-slate-600'}`}>
-    <Icon size={14} strokeWidth={active ? 2.5 : 2} />
-  </div>
-);
-
-const TableCard = ({ table, onClick, isSelecting }) => {
+const TableCard = ({ table, onClick, isSelecting, style, isEditing, onPointerDown, onDelete }) => {
   const isOccupied = table.status !== 'free';
   const isBlocked = table.isBlocked;
   const isSeated = isOccupied && (
@@ -122,81 +119,86 @@ const TableCard = ({ table, onClick, isSelecting }) => {
     desserts: { active: table.items?.some(i => i.category === 'postres') },
   };
 
+  const Component = isEditing ? 'div' : 'button';
+
   return (
-    <button
-      onClick={onClick}
+    <Component
+      onClick={!isEditing ? onClick : undefined}
       className={`
-        relative w-full aspect-[4/3] rounded-2xl flex flex-col justify-between p-4 transition-all duration-300 transform hover:scale-[1.02] active:scale-95 shadow-xl border-2
+        absolute w-24 h-24 rounded-xl flex flex-col justify-between p-2 transition-transform duration-200 shadow-lg border-2
         ${isSelecting ? 'ring-4 ring-blue-500 animate-pulse' : ''}
-        ${table.status === 'free' ? (isBlocked ? 'bg-yellow-500/10 border-yellow-500 text-yellow-100' : 'bg-slate-900/50 border-slate-700/50 hover:border-slate-600 text-slate-500') : ''}
-        ${table.status === 'occupied' ? (hasUnsentItems ? 'bg-slate-800 border-red-500/50 hover:border-red-400 text-slate-100' : 'bg-slate-800 border-orange-500/50 hover:border-orange-500 text-slate-100 shadow-orange-500/5') : ''}
-        ${table.status === 'payment' ? 'bg-slate-800 border-emerald-500 hover:border-emerald-400 text-emerald-100 shadow-emerald-500/5' : ''}
+        ${isEditing ? 'cursor-move hover:scale-110 z-50 border-dashed border-slate-400' : 'hover:scale-[1.05] active:scale-95'}
+        ${table.status === 'free' ? (isBlocked ? 'bg-yellow-500/10 border-yellow-500 text-yellow-100' : 'bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-400') : ''}
+        ${table.status === 'occupied' ? (hasUnsentItems ? 'bg-slate-800 border-red-500 text-slate-100' : 'bg-slate-800 border-orange-500 text-slate-100 shadow-orange-500/10') : ''}
+        ${table.status === 'payment' ? 'bg-slate-800 border-emerald-500 text-emerald-100' : ''}
       `}
+      style={{ ...style, touchAction: 'none' }}
+      onPointerDown={(e) => {
+        if (isEditing) {
+          onPointerDown(e);
+        }
+      }}
     >
+      {/* Edit Mode Controls */}
+      {isEditing && (
+        <>
+          <div className="absolute inset-0 bg-black/10 z-30 flex items-center justify-center cursor-move rounded-xl backdrop-blur-[1px] pointer-events-none">
+            {/* Grip handled by parent mouse events, just visual hint */}
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(table);
+            }}
+            className="absolute -top-2 -right-2 z-50 bg-red-600 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-md hover:bg-red-700 active:scale-95 transition-all"
+          >
+            <X size={14} />
+          </button>
+        </>
+      )}
+
       {/* Warning for un-sent items */}
-      {hasUnsentItems && (
-        <div className="absolute -top-2 -right-2 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-2 border-slate-950 animate-bounce z-20">
-          <AlertCircle size={18} />
+      {hasUnsentItems && !isEditing && (
+        <div className="absolute -top-1 -right-1 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center shadow-lg border border-slate-950 animate-bounce z-20">
+          <AlertCircle size={10} />
         </div>
       )}
 
-      {/* Background decoration for Seated */}
-      {isSeated && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-5 pointer-events-none">
-          <Users size={80} />
-        </div>
-      )}
+      <div className="flex flex-col h-full justify-between items-center text-center relative z-10">
+        <span className="text-xl font-black tracking-tighter leading-none">
+          {table.name}
+        </span>
 
-      <div className="flex justify-between items-start w-full relative z-10">
-        <div className="flex flex-col">
-          <span className="text-4xl font-black flex items-center gap-2 tracking-tighter">
-            {table.name}
-            {isBlocked && <Lock size={18} className="text-yellow-500 animate-bounce" />}
-            {isSeated && (
-              <div className="flex items-center gap-1 bg-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold animate-in fade-in zoom-in duration-300">
-                <Users size={12} /> {table.pax || table.reservation?.pax || ''}
+        {isOccupied && !isEditing ? (
+          <>
+            <div className="flex gap-1 justify-center w-full my-0.5">
+              <TableStatusIcon active={stages.drinks.active} icon={Beer} colorClass="bg-blue-500 text-white" size={10} />
+              <TableStatusIcon active={stages.starters.active} icon={Utensils} colorClass="bg-purple-500 text-white" size={10} />
+              <TableStatusIcon active={stages.burgers.active} icon={Beef} colorClass="bg-orange-500 text-white" size={10} />
+              <TableStatusIcon active={stages.desserts.active} icon={IceCream} colorClass="bg-pink-500 text-white" size={10} />
+            </div>
+
+            <div className="flex items-center justify-center gap-2 w-full mt-auto">
+              <div className="flex items-center gap-0.5 text-[10px] font-bold bg-slate-900/40 px-1.5 py-0.5 rounded text-slate-300">
+                <Euro size={10} /> {formatPrice(table.total)}
               </div>
-            )}
-          </span>
-          {table.reservation && !isSeated && (
-            <span className={`text-[10px] font-bold uppercase ${isBlocked ? 'text-yellow-500' : 'text-slate-500'}`}>
-              Res: {table.reservation.name} ({table.reservation.time})
-            </span>
-          )}
-          {isSeated && !table.reservation && (
-            <span className="text-[10px] font-bold uppercase text-orange-500/70">Ocupada</span>
-          )}
-        </div>
-        {isOccupied && (
-          <div className={`px-2 py-1 rounded-lg text-sm font-mono font-bold shadow-lg ${table.status === 'payment' ? 'bg-emerald-500 text-white' : 'bg-slate-950 border border-slate-700 text-orange-400'}`}>
-            {formatPrice(table.total)}
+            </div>
+          </>
+        ) : (
+          <div className="mt-auto text-[10px] font-bold uppercase tracking-wider opacity-60">
+            {table.status === 'free' ? 'LIBRE' : table.status}
           </div>
         )}
       </div>
-
-      {isOccupied ? (
-        <div className="w-full relative z-10">
-          <div className="flex justify-between items-center bg-slate-900/80 rounded-full p-1 border border-slate-700/50 backdrop-blur-sm">
-            <TableStatusIcon icon={Beer} active={stages.drinks.active} colorClass="bg-blue-500 text-white" />
-            <div className={`h-0.5 flex-1 mx-1 ${stages.starters.active ? 'bg-orange-500' : 'bg-slate-700'}`} />
-            <TableStatusIcon icon={Utensils} active={stages.starters.active} colorClass="bg-green-500 text-white" />
-            <div className={`h-0.5 flex-1 mx-1 ${stages.burgers.active ? 'bg-orange-500' : 'bg-slate-700'}`} />
-            <TableStatusIcon icon={Beef} active={stages.burgers.active} colorClass="bg-orange-500 text-white" />
-            <div className={`h-0.5 flex-1 mx-1 ${stages.desserts.active ? 'bg-orange-500' : 'bg-slate-700'}`} />
-            <TableStatusIcon icon={IceCream} active={stages.desserts.active} colorClass="bg-pink-500 text-white" />
-          </div>
-          <div className="text-[10px] text-center mt-2 text-slate-400 font-bold uppercase tracking-widest">
-            {table.status === 'payment' ? 'PAGO PENDIENTE' : (hasUnsentItems ? 'TIENE ÍTEMS PENDIENTES' : table.stage || 'Servido')}
-          </div>
-        </div>
-      ) : (
-        <div className={`flex-1 flex items-center justify-center ${isBlocked ? 'text-yellow-500/20' : 'opacity-10'}`}>
-          {isBlocked ? <Lock size={48} /> : <LayoutGrid size={48} />}
-        </div>
-      )}
-    </button>
+    </Component>
   );
 };
+
+const TableStatusIcon = ({ active, icon: Icon, colorClass, size = 14 }) => (
+  <div className={`p-1 rounded-full transition-all duration-300 ${active ? colorClass + ' scale-110 shadow-sm' : 'bg-slate-800/50 text-slate-600'}`}>
+    <Icon size={size} strokeWidth={active ? 2.5 : 2} />
+  </div>
+);
 
 const ReservationModal = ({ onClose, onAdd, customers = [] }) => {
   const [formData, setFormData] = useState({
@@ -417,7 +419,7 @@ const PaymentModal = ({ order, onConfirm, onCancel }) => {
   );
 };
 
-const Dashboard = ({ tables, deliveries, reservations, customers, assigningReservationId, setAssigningReservationId, onSelectTable, onSelectDelivery, onAddDelivery, onAddReservation, activeTab, setActiveTab }) => {
+const Dashboard = ({ tables, deliveries, reservations, customers, assigningReservationId, setAssigningReservationId, onSelectTable, onSelectDelivery, onAddDelivery, onAddReservation, activeTab, setActiveTab, isEditingLayout, setIsEditingLayout, handleDragStart, handleDragMove, handleDragEnd, saveLayout, handleAddTable, handleDeleteTable, draggedTable, containerRef }) => {
   const [showPlatformSelect, setShowPlatformSelect] = useState(false);
   const [showReservationModal, setShowReservationModal] = useState(false);
   const platforms = [
@@ -427,10 +429,14 @@ const Dashboard = ({ tables, deliveries, reservations, customers, assigningReser
     { id: 'JustEat', color: 'bg-red-600 text-white' }
   ];
 
+
+
   return (
     <div className="h-full bg-slate-950 flex overflow-hidden">
-      <div className="flex-1 p-6 flex flex-col border-r border-slate-800 overflow-y-auto">
-        <div className="flex justify-between items-center mb-8 shrink-0">
+      <div
+        className="flex-1 p-6 flex flex-col border-r border-slate-800 overflow-hidden relative"
+      >
+        <div className="flex justify-between items-center mb-4 shrink-0 z-20 relative">
           <div className="flex flex-col">
             <h2 className="text-3xl font-bold text-white flex items-center gap-3">
               <LayoutGrid size={32} className="text-orange-500" />
@@ -443,41 +449,102 @@ const Dashboard = ({ tables, deliveries, reservations, customers, assigningReser
               </div>
             )}
           </div>
-          <div className="flex gap-4 text-xs font-medium text-slate-500 uppercase tracking-widest">
-            <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-slate-600"></span> Libre</span>
-            <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-yellow-500"></span> Bloqueo</span>
-            <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-orange-500"></span> Ocupada</span>
+          <div className="flex items-center gap-4">
+            <div className="flex gap-4 text-xs font-medium text-slate-500 uppercase tracking-widest mr-4">
+              <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-slate-600"></span> Libre</span>
+              <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-yellow-500"></span> Bloqueo</span>
+              <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-orange-500"></span> Ocupada</span>
+            </div>
+
+            {isEditingLayout && (
+              <div className="pointer-events-none absolute top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-black/80 text-white text-[10px] font-mono rounded z-50">
+                DEBUG: {draggedTable ? `Dragging ${draggedTable.id}` : 'Idle'}
+              </div>
+            )}
+
+            {isEditingLayout && (
+              <>
+                <button
+                  onClick={async () => {
+                    if (confirm("¿Estás seguro? Esto borrará todas las posiciones y recargará las mesas por defecto.")) {
+                      // Delete all tables
+                      const tablesCollectionRef = collection(db, 'tables');
+                      const querySnapshot = await getDocs(tablesCollectionRef);
+                      const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+                      await Promise.all(deletePromises);
+                      window.location.reload(); // Reload to trigger seed
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg font-bold transition-all shadow-lg text-xs"
+                >
+                  <Trash2 size={14} /> RESET
+                </button>
+                <button
+                  onClick={handleAddTable}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold transition-all shadow-lg"
+                >
+                  <Plus size={18} /> MESA
+                </button>
+              </>
+            )}
+
+            <button
+              onClick={() => {
+                if (isEditingLayout) {
+                  saveLayout();
+                } else {
+                  setIsEditingLayout(true);
+                }
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all ${isEditingLayout ? 'bg-emerald-500 text-white shadow-emerald-500/20 shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+            >
+              {isEditingLayout ? <><Save size={18} /> GUARDAR</> : <><PenLine size={18} /> EDITAR SALA</>}
+            </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 auto-rows-min">
+        <div className="flex-1 relative mt-4">
+          {/* Grid lines for reference when editing */}
+          {isEditingLayout && (
+            <div className="absolute inset-0 opacity-10 pointer-events-none"
+              style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }}
+            />
+          )}
+
           {tables.map(table => (
             <TableCard
               key={table.id}
               table={table}
               isSelecting={assigningReservationId !== null}
+              isEditing={isEditingLayout}
               onClick={() => onSelectTable(table)}
+              onPointerDown={(e) => handleDragStart(e, table)}
+              onDelete={handleDeleteTable}
+              style={{
+                left: `${table.x}%`,
+                top: `${table.y}%`
+              }}
             />
           ))}
-        </div>
 
-        {tables.length === 0 && (
-          <div className="flex-1 flex flex-col items-center justify-center text-slate-600 gap-4">
-            <Database size={64} className="opacity-20" />
-            <p className="text-xl font-medium">No hay datos en la base de datos</p>
-            <button
-              onClick={async () => {
-                const btn = document.activeElement;
-                if (btn) btn.disabled = true;
-                await seedDatabase();
-                if (btn) btn.disabled = false;
-              }}
-              className="px-6 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              INICIALIZAR BASE DE DATOS
-            </button>
-          </div>
-        )}
+          {tables.length === 0 && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-600 gap-4 pointer-events-none">
+              <Database size={64} className="opacity-20" />
+              <p className="text-xl font-medium">No hay datos en la base de datos</p>
+              <button
+                onClick={async () => {
+                  const btn = document.activeElement;
+                  if (btn) btn.disabled = true;
+                  await seedDatabase();
+                  if (btn) btn.disabled = false;
+                }}
+                className="px-6 py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed pointer-events-auto"
+              >
+                INICIALIZAR BASE DE DATOS
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* RIGHT: SIDEBAR (Delivery + Reservas) */}
@@ -643,7 +710,7 @@ const Dashboard = ({ tables, deliveries, reservations, customers, assigningReser
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 
@@ -865,16 +932,229 @@ const App = () => {
   const activeOrder = activeOrderId ? (orders.find(o => o.id === activeOrderId) || (tempOrder && tempOrder.id === activeOrderId ? tempOrder : null)) : null;
   const currentOrder = activeOrder;
 
-  const INITIAL_TABLES = [
-    { id: '1', name: 'M1' }, { id: '2', name: 'M2' }, { id: '3', name: 'M3' },
-    { id: '4', name: 'M4' }, { id: '5', name: 'M5' }, { id: '6', name: 'M6' },
-    { id: '7', name: 'M7' }, { id: '8', name: 'M8' }, { id: '9', name: 'M9' }
-  ];
+  /*
+     TABLE LAYOUT LOGIC
+  */
+  const [tablesConfig, setTablesConfig] = useState([]);
+  const [isEditingLayout, setIsEditingLayout] = useState(false);
+  const [draggedTable, setDraggedTable] = useState(null);
+  const containerRef = useRef(null);
+
+  // Load Tables Config from DF
+  useEffect(() => {
+    const unsubTables = onSnapshot(collection(db, 'tables'), (snapshot) => {
+      if (snapshot.empty) {
+        // Seed initial 30 tables (21 Sala + 9 Terraza)
+        const initial = [];
+        // Sala: 3 rows of 7 = 21
+        for (let i = 0; i < 21; i++) {
+          initial.push({
+            id: (i + 1).toString(),
+            name: `M${i + 1}`,
+            x: 5 + (i % 7) * 13,
+            y: 5 + Math.floor(i / 7) * 15,
+            type: 'sala'
+          });
+        }
+        // Terraza: 9 tables at bottom
+        for (let i = 0; i < 9; i++) {
+          initial.push({
+            id: `T${i + 1}`,
+            name: `T${i + 1}`,
+            x: 10 + i * 9,
+            y: 70, // Bottom area
+            type: 'terraza'
+          });
+        }
+
+        // Write to DB
+        initial.forEach(t => setDoc(doc(db, 'tables', t.id), t));
+        setTablesConfig(initial);
+      } else {
+        const data = snapshot.docs.map(d => {
+          const dData = d.data();
+          // Sanitize coordinates if missing/NaN
+          return {
+            ...dData,
+            id: d.id,
+            x: (typeof dData.x === 'number' && !isNaN(dData.x)) ? dData.x : 0,
+            y: (typeof dData.y === 'number' && !isNaN(dData.y)) ? dData.y : 0
+          };
+        });
+
+        // --- ENSURE FULL SET (M1-M21, T1-T9) ---
+        const existingIds = new Set(data.map(t => t.id));
+        const missingTables = [];
+
+        // Check Sala (1-21)
+        for (let i = 0; i < 21; i++) {
+          const id = (i + 1).toString();
+          if (!existingIds.has(id)) {
+            missingTables.push({
+              id,
+              name: `M${i + 1}`,
+              x: 5 + (i % 7) * 13,
+              y: 5 + Math.floor(i / 7) * 15,
+              type: 'sala',
+              status: 'free'
+            });
+          }
+        }
+
+        // Check Terraza (T1-T9)
+        for (let i = 0; i < 9; i++) {
+          const id = `T${i + 1}`;
+          if (!existingIds.has(id)) {
+            missingTables.push({
+              id,
+              name: `T${i + 1}`,
+              x: 10 + i * 9,
+              y: 70, // Bottom area
+              type: 'terraza',
+              status: 'free'
+            });
+          }
+        }
+
+        // Merge existing + missing
+        const fullData = [...data, ...missingTables];
+
+        // If we found missing tables, save them to DB so next load is complete
+        if (missingTables.length > 0) {
+          missingTables.forEach(t => setDoc(doc(db, 'tables', t.id), t));
+        }
+
+        // Check if many items are at 0,0 (clumping) -> indicates bad data migration
+        // Only check existing 'clumped' ones, new ones are created with valid coords
+        const clumped = fullData.filter(t => t.x === 0 && t.y === 0).length;
+        if (clumped > 5) {
+          // Auto-fix: Redistribute them temporarily in a grid
+          const fixedData = fullData.map((t, i) => {
+            if (t.x === 0 && t.y === 0) {
+              return {
+                ...t,
+                x: 5 + (i % 8) * 11, // Simple grid
+                y: 5 + Math.floor(i / 8) * 12
+              };
+            }
+            return t;
+          });
+          setTablesConfig(fixedData);
+
+          // Auto-save the fixed positions to DB immediately to persist the un-clumping
+          fixedData.forEach(t => {
+            if (t.x !== 0 || t.y !== 0) {
+              setDoc(doc(db, 'tables', t.id), t);
+            }
+          });
+        } else {
+          setTablesConfig(fullData);
+        }
+      }
+    });
+    return () => unsubTables();
+  }, []);
+
+  /* D&D Logic with Global Listeners (Pointer Events) */
+  const draggedTableInstance = useRef(null); // Mutable ref to avoid stale state in listeners
+
+  const handleDragMove = (e) => {
+    // Read from ref, not state (state is async/stale in listener closure)
+    const currentDrag = draggedTableInstance.current;
+    if (!currentDrag) return;
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+
+    // Calculate delta in percentage
+    const deltaXPixels = e.clientX - currentDrag.startX;
+    const deltaYPixels = e.clientY - currentDrag.startY;
+
+    const deltaXPercent = (deltaXPixels / rect.width) * 100;
+    const deltaYPercent = (deltaYPixels / rect.height) * 100;
+
+    const newX = Math.max(0, Math.min(90, currentDrag.initialX + deltaXPercent));
+    const newY = Math.max(0, Math.min(90, currentDrag.initialY + deltaYPercent));
+
+    setTablesConfig(prev => prev.map(t =>
+      t.id === currentDrag.id ? { ...t, x: newX, y: newY } : t
+    ));
+  };
+
+  const handleDragEnd = () => {
+    draggedTableInstance.current = null;
+    setDraggedTable(null); // Clear UI state if needed
+    window.removeEventListener('pointermove', handleDragMove);
+    window.removeEventListener('pointerup', handleDragEnd);
+  };
+
+  const handleDragStart = (e, table) => {
+    if (!isEditingLayout) return;
+
+    // Pointer Events preventDefault not needed for simple dragging unless touch scrolling issue
+    // but touch-action: none handles that.
+
+    // Set Ref immediately for synchronous access in listeners
+    draggedTableInstance.current = {
+      id: table.id,
+      startX: e.clientX,
+      startY: e.clientY,
+      initialX: (typeof table.x === 'number' && !isNaN(table.x)) ? table.x : 0,
+      initialY: (typeof table.y === 'number' && !isNaN(table.y)) ? table.y : 0
+    };
+
+    // Set State for UI feedback (e.g. valid 'draggedTable')
+    setDraggedTable(draggedTableInstance.current);
+
+    window.addEventListener('pointermove', handleDragMove);
+    window.addEventListener('pointerup', handleDragEnd);
+  };
+
+  const handleAddTable = async () => {
+    const newId = Date.now().toString();
+    // Find suitable name
+    const maxNum = tablesConfig.reduce((max, t) => {
+      const num = parseInt(t.name.replace(/\D/g, '')) || 0;
+      return num > max ? num : max;
+    }, 0);
+
+    const newTable = {
+      id: newId,
+      name: `M${maxNum + 1}`,
+      x: 50,
+      y: 50,
+      type: 'sala',
+      status: 'free'
+    };
+
+    // Update local and DB
+    setTablesConfig(prev => [...prev, newTable]);
+    await setDoc(doc(db, 'tables', newId), newTable);
+  };
+
+  const handleDeleteTable = async (table) => {
+    if (confirm(`¿Eliminar mesa ${table.name}?`)) {
+      setTablesConfig(prev => prev.filter(t => t.id !== table.id));
+      await deleteDoc(doc(db, 'tables', table.id));
+    }
+  };
+
+  const saveLayout = async () => {
+    try {
+      await Promise.all(tablesConfig.map(t => setDoc(doc(db, 'tables', t.id), t)));
+      setIsEditingLayout(false);
+    } catch (e) {
+      console.error("Error saving layout", e);
+    }
+  };
 
   const derivedTables = useMemo(() => {
     const todayStr = new Date().toISOString().split('T')[0];
-    return INITIAL_TABLES.map(t => {
-      const order = orders.find(o => o.type === 'sala' && o.tableId === t.id && o.status !== 'closed');
+    return tablesConfig.map(t => {
+      const order = orders.find(o => o.type === 'sala' && (o.tableId === t.id || o.name === t.name) && o.status !== 'closed');
+      // Note: We use t.id to match.
 
       // Find valid reservation for today
       const res = reservations.find(r => r.tableId === t.id && r.date === todayStr && !r.seated);
@@ -884,7 +1164,6 @@ const App = () => {
         const resTime = new Date();
         resTime.setHours(h, m, 0, 0);
         const diff = (resTime - now) / (1000 * 60);
-        // Yellow/Lock if within 30 minutes
         if (diff <= 30 && diff > -60) blocked = true;
       }
 
@@ -895,11 +1174,12 @@ const App = () => {
       );
 
       if (isEffectivelyOccupied) {
+        // CRITICAL: Preserve table config (x, y, id, name) over order data
         return { ...order, ...t, status: order.status || 'occupied', reservation: res, isBlocked: blocked };
       }
       return { ...t, status: 'free', total: 0, items: [], reservation: res, isBlocked: blocked };
     });
-  }, [orders, reservations, now]);
+  }, [orders, reservations, tablesConfig, now]);
 
   const derivedDeliveries = useMemo(() => {
     return orders.filter(o => o.type === 'delivery' && o.status !== 'closed');
@@ -1241,10 +1521,19 @@ const App = () => {
           setAssigningReservationId={setAssigningReservationId}
           onSelectTable={handleSelectTable}
           onSelectDelivery={handleSelectDelivery}
-          onAddDelivery={handleAddDelivery}
           onAddReservation={handleAddReservation}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          isEditingLayout={isEditingLayout}
+          setIsEditingLayout={setIsEditingLayout}
+          handleSaveLayout={saveLayout}
+          handleAddTable={handleAddTable}
+          handleDeleteTable={handleDeleteTable}
+          draggedTable={draggedTable}
+          handleDragStart={handleDragStart}
+          handleDragMove={handleDragMove}
+          handleDragEnd={handleDragEnd}
+          containerRef={containerRef}
         />
       ) : (
         <div className="flex flex-1 overflow-hidden">
