@@ -12,22 +12,28 @@ self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // Cache images from our image domains
+    // Cache ALL images from any domain to be super efficient in the POS
     if (
         request.destination === 'image' ||
-        url.hostname.includes('acadify.cloud') ||
-        url.hostname.includes('placehold.co')
+        url.pathname.match(/\.(jpg|jpeg|png|gif|svg|webp|avif)$/i) ||
+        url.hostname.includes('firebasestorage')
     ) {
         event.respondWith(
             caches.open(CACHE_NAME).then((cache) => {
                 return cache.match(event.request).then((response) => {
-                    return (
-                        response ||
-                        fetch(event.request).then((networkResponse) => {
+                    // Return cached response immediately if it exists
+                    if (response) return response;
+
+                    // Otherwise fetch and cache
+                    return fetch(event.request).then((networkResponse) => {
+                        if (networkResponse.status === 200) {
                             cache.put(event.request, networkResponse.clone());
-                            return networkResponse;
-                        })
-                    );
+                        }
+                        return networkResponse;
+                    }).catch(() => {
+                        // Fallback if network fails
+                        return null;
+                    });
                 });
             })
         );

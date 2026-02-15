@@ -49,6 +49,16 @@ const INITIAL_TABLES = [
 export const seedDatabase = async () => {
     try {
         console.log('Starting seed...');
+
+        // Clear old data (optional but recommended during refactor)
+        const collectionsToClear = ['tables', 'deliveries', 'orders', 'reservations', 'customers'];
+        for (const colName of collectionsToClear) {
+            const snap = await getDocs(collection(db, colName));
+            for (const d of snap.docs) {
+                await deleteDoc(doc(db, colName, d.id));
+            }
+        }
+
         // Seed Menu
         for (const category in MENU_DATA) {
             for (const item of MENU_DATA[category]) {
@@ -56,13 +66,37 @@ export const seedDatabase = async () => {
             }
         }
 
-        // Seed Tables
-        for (const table of INITIAL_TABLES) {
-            await setDoc(doc(db, 'tables', table.id), table);
+        // Seed some initial Customers
+        const initialCustomers = [
+            { id: 'c1', name: 'Marta García', phone: '600123456', email: 'marta@gmail.com', orderCount: 5 },
+            { id: 'c2', name: 'Juan Pérez', phone: '655999888', email: 'juan@perez.es', orderCount: 1 }
+        ];
+        for (const c of initialCustomers) {
+            await setDoc(doc(db, 'customers', c.id), c);
+        }
+
+        // Seed some initial Orders (Sala)
+        const initialOrders = [
+            { id: 'o1', type: 'sala', tableId: '2', name: 'M2', status: 'occupied', stage: 'burgers', total: 42.50, items: [], comment: 'Terraza' },
+            { id: 'o2', type: 'sala', tableId: '5', name: 'M5', status: 'payment', stage: 'desserts', total: 15.00, items: [], comment: '' },
+            {
+                id: 'o3',
+                type: 'delivery',
+                name: '#GL-9933',
+                platform: 'Glovo',
+                status: 'cocina',
+                total: 8.90,
+                items: [],
+                customerName: 'Juan Pérez',
+                customerPhone: '655999888'
+            }
+        ];
+        for (const o of initialOrders) {
+            await setDoc(doc(db, 'orders', o.id), o);
         }
 
         console.log('Database seeded successfully!');
-        alert('¡Base de datos inicializada con éxito!');
+        alert('¡Base de datos unificada inicializada con éxito!');
     } catch (error) {
         console.error('Error seeding database:', error);
         alert('Error al inicializar: ' + error.message);

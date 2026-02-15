@@ -27,10 +27,17 @@ import {
   User,
   MoreHorizontal,
   Database,
-  MessageSquare
+  MessageSquare,
+  Lock,
+  Users,
+  AlertCircle,
+  Send,
+  Banknote,
+  Wallet,
+  Divide
 } from 'lucide-react';
 import { db } from './firebase';
-import { collection, onSnapshot, doc, updateDoc, setDoc, query, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, setDoc, query, getDocs, deleteDoc } from 'firebase/firestore';
 import { seedDatabase } from './seed';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
@@ -99,38 +106,77 @@ const TableStatusIcon = ({ active, icon: Icon, colorClass }) => (
   </div>
 );
 
-const TableCard = ({ table, onClick }) => {
+const TableCard = ({ table, onClick, isSelecting }) => {
   const isOccupied = table.status !== 'free';
+  const isBlocked = table.isBlocked;
+  const isSeated = isOccupied && (
+    (table.stage && table.stage !== 'empty') ||
+    (table.items && table.items.length > 0)
+  );
+  const hasUnsentItems = isOccupied && table.items?.some(i => i.sentToKitchen === false);
 
   const stages = {
-    drinks: { active: table.stage === 'drinks' || table.stage === 'starters' || table.stage === 'burgers' || table.stage === 'desserts' },
-    starters: { active: table.stage === 'starters' || table.stage === 'burgers' || table.stage === 'desserts' },
-    burgers: { active: table.stage === 'burgers' || table.stage === 'desserts' },
-    desserts: { active: table.stage === 'desserts' },
+    drinks: { active: table.items?.some(i => i.category === 'bebidas') },
+    starters: { active: table.items?.some(i => i.category === 'entrantes') },
+    burgers: { active: table.items?.some(i => i.category === 'burgers') },
+    desserts: { active: table.items?.some(i => i.category === 'postres') },
   };
 
   return (
     <button
       onClick={onClick}
       className={`
-        relative w-full aspect-[4/3] rounded-xl flex flex-col justify-between p-4 transition-all duration-200 transform hover:scale-[1.02] active:scale-95 shadow-xl border-2
-        ${table.status === 'free' ? 'bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-400' : ''}
-        ${table.status === 'occupied' ? 'bg-slate-800 border-orange-500/50 hover:border-orange-500 text-slate-100' : ''}
-        ${table.status === 'payment' ? 'bg-slate-800 border-emerald-500 hover:border-emerald-400 text-emerald-100' : ''}
+        relative w-full aspect-[4/3] rounded-2xl flex flex-col justify-between p-4 transition-all duration-300 transform hover:scale-[1.02] active:scale-95 shadow-xl border-2
+        ${isSelecting ? 'ring-4 ring-blue-500 animate-pulse' : ''}
+        ${table.status === 'free' ? (isBlocked ? 'bg-yellow-500/10 border-yellow-500 text-yellow-100' : 'bg-slate-900/50 border-slate-700/50 hover:border-slate-600 text-slate-500') : ''}
+        ${table.status === 'occupied' ? (hasUnsentItems ? 'bg-slate-800 border-red-500/50 hover:border-red-400 text-slate-100' : 'bg-slate-800 border-orange-500/50 hover:border-orange-500 text-slate-100 shadow-orange-500/5') : ''}
+        ${table.status === 'payment' ? 'bg-slate-800 border-emerald-500 hover:border-emerald-400 text-emerald-100 shadow-emerald-500/5' : ''}
       `}
     >
-      <div className="flex justify-between items-start w-full">
-        <span className="text-3xl font-black">{table.name}</span>
+      {/* Warning for un-sent items */}
+      {hasUnsentItems && (
+        <div className="absolute -top-2 -right-2 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg border-2 border-slate-950 animate-bounce z-20">
+          <AlertCircle size={18} />
+        </div>
+      )}
+
+      {/* Background decoration for Seated */}
+      {isSeated && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-5 pointer-events-none">
+          <Users size={80} />
+        </div>
+      )}
+
+      <div className="flex justify-between items-start w-full relative z-10">
+        <div className="flex flex-col">
+          <span className="text-4xl font-black flex items-center gap-2 tracking-tighter">
+            {table.name}
+            {isBlocked && <Lock size={18} className="text-yellow-500 animate-bounce" />}
+            {isSeated && (
+              <div className="flex items-center gap-1 bg-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full font-bold animate-in fade-in zoom-in duration-300">
+                <Users size={12} /> {table.pax || table.reservation?.pax || ''}
+              </div>
+            )}
+          </span>
+          {table.reservation && !isSeated && (
+            <span className={`text-[10px] font-bold uppercase ${isBlocked ? 'text-yellow-500' : 'text-slate-500'}`}>
+              Res: {table.reservation.name} ({table.reservation.time})
+            </span>
+          )}
+          {isSeated && !table.reservation && (
+            <span className="text-[10px] font-bold uppercase text-orange-500/70">Ocupada</span>
+          )}
+        </div>
         {isOccupied && (
-          <div className={`px-2 py-1 rounded-md text-sm font-mono font-bold ${table.status === 'payment' ? 'bg-emerald-500 text-white' : 'bg-slate-950 text-orange-400'}`}>
+          <div className={`px-2 py-1 rounded-lg text-sm font-mono font-bold shadow-lg ${table.status === 'payment' ? 'bg-emerald-500 text-white' : 'bg-slate-950 border border-slate-700 text-orange-400'}`}>
             {formatPrice(table.total)}
           </div>
         )}
       </div>
 
       {isOccupied ? (
-        <div className="w-full">
-          <div className="flex justify-between items-center bg-slate-900/50 rounded-full p-1 border border-slate-700/50">
+        <div className="w-full relative z-10">
+          <div className="flex justify-between items-center bg-slate-900/80 rounded-full p-1 border border-slate-700/50 backdrop-blur-sm">
             <TableStatusIcon icon={Beer} active={stages.drinks.active} colorClass="bg-blue-500 text-white" />
             <div className={`h-0.5 flex-1 mx-1 ${stages.starters.active ? 'bg-orange-500' : 'bg-slate-700'}`} />
             <TableStatusIcon icon={Utensils} active={stages.starters.active} colorClass="bg-green-500 text-white" />
@@ -139,28 +185,44 @@ const TableCard = ({ table, onClick }) => {
             <div className={`h-0.5 flex-1 mx-1 ${stages.desserts.active ? 'bg-orange-500' : 'bg-slate-700'}`} />
             <TableStatusIcon icon={IceCream} active={stages.desserts.active} colorClass="bg-pink-500 text-white" />
           </div>
-          <div className="text-xs text-center mt-2 text-slate-400 font-medium uppercase tracking-wider">
-            {table.status === 'payment' ? 'COBRANDO' : table.stage || 'Esperando'}
+          <div className="text-[10px] text-center mt-2 text-slate-400 font-bold uppercase tracking-widest">
+            {table.status === 'payment' ? 'PAGO PENDIENTE' : (hasUnsentItems ? 'TIENE ÍTEMS PENDIENTES' : table.stage || 'Servido')}
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center opacity-20">
-          <LayoutGrid size={40} />
+        <div className={`flex-1 flex items-center justify-center ${isBlocked ? 'text-yellow-500/20' : 'opacity-10'}`}>
+          {isBlocked ? <Lock size={48} /> : <LayoutGrid size={48} />}
         </div>
       )}
     </button>
   );
 };
 
-const ReservationModal = ({ onClose, onAdd }) => {
+const ReservationModal = ({ onClose, onAdd, customers = [] }) => {
   const [formData, setFormData] = useState({
     phone: '',
     name: '',
+    email: '',
     pax: 2,
     date: new Date().toISOString().split('T')[0],
     time: '21:00',
     notes: ''
   });
+
+  const matchedCustomer = useMemo(() => {
+    if (formData.phone.length < 9) return null;
+    return customers.find(c => c.phone.replace(/\s/g, '') === formData.phone.replace(/\s/g, ''));
+  }, [formData.phone, customers]);
+
+  useEffect(() => {
+    if (matchedCustomer) {
+      setFormData(prev => ({
+        ...prev,
+        name: matchedCustomer.name || prev.name,
+        email: matchedCustomer.email || prev.email
+      }));
+    }
+  }, [matchedCustomer]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -179,14 +241,21 @@ const ReservationModal = ({ onClose, onAdd }) => {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">1. Teléfono</label>
-            <input
-              required
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="6xx xxx xxx"
-              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
+            <div className="relative">
+              <input
+                required
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="6xx xxx xxx"
+                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+              {matchedCustomer && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 px-2 py-1 bg-orange-500/20 text-orange-400 text-[10px] font-bold rounded-lg border border-orange-500/30">
+                  {matchedCustomer.orderCount || 0} PEDIDOS
+                </div>
+              )}
+            </div>
           </div>
           <div>
             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">2. Nombre Cliente</label>
@@ -196,6 +265,16 @@ const ReservationModal = ({ onClose, onAdd }) => {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Ej: Juan Pérez"
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">E-mail (Opcional)</label>
+            <input
+              type="email"
+              value={formData.email || ''}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              placeholder="cliente@correo.com"
               className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
@@ -253,7 +332,92 @@ const ReservationModal = ({ onClose, onAdd }) => {
   );
 };
 
-const Dashboard = ({ tables, deliveries, reservations, onSelectTable, onAddDelivery, onAddReservation, activeTab, setActiveTab }) => {
+const ConfirmationModal = ({ title, message, onConfirm, onCancel, confirmText = "Confirmar", cancelText = "Cancelar", icon: Icon = AlertCircle, color = "orange" }) => {
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
+      <div className="bg-slate-900 w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-800 animate-in zoom-in-95 duration-300">
+        <div className="p-8 text-center">
+          <div className={`w-20 h-20 bg-${color}-500/10 rounded-full flex items-center justify-center mx-auto mb-6`}>
+            <Icon size={40} className={`text-${color}-500`} />
+          </div>
+          <h3 className="text-2xl font-black text-white mb-3 tracking-tight">{title}</h3>
+          <p className="text-slate-400 text-sm leading-relaxed mb-8 px-4">{message}</p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={onConfirm}
+              className={`w-full py-4 bg-${color === 'red' ? 'red-600' : 'orange-500'} hover:bg-${color === 'red' ? 'red-500' : 'orange-600'} text-white font-black rounded-2xl shadow-xl shadow-${color}-500/20 transition-all active:scale-95`}
+            >
+              {confirmText}
+            </button>
+            <button
+              onClick={onCancel}
+              className="w-full py-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-2xl transition-all"
+            >
+              {cancelText}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PaymentModal = ({ order, onConfirm, onCancel }) => {
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 animate-in fade-in duration-300">
+      <div className="bg-slate-900 w-full max-w-md rounded-[3rem] shadow-2xl overflow-hidden border border-slate-800 animate-in zoom-in-95 duration-300">
+        <div className="p-10 text-center">
+          <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-8">
+            <Wallet size={48} className="text-emerald-500" />
+          </div>
+
+          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-2">Finalizar Cuenta</h3>
+          <div className="text-6xl font-black text-white mb-10 tracking-tighter">
+            {formatPrice(order.total)}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <button
+              onClick={() => onConfirm('tarjeta')}
+              className="flex flex-col items-center gap-3 p-6 bg-slate-800 hover:bg-blue-600 text-white rounded-3xl transition-all group active:scale-95 border border-slate-700 hover:border-blue-400 shadow-xl"
+            >
+              <div className="w-12 h-12 bg-slate-700 group-hover:bg-blue-500 rounded-2xl flex items-center justify-center transition-colors">
+                <CreditCard size={24} />
+              </div>
+              <span className="font-black uppercase text-sm tracking-wide">Tarjeta</span>
+            </button>
+
+            <button
+              onClick={() => onConfirm('efectivo')}
+              className="flex flex-col items-center gap-3 p-6 bg-slate-800 hover:bg-emerald-600 text-white rounded-3xl transition-all group active:scale-95 border border-slate-700 hover:border-emerald-400 shadow-xl"
+            >
+              <div className="w-12 h-12 bg-slate-700 group-hover:bg-emerald-500 rounded-2xl flex items-center justify-center transition-colors">
+                <Banknote size={24} />
+              </div>
+              <span className="font-black uppercase text-sm tracking-wide">Efectivo</span>
+            </button>
+          </div>
+
+          <button
+            onClick={() => { }} // No actua por ahora
+            className="flex items-center justify-center gap-2 text-[10px] font-black uppercase text-slate-500 hover:text-orange-500 transition-colors mx-auto mb-8 bg-slate-900 px-4 py-2 rounded-full border border-slate-800"
+          >
+            <Divide size={12} /> Fraccionar Pago
+          </button>
+
+          <button
+            onClick={onCancel}
+            className="w-full py-4 text-slate-500 hover:text-white font-bold transition-colors"
+          >
+            VOLVER AL PEDIDO
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const Dashboard = ({ tables, deliveries, reservations, customers, assigningReservationId, setAssigningReservationId, onSelectTable, onSelectDelivery, onAddDelivery, onAddReservation, activeTab, setActiveTab }) => {
   const [showPlatformSelect, setShowPlatformSelect] = useState(false);
   const [showReservationModal, setShowReservationModal] = useState(false);
   const platforms = [
@@ -267,20 +431,33 @@ const Dashboard = ({ tables, deliveries, reservations, onSelectTable, onAddDeliv
     <div className="h-full bg-slate-950 flex overflow-hidden">
       <div className="flex-1 p-6 flex flex-col border-r border-slate-800 overflow-y-auto">
         <div className="flex justify-between items-center mb-8 shrink-0">
-          <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-            <LayoutGrid size={32} className="text-orange-500" />
-            Sala Principal
-          </h2>
+          <div className="flex flex-col">
+            <h2 className="text-3xl font-bold text-white flex items-center gap-3">
+              <LayoutGrid size={32} className="text-orange-500" />
+              Sala Principal
+            </h2>
+            {assigningReservationId && (
+              <div className="mt-2 text-blue-400 font-bold animate-pulse text-sm flex items-center gap-2">
+                <MapPin size={16} /> SELECCIONA UNA MESA PARA LA RESERVA
+                <button onClick={() => setAssigningReservationId(null)} className="text-[10px] bg-slate-800 px-2 py-1 rounded text-slate-400 hover:text-white ml-2">CANCELAR</button>
+              </div>
+            )}
+          </div>
           <div className="flex gap-4 text-xs font-medium text-slate-500 uppercase tracking-widest">
             <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-slate-600"></span> Libre</span>
+            <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-yellow-500"></span> Bloqueo</span>
             <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-orange-500"></span> Ocupada</span>
-            <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> Pago</span>
           </div>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 auto-rows-min">
           {tables.map(table => (
-            <TableCard key={table.id} table={table} onClick={() => onSelectTable(table)} />
+            <TableCard
+              key={table.id}
+              table={table}
+              isSelecting={assigningReservationId !== null}
+              onClick={() => onSelectTable(table)}
+            />
           ))}
         </div>
 
@@ -362,7 +539,7 @@ const Dashboard = ({ tables, deliveries, reservations, onSelectTable, onAddDeliv
                 {deliveries.map(order => (
                   <button
                     key={order.id}
-                    onClick={() => onSelectTable(order)} // We re-use select for both types
+                    onClick={() => onSelectDelivery(order)} // Use specific delivery handler
                     className="w-full text-left bg-slate-800 p-4 rounded-xl border border-slate-700 hover:border-orange-500/50 transition-all group"
                   >
                     <div className="flex justify-between items-start mb-2">
@@ -410,6 +587,7 @@ const Dashboard = ({ tables, deliveries, reservations, onSelectTable, onAddDeliv
               {showReservationModal && (
                 <ReservationModal
                   onClose={() => setShowReservationModal(false)}
+                  customers={customers}
                   onAdd={(data) => {
                     onAddReservation(data);
                     setShowReservationModal(false);
@@ -432,9 +610,23 @@ const Dashboard = ({ tables, deliveries, reservations, onSelectTable, onAddDeliv
                           <span className="flex items-center gap-1"><Phone size={12} /> {res.phone}</span>
                         </div>
                       </div>
+                      <div className="flex flex-col gap-1">
+                        <button
+                          onClick={() => setAssigningReservationId(res.id)}
+                          className={`p-2 rounded-lg transition-all ${res.tableId ? 'bg-orange-500/20 text-orange-400' : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white'}`}
+                          title="Asignar mesa"
+                        >
+                          <LayoutGrid size={18} />
+                        </button>
+                        {res.tableId && (
+                          <span className="text-[10px] font-black text-center bg-orange-500 text-white rounded py-0.5">
+                            M{res.tableId}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {res.notes && (
-                      <div className="mt-1 p-2 bg-slate-900/50 rounded-lg text-xs text-slate-500 border border-slate-700/50 italic">
+                      <div className="mt-1 p-2 bg-slate-900/50 rounded-lg text-xs text-slate-500 border border-slate-700/50 italic mr-10">
                         <MessageSquare size={10} className="inline mr-1 opacity-50" /> {res.notes}
                       </div>
                     )}
@@ -466,7 +658,6 @@ const ProductCard = ({ product, onClick }) => {
         <LazyLoadImage
           alt={product.name.es}
           src={product.img}
-          effect="blur"
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
           wrapperClassName="w-full h-full"
           onError={(e) => { e.target.src = 'https://placehold.co/400x300?text=Smile+Burger'; }}
@@ -616,32 +807,41 @@ const BurgerCustomizer = ({ product, onClose, onAdd }) => {
 };
 
 const App = () => {
-  const [tables, setTables] = useState([]);
-  const [deliveries, setDeliveries] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [reservations, setReservations] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [menu, setMenu] = useState({});
-  const [activeTableId, setActiveTableId] = useState(null);
-  const [activeDeliveryId, setActiveDeliveryId] = useState(null);
+  const [activeOrderId, setActiveOrderId] = useState(null);
   const [activeCategory, setActiveCategory] = useState('burgers');
-  const [activeTab, setActiveTab] = useState('orders');
+  const [activeTab, setActiveTab] = useState('tables'); // Changed from 'orders' to 'tables'
+  const [tempOrder, setTempOrder] = useState(null); // New separate state for temp orders
   const [customizingProduct, setCustomizingProduct] = useState(null);
+  const [assigningReservationId, setAssigningReservationId] = useState(null);
+  const [showUnseatConfirm, setShowUnseatConfirm] = useState(false);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Firestore Subscriptions
   useEffect(() => {
-    const unsubTables = onSnapshot(collection(db, 'tables'), (snapshot) => {
-      const tablesData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-      setTables(tablesData.sort((a, b) => parseInt(a.id) - parseInt(b.id)));
-    });
-
-    const unsubDeliveries = onSnapshot(collection(db, 'deliveries'), (snapshot) => {
-      const deliveriesData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-      setDeliveries(deliveriesData.sort((a, b) => b.orderId - a.orderId));
+    const unsubOrders = onSnapshot(collection(db, 'orders'), (snapshot) => {
+      const ordersData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      setOrders(ordersData);
     });
 
     const unsubReservations = onSnapshot(collection(db, 'reservations'), (snapshot) => {
       const reservationsData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-      // Sort by time
       setReservations(reservationsData.sort((a, b) => a.time.localeCompare(b.time)));
+    });
+
+    const unsubCustomers = onSnapshot(collection(db, 'customers'), (snapshot) => {
+      const customersData = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      setCustomers(customersData);
     });
 
     const unsubMenu = onSnapshot(collection(db, 'menu'), (snapshot) => {
@@ -655,38 +855,103 @@ const App = () => {
     });
 
     return () => {
-      unsubTables();
-      unsubDeliveries();
+      unsubOrders();
       unsubReservations();
+      unsubCustomers();
       unsubMenu();
     };
   }, []);
 
-  const activeTable = activeTableId ? tables.find(t => t.id === activeTableId) : null;
-  const activeDelivery = activeDeliveryId ? deliveries.find(d => d.id === activeDeliveryId) : null;
-  const currentOrder = activeTable || activeDelivery;
+  const activeOrder = activeOrderId ? (orders.find(o => o.id === activeOrderId) || (tempOrder && tempOrder.id === activeOrderId ? tempOrder : null)) : null;
+  const currentOrder = activeOrder;
+
+  const INITIAL_TABLES = [
+    { id: '1', name: 'M1' }, { id: '2', name: 'M2' }, { id: '3', name: 'M3' },
+    { id: '4', name: 'M4' }, { id: '5', name: 'M5' }, { id: '6', name: 'M6' },
+    { id: '7', name: 'M7' }, { id: '8', name: 'M8' }, { id: '9', name: 'M9' }
+  ];
+
+  const derivedTables = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    return INITIAL_TABLES.map(t => {
+      const order = orders.find(o => o.type === 'sala' && o.tableId === t.id && o.status !== 'closed');
+
+      // Find valid reservation for today
+      const res = reservations.find(r => r.tableId === t.id && r.date === todayStr && !r.seated);
+      let blocked = false;
+      if (res) {
+        const [h, m] = res.time.split(':').map(Number);
+        const resTime = new Date();
+        resTime.setHours(h, m, 0, 0);
+        const diff = (resTime - now) / (1000 * 60);
+        // Yellow/Lock if within 30 minutes
+        if (diff <= 30 && diff > -60) blocked = true;
+      }
+
+      const isEffectivelyOccupied = order && (
+        (order.items && order.items.length > 0) ||
+        (order.stage && order.stage !== 'empty') ||
+        order.status === 'payment'
+      );
+
+      if (isEffectivelyOccupied) {
+        return { ...order, ...t, status: order.status || 'occupied', reservation: res, isBlocked: blocked };
+      }
+      return { ...t, status: 'free', total: 0, items: [], reservation: res, isBlocked: blocked };
+    });
+  }, [orders, reservations, now]);
+
+  const derivedDeliveries = useMemo(() => {
+    return orders.filter(o => o.type === 'delivery' && o.status !== 'closed');
+  }, [orders]);
+
+  const handleAssignTable = async (reservationId, tableId) => {
+    try {
+      await updateDoc(doc(db, 'reservations', reservationId), { tableId });
+      setAssigningReservationId(null);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleSelectTable = async (table) => {
-    setActiveDeliveryId(null);
-    setActiveTableId(table.id);
-    if (table.status === 'free') {
-      await updateDoc(doc(db, 'tables', table.id), {
+    if (assigningReservationId) {
+      await handleAssignTable(assigningReservationId, table.id);
+      return;
+    }
+    const existingOrder = orders.find(o => o.type === 'sala' && o.tableId === table.id && o.status !== 'closed');
+
+    if (existingOrder) {
+      setActiveOrderId(existingOrder.id);
+    } else {
+      const id = Date.now().toString();
+      const newTempOrder = {
+        id,
+        type: 'sala',
+        tableId: table.id,
+        name: table.name,
         status: 'occupied',
-        stage: 'empty'
-      });
+        stage: 'empty',
+        total: 0,
+        items: [],
+        comment: '',
+        _isTemp: true
+      };
+      setTempOrder(newTempOrder);
+      setActiveOrderId(id);
     }
   };
 
   const handleSelectDelivery = (delivery) => {
-    setActiveTableId(null);
-    setActiveDeliveryId(delivery.id);
+    setActiveOrderId(delivery.id);
   };
 
   const handleAddDelivery = async (platform) => {
     const id = Date.now().toString();
-    const newDelivery = {
+    const newOrder = {
       id,
       orderId: Date.now(),
+      type: 'delivery',
       name: `#${platform.substring(0, 2).toUpperCase()}-${Math.floor(Math.random() * 9000) + 1000}`,
       platform,
       status: 'cocina',
@@ -694,9 +959,34 @@ const App = () => {
       items: [],
       comment: ''
     };
-    await setDoc(doc(db, 'deliveries', id), newDelivery);
-    setActiveDeliveryId(id);
-    setActiveTableId(null);
+    await setDoc(doc(db, 'orders', id), newOrder);
+    setActiveOrderId(id);
+  };
+
+  const upsertCustomer = async (customerData) => {
+    if (!customerData.phone) return;
+    const phone = customerData.phone.replace(/\s/g, '');
+    const existing = customers.find(c => c.phone.replace(/\s/g, '') === phone);
+
+    if (existing) {
+      await updateDoc(doc(db, 'customers', existing.id), {
+        name: customerData.name || existing.name,
+        email: customerData.email || existing.email,
+        orderCount: (existing.orderCount || 0) + 1,
+        lastOrder: new Date().toISOString()
+      });
+    } else {
+      const id = Date.now().toString();
+      await setDoc(doc(db, 'customers', id), {
+        id,
+        phone,
+        name: customerData.name || 'Cliente Nuevo',
+        email: customerData.email || '',
+        orderCount: 1,
+        firstOrder: new Date().toISOString(),
+        lastOrder: new Date().toISOString()
+      });
+    }
   };
 
   const handleAddReservation = async (data) => {
@@ -707,15 +997,51 @@ const App = () => {
         ...data,
         createdAt: new Date().toISOString()
       });
+      // Optionally link customer on reservation too
+      await upsertCustomer({ phone: data.phone, name: data.name, email: data.email });
     } catch (error) {
       console.error('Error adding reservation:', error);
       alert('Error al añadir reserva: ' + error.message);
     }
   };
 
-  const handleCloseTable = () => {
-    setActiveTableId(null);
-    setActiveDeliveryId(null);
+  const handleClearOrders = async () => {
+    try {
+      const snap = await getDocs(collection(db, 'orders'));
+      for (const d of snap.docs) {
+        await deleteDoc(doc(db, 'orders', d.id));
+      }
+      setShowDeleteAllConfirm(false);
+      setActiveOrderId(null);
+    } catch (error) {
+      console.error('Error clearing orders:', error);
+    }
+  };
+
+  const handleMarchar = async () => {
+    if (!currentOrder) return;
+    try {
+      console.log('Marchando pedido:', currentOrder.id);
+      const newItems = currentOrder.items.map(item => ({
+        ...item,
+        sentToKitchen: true
+      }));
+
+      await updateDoc(doc(db, 'orders', currentOrder.id), {
+        items: newItems
+      });
+
+      console.log('Pedido marchado con éxito');
+      setActiveOrderId(null);
+    } catch (error) {
+      console.error('Error al marchar pedido:', error);
+      alert('Error al marchar pedido: ' + error.message);
+    }
+  };
+
+  const handleCloseTable = async () => {
+    setTempOrder(null); // Clean up any temp order
+    setActiveOrderId(null);
   };
 
   const handleProductClick = (product) => {
@@ -747,6 +1073,8 @@ const App = () => {
         pointName: point ? COOKING_POINTS.find(p => p.id === point)?.label : null,
         extras: extras || [],
         price: finalPrice,
+        category: product.category,
+        sentToKitchen: false,
         qty: 1,
         comment: ''
       };
@@ -756,21 +1084,62 @@ const App = () => {
         return;
       }
 
-      const collectionName = activeTableId ? 'tables' : 'deliveries';
       const currentItems = currentOrder.items || [];
+      const isFirstItem = currentItems.length === 0;
 
-      console.log('Updating Firestore:', collectionName, currentOrder.id);
+      // Determine next stage
+      const nextStage = product.category === 'bebidas' ? 'drinks' :
+        product.category === 'entrantes' ? 'starters' :
+          product.category === 'burgers' ? 'burgers' :
+            product.category === 'postres' ? 'desserts' :
+              (currentOrder.stage === 'empty' ? 'drinks' : currentOrder.stage);
 
-      await updateDoc(doc(db, collectionName, currentOrder.id), {
+      // If first item, ensure we mark seated and handle reservation
+      if (isFirstItem && currentOrder.type === 'sala') {
+        const tableInfo = derivedTables.find(t => t.id === currentOrder.tableId);
+        if (tableInfo?.reservation && !tableInfo.reservation.seated) {
+          console.log('Marking reservation as seated:', tableInfo.reservation.id);
+          await updateDoc(doc(db, 'reservations', tableInfo.reservation.id), { seated: true });
+        }
+      }
+
+      console.log('Updating Order in Firestore. New Stage:', nextStage);
+
+      const updatedOrderData = {
         items: [...currentItems, newItem],
-        total: (currentOrder.total || 0) + finalPrice,
-        stage: collectionName === 'tables' ? (
-          product.category === 'bebidas' ? 'drinks' :
-            product.category === 'entrantes' ? 'starters' :
-              product.category === 'burgers' ? 'burgers' :
-                product.category === 'postres' ? 'desserts' : (currentOrder.stage || 'empty')
-        ) : (currentOrder.stage || 'cocina')
-      });
+        total: parseFloat(((currentOrder.total || 0) + finalPrice).toFixed(2)),
+        stage: currentOrder.type === 'sala' ? (nextStage === 'empty' ? 'drinks' : nextStage) : (currentOrder.stage || 'cocina')
+      };
+
+      if (currentOrder._isTemp) {
+        // Promote Temp Order to Real Order
+        const { _isTemp, ...baseOrderData } = currentOrder;
+        const realOrder = {
+          ...baseOrderData,
+          ...updatedOrderData
+        };
+
+        // Optimistic update: Temporarily keep it in tempOrder but updated, 
+        // until onSnapshot picks it up or we switch ID? 
+        // Actually, better to just write to DB. 'orders' will update via snapshot.
+        // We persist tempOrder locally updated just in case of lag.
+        setTempOrder(null); // Clear temp
+        // But wait, if we clear temp, activeOrder becomes null until snapshot arrives?
+        // Let's add it effectively to 'orders' optimistically? 
+        // No, let's keep tempOrder until we are sure? 
+        // Easier: Just set activeOrderId to the same ID. 
+        // And relying on onSnapshot implies a flicker.
+
+        // Better Strategy: Just write to DB. 
+        await setDoc(doc(db, 'orders', currentOrder.id), realOrder);
+
+        // We don't need to manually update 'orders' because onSnapshot will do it.
+        // But to avoid flicker, we can add it to 'orders' optimistically.
+        setOrders(prev => [...prev, realOrder]);
+      } else {
+        // Normal update
+        await updateDoc(doc(db, 'orders', currentOrder.id), updatedOrderData);
+      }
 
       console.log('Successfully updated order');
     } catch (error) {
@@ -786,8 +1155,7 @@ const App = () => {
     const itemToRemove = currentOrder.items.find(i => i.orderId === orderId);
     if (!itemToRemove) return;
 
-    const collectionName = activeTableId ? 'tables' : 'deliveries';
-    await updateDoc(doc(db, collectionName, currentOrder.id), {
+    await updateDoc(doc(db, 'orders', currentOrder.id), {
       items: currentOrder.items.filter(i => i.orderId !== orderId),
       total: currentOrder.total - itemToRemove.price
     });
@@ -795,26 +1163,37 @@ const App = () => {
 
   const updateComment = async (val) => {
     if (!currentOrder) return;
-    const collectionName = activeTableId ? 'tables' : 'deliveries';
-    await updateDoc(doc(db, collectionName, currentOrder.id), {
+    await updateDoc(doc(db, 'orders', currentOrder.id), {
       comment: val
     });
   };
 
   const updateCustomerInfo = async (field, val) => {
-    if (!activeDeliveryId) return;
-    await updateDoc(doc(db, 'deliveries', activeDeliveryId), {
+    if (!activeOrder || activeOrder.type !== 'delivery') return;
+
+    await updateDoc(doc(db, 'orders', activeOrder.id), {
       [field]: val
     });
+
+    // If we're updating phone, try to lookup customer and auto-fill
+    if (field === 'customerPhone' && val.length >= 9) {
+      const phone = val.replace(/\s/g, '');
+      const match = customers.find(c => c.phone.replace(/\s/g, '') === phone);
+      if (match) {
+        await updateDoc(doc(db, 'orders', activeOrder.id), {
+          customerName: match.name,
+          customerEmail: match.email || ''
+        });
+      }
+    }
   };
 
   const updateItemComment = async (orderId, comment) => {
     if (!currentOrder) return;
-    const collectionName = activeTableId ? 'tables' : 'deliveries';
     const newItems = currentOrder.items.map(item =>
       item.orderId === orderId ? { ...item, comment } : item
     );
-    await updateDoc(doc(db, collectionName, currentOrder.id), {
+    await updateDoc(doc(db, 'orders', currentOrder.id), {
       items: newItems
     });
   };
@@ -838,6 +1217,12 @@ const App = () => {
           <h1 className="font-bold text-lg tracking-tight">SMILE <span className="text-orange-500">POS</span></h1>
         </div>
         <div className="flex items-center gap-4 text-sm text-slate-400">
+          <button
+            onClick={() => setShowDeleteAllConfirm(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all font-bold text-xs"
+          >
+            <Trash2 size={14} /> Borrar Pedidos
+          </button>
           <button onClick={seedDatabase} className="flex items-center gap-1 hover:text-white transition-colors">
             <Database size={14} /> Sync Data
           </button>
@@ -848,10 +1233,16 @@ const App = () => {
 
       {!currentOrder ? (
         <Dashboard
-          tables={tables}
-          deliveries={deliveries}
-          onSelectTable={(item) => item.platform ? handleSelectDelivery(item) : handleSelectTable(item)}
+          tables={derivedTables}
+          deliveries={derivedDeliveries}
+          reservations={reservations}
+          customers={customers}
+          assigningReservationId={assigningReservationId}
+          setAssigningReservationId={setAssigningReservationId}
+          onSelectTable={handleSelectTable}
+          onSelectDelivery={handleSelectDelivery}
           onAddDelivery={handleAddDelivery}
+          onAddReservation={handleAddReservation}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
         />
@@ -860,20 +1251,48 @@ const App = () => {
           <div className="w-[350px] md:w-[400px] bg-slate-900 border-r border-slate-800 flex flex-col shrink-0 z-20 shadow-2xl">
             <div className="p-4 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
               <div>
-                <div className="text-xs text-slate-400 uppercase font-bold">{activeTableId ? 'MESA' : 'PEDIDO'}</div>
+                <div className="text-xs text-slate-400 uppercase font-bold">{currentOrder.type === 'sala' ? 'MESA' : 'PEDIDO'}</div>
                 <div className="text-2xl font-black text-orange-500">{currentOrder.name}</div>
               </div>
-              <button
-                onClick={handleCloseTable}
-                className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium transition-colors"
-              >
-                <ArrowLeft size={16} /> Salir
-              </button>
+              <div className="flex gap-2">
+                {currentOrder.type === 'sala' && currentOrder.stage !== 'empty' && currentOrder.items?.length === 0 && (
+                  <button
+                    onClick={() => setShowUnseatConfirm(true)}
+                    className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-red-900/50 hover:text-red-400 rounded-lg text-xs font-bold transition-all border border-slate-600"
+                  >
+                    <LogOut size={14} className="rotate-180" /> LEVANTAR
+                  </button>
+                )}
+                <button
+                  onClick={handleCloseTable}
+                  className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium transition-colors border border-slate-600 shadow-sm"
+                >
+                  <ArrowLeft size={16} /> Salir
+                </button>
+              </div>
             </div>
 
             {/* Client Info (Delivery only) */}
-            {activeDeliveryId && (
+            {currentOrder.type === 'delivery' && (
               <div className="p-3 bg-slate-900/50 border-b border-slate-800 grid grid-cols-2 gap-2">
+                <div className="relative">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Teléfono</div>
+                  <input
+                    type="text"
+                    value={currentOrder.customerPhone || ''}
+                    onChange={(e) => updateCustomerInfo('customerPhone', e.target.value)}
+                    placeholder="6xx xxx xxx"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-inner"
+                  />
+                  {currentOrder.customerPhone && (() => {
+                    const match = customers.find(c => c.phone.replace(/\s/g, '') === currentOrder.customerPhone.replace(/\s/g, ''));
+                    return match ? (
+                      <div className="absolute right-2 bottom-1.5 text-[8px] font-bold text-orange-400 bg-orange-400/10 px-1 rounded">
+                        {match.orderCount} Pedidos
+                      </div>
+                    ) : null;
+                  })()}
+                </div>
                 <div>
                   <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Cliente</div>
                   <input
@@ -881,16 +1300,6 @@ const App = () => {
                     value={currentOrder.customerName || ''}
                     onChange={(e) => updateCustomerInfo('customerName', e.target.value)}
                     placeholder="Nombre..."
-                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-inner"
-                  />
-                </div>
-                <div>
-                  <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">Teléfono</div>
-                  <input
-                    type="text"
-                    value={currentOrder.customerPhone || ''}
-                    onChange={(e) => updateCustomerInfo('customerPhone', e.target.value)}
-                    placeholder="6xx xxx xxx"
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-orange-500 shadow-inner"
                   />
                 </div>
@@ -911,25 +1320,75 @@ const App = () => {
             </div>
 
             <div className="flex-1 overflow-y-auto p-2 space-y-2">
-              {currentOrder.items.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-slate-600 opacity-50">
-                  <ShoppingBag size={48} className="mb-2" />
-                  <p>Pedido vacío</p>
+              {currentOrder.type === 'sala' && currentOrder.items?.length === 0 && currentOrder.stage === 'empty' ? (
+                <div className="h-full flex flex-col items-center justify-center p-6 text-center">
+                  <div className="bg-slate-800 p-8 rounded-3xl border-2 border-dashed border-slate-700 w-full animate-in zoom-in-95 duration-500">
+                    <div className="w-20 h-20 bg-orange-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Users size={40} className="text-orange-500" />
+                    </div>
+                    <h3 className="text-xl font-bold text-white mb-2 uppercase tracking-tight">
+                      {(() => {
+                        const tableInfo = derivedTables.find(t => t.id === currentOrder.tableId);
+                        return tableInfo?.reservation
+                          ? `¿Desea sentar a la reserva ${tableInfo.reservation.name}?`
+                          : '¿Desea sentar a alguien?';
+                      })()}
+                    </h3>
+                    <p className="text-slate-500 text-sm mb-8">Selecciona "SÍ" para abrir la cuenta y empezar el servicio.</p>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const tableInfo = derivedTables.find(t => t.id === currentOrder.tableId);
+                          if (tableInfo?.reservation) {
+                            await updateDoc(doc(db, 'reservations', tableInfo.reservation.id), { seated: true });
+                          }
+
+                          if (currentOrder._isTemp) {
+                            const { _isTemp, ...baseData } = currentOrder;
+                            const realOrder = { ...baseData, stage: 'drinks' };
+                            await setDoc(doc(db, 'orders', currentOrder.id), realOrder);
+                            setOrders(prev => [...prev, realOrder]);
+                            setTempOrder(null);
+                          } else {
+                            await updateDoc(doc(db, 'orders', currentOrder.id), { stage: 'drinks' });
+                          }
+                        } catch (error) {
+                          console.error("Error seating:", error);
+                        }
+                      }}
+                      className="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-2xl shadow-xl shadow-orange-500/20 transition-all active:scale-95 flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle2 size={24} /> SÍ, EMPEZAR PEDIDO
+                    </button>
+                  </div>
+                </div>
+              ) : currentOrder.items.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-slate-600 opacity-50 p-10 text-center">
+                  <ShoppingBag size={48} className="mb-2 mx-auto" />
+                  <p className="font-bold">El pedido está vacío</p>
+                  <p className="text-xs">Añade productos de la derecha</p>
                 </div>
               ) : (
                 currentOrder.items.map((item) => (
-                  <div key={item.orderId} className="bg-slate-800 p-3 rounded-lg border border-slate-700 animate-in slide-in-from-left-2 duration-200">
+                  <div
+                    key={item.orderId}
+                    className={`p-3 rounded-lg border transition-all animate-in slide-in-from-left-2 duration-200 ${item.sentToKitchen ? 'bg-emerald-900/30 border-emerald-500/50 shadow-inner' : 'bg-slate-800 border-slate-700'}`}
+                  >
                     <div className="flex justify-between group">
                       <button
                         onClick={() => {
+                          if (item.sentToKitchen) return;
                           const com = prompt("Comentario para " + item.name + ":", item.comment || "");
                           if (com !== null) updateItemComment(item.orderId, com);
                         }}
-                        className="flex-1 text-left"
+                        className="flex-1 text-left relative"
                       >
                         <div className="flex justify-between items-start">
-                          <span className="font-bold text-slate-100">{item.name}</span>
-                          <span className="font-bold text-slate-100">{formatPrice(item.price)}</span>
+                          <div className="flex items-center gap-2">
+                            {item.sentToKitchen && <ChefHat size={16} className="text-emerald-400" />}
+                            <span className={`font-bold ${item.sentToKitchen ? 'text-emerald-100' : 'text-slate-100'}`}>{item.name}</span>
+                          </div>
+                          <span className={`font-bold ${item.sentToKitchen ? 'text-emerald-400' : 'text-slate-100'}`}>{formatPrice(item.price)}</span>
                         </div>
 
                         {(item.variantName || item.pointName || (item.extras && item.extras.length > 0) || item.comment) && (
@@ -946,7 +1405,8 @@ const App = () => {
 
                       <button
                         onClick={() => removeItem(item.orderId)}
-                        className="ml-3 p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-colors self-center"
+                        disabled={item.sentToKitchen}
+                        className={`ml-3 p-2 rounded-md transition-colors self-center ${item.sentToKitchen ? 'text-emerald-800 cursor-not-allowed' : 'text-slate-500 hover:text-red-400 hover:bg-red-400/10'}`}
                       >
                         <Trash2 size={18} />
                       </button>
@@ -957,15 +1417,24 @@ const App = () => {
             </div>
 
             <div className="p-4 bg-slate-800 border-t border-slate-700">
-              <div className="flex justify-between items-end mb-4">
-                <span className="text-slate-400 font-medium">Total</span>
+              <div className="flex justify-between items-end mb-4 px-1">
+                <span className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">Cuenta Total</span>
                 <span className="text-4xl font-black text-white">{formatPrice(currentOrder.total)}</span>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <button className="py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors">
-                  <CheckCircle2 size={20} /> MARCHAR
+                <button
+                  onClick={handleMarchar}
+                  disabled={!currentOrder.items?.some(i => i.sentToKitchen === false)}
+                  className={`py-4 rounded-2xl font-black flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg ${currentOrder.items?.some(i => i.sentToKitchen === false)
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20'
+                    : 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'}`}
+                >
+                  <Send size={20} className={currentOrder.items?.some(i => i.sentToKitchen === false) ? "animate-pulse" : ""} /> MARCHAR
                 </button>
-                <button className="py-4 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors">
+                <button
+                  onClick={() => setShowPaymentModal(true)}
+                  className="py-4 bg-slate-700 hover:bg-slate-600 text-white rounded-2xl font-black flex items-center justify-center gap-2 transition-all active:scale-95 border border-slate-600 shadow-sm"
+                >
                   <CreditCard size={20} /> COBRAR
                 </button>
               </div>
@@ -1011,6 +1480,59 @@ const App = () => {
           product={customizingProduct}
           onClose={() => setCustomizingProduct(null)}
           onAdd={addItemToOrder}
+        />
+      )}
+
+      {showUnseatConfirm && (
+        <ConfirmationModal
+          title="¿Levantar Mesa?"
+          message="Se quitará el estado de 'sentados' y la mesa volverá a estar disponible para empezar de nuevo."
+          icon={LogOut}
+          color="red"
+          confirmText="SÍ, LEVANTAR"
+          cancelText="MANTENER SENTADOS"
+          onCancel={() => setShowUnseatConfirm(false)}
+          onConfirm={async () => {
+            const tableInfo = derivedTables.find(t => t.id === currentOrder.tableId);
+            if (tableInfo?.reservation) {
+              await updateDoc(doc(db, 'reservations', tableInfo.reservation.id), { seated: false });
+            }
+            await updateDoc(doc(db, 'orders', currentOrder.id), { stage: 'empty' });
+            setShowUnseatConfirm(false);
+          }}
+        />
+      )}
+
+      {showPaymentModal && currentOrder && (
+        <PaymentModal
+          order={currentOrder}
+          onCancel={() => setShowPaymentModal(false)}
+          onConfirm={async (method) => {
+            try {
+              await updateDoc(doc(db, 'orders', currentOrder.id), {
+                status: 'closed',
+                paymentMethod: method,
+                closedAt: new Date().toISOString()
+              });
+              setShowPaymentModal(false);
+              setActiveOrderId(null);
+            } catch (error) {
+              console.error('Error paying:', error);
+            }
+          }}
+        />
+      )}
+
+      {showDeleteAllConfirm && (
+        <ConfirmationModal
+          title="¿Borrar Todo?"
+          message="Esta acción eliminará todos los pedidos activos (Sala y Delivery) de forma permanente. ¿Desea continuar?"
+          icon={Trash2}
+          color="red"
+          confirmText="SÍ, BORRAR TODO"
+          cancelText="CANCELAR"
+          onCancel={() => setShowDeleteAllConfirm(false)}
+          onConfirm={handleClearOrders}
         />
       )}
     </div>
