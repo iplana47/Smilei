@@ -129,8 +129,7 @@ const TableCard = ({ table, onClick, isSelecting, style, isEditing, onPointerDow
         ${isSelecting ? 'ring-4 ring-blue-500 animate-pulse' : ''}
         ${isEditing ? 'cursor-move hover:scale-110 z-50 border-dashed border-slate-400' : 'hover:scale-[1.05] active:scale-95'}
         ${table.status === 'free' ? (isBlocked ? 'bg-yellow-500/10 border-yellow-500 text-yellow-100' : 'bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-400') : ''}
-        ${table.status === 'occupied' ? (hasUnsentItems ? 'bg-slate-800 border-red-500 text-slate-100' : 'bg-slate-800 border-orange-500 text-slate-100 shadow-orange-500/10') : ''}
-        ${table.status === 'payment' ? 'bg-slate-800 border-emerald-500 text-emerald-100' : ''}
+        ${table.status === 'occupied' ? (hasUnsentItems ? 'bg-slate-800 border-red-500 text-slate-100' : 'bg-slate-800 border-orange-500 text-slate-100 shadow-orange-500/10 shadow-lg') : ''}
       `}
       style={{ ...style, touchAction: 'none' }}
       onPointerDown={(e) => {
@@ -173,7 +172,6 @@ const TableCard = ({ table, onClick, isSelecting, style, isEditing, onPointerDow
           <>
             <div className="flex gap-1 justify-center w-full my-0.5">
               <TableStatusIcon active={stages.drinks.active} icon={Beer} colorClass="bg-blue-500 text-white" size={10} />
-              <TableStatusIcon active={stages.starters.active} icon={Utensils} colorClass="bg-purple-500 text-white" size={10} />
               <TableStatusIcon active={stages.starters.active} icon={Utensils} colorClass="bg-purple-500 text-white" size={10} />
               <TableStatusIcon active={stages.burgers.active} icon={Beef} colorClass="bg-orange-500 text-white" size={10} />
               <TableStatusIcon active={stages.desserts.active} icon={IceCream} colorClass="bg-pink-500 text-white" size={10} />
@@ -1274,8 +1272,7 @@ const App = () => {
 
       const isEffectivelyOccupied = order && (
         (order.items && order.items.length > 0) ||
-        (order.stage && order.stage !== 'empty') ||
-        order.status === 'payment'
+        (order.stage && order.stage !== 'empty')
       );
 
       if (isEffectivelyOccupied) {
