@@ -142,7 +142,7 @@ const TableCard = ({ table, onClick, isSelecting, style, isEditing, onPointerDow
       {/* Edit Mode Controls */}
       {isEditing && (
         <>
-          <div className="absolute inset-0 bg-black/10 z-30 flex items-center justify-center cursor-move rounded-xl backdrop-blur-[1px] pointer-events-none">
+          <div className="absolute inset-0 z-30 flex items-center justify-center cursor-move rounded-xl pointer-events-none">
             {/* Grip handled by parent mouse events, just visual hint */}
           </div>
           <button
@@ -164,7 +164,7 @@ const TableCard = ({ table, onClick, isSelecting, style, isEditing, onPointerDow
         </div>
       )}
 
-      <div className="flex flex-col h-full justify-between items-center text-center relative z-10">
+      <div className={`flex flex-col h-full justify-between items-center text-center relative z-10 ${isEditing ? 'pointer-events-none' : ''}`}>
         <span className="text-xl font-black tracking-tighter leading-none">
           {table.name}
         </span>
@@ -173,6 +173,7 @@ const TableCard = ({ table, onClick, isSelecting, style, isEditing, onPointerDow
           <>
             <div className="flex gap-1 justify-center w-full my-0.5">
               <TableStatusIcon active={stages.drinks.active} icon={Beer} colorClass="bg-blue-500 text-white" size={10} />
+              <TableStatusIcon active={stages.starters.active} icon={Utensils} colorClass="bg-purple-500 text-white" size={10} />
               <TableStatusIcon active={stages.starters.active} icon={Utensils} colorClass="bg-purple-500 text-white" size={10} />
               <TableStatusIcon active={stages.burgers.active} icon={Beef} colorClass="bg-orange-500 text-white" size={10} />
               <TableStatusIcon active={stages.desserts.active} icon={IceCream} colorClass="bg-pink-500 text-white" size={10} />
@@ -185,8 +186,22 @@ const TableCard = ({ table, onClick, isSelecting, style, isEditing, onPointerDow
             </div>
           </>
         ) : (
-          <div className="mt-auto text-[10px] font-bold uppercase tracking-wider opacity-60">
-            {table.status === 'free' ? 'LIBRE' : table.status}
+          <div className="mt-auto w-full">
+            {table.isBlocked && table.reservation ? (
+              <div className="bg-yellow-500/20 rounded p-1 border border-yellow-500/30 animate-pulse">
+                <div className="text-[10px] font-black text-yellow-500 uppercase leading-none mb-1">RESERVA</div>
+                <div className="text-[11px] font-bold text-white leading-none truncate">{table.reservation.name}</div>
+                <div className="text-[10px] font-medium text-yellow-300 items-center justify-center gap-1 mt-0.5 flex">
+                  <span>{table.reservation.time}</span>
+                  <span className="opacity-40">•</span>
+                  <span className="flex items-center gap-0.5"><User size={8} />{table.reservation.pax}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-[10px] font-bold uppercase tracking-wider opacity-60">
+                {table.status === 'free' ? (isBlocked ? 'BLOQUEO' : 'LIBRE') : table.status}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -200,8 +215,8 @@ const TableStatusIcon = ({ active, icon: Icon, colorClass, size = 14 }) => (
   </div>
 );
 
-const ReservationModal = ({ onClose, onAdd, customers = [] }) => {
-  const [formData, setFormData] = useState({
+const ReservationModal = ({ onClose, onAdd, initialData, customers = [] }) => {
+  const [formData, setFormData] = useState(initialData || {
     phone: '',
     name: '',
     email: '',
@@ -235,7 +250,9 @@ const ReservationModal = ({ onClose, onAdd, customers = [] }) => {
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
       <div className="bg-slate-900 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="p-6 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
-          <h3 className="text-xl font-bold text-white flex items-center gap-2"><Calendar className="text-orange-500" /> Nueva Reserva</h3>
+          <h3 className="text-xl font-bold text-white flex items-center gap-2">
+            <Calendar className="text-orange-500" /> {initialData ? 'Editar Reserva' : 'Nueva Reserva'}
+          </h3>
           <button onClick={onClose} className="p-2 bg-slate-700 rounded-full hover:bg-slate-600 transition-colors">
             <X size={20} className="text-white" />
           </button>
@@ -326,7 +343,7 @@ const ReservationModal = ({ onClose, onAdd, customers = [] }) => {
             type="submit"
             className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 rounded-xl mt-4 transition-all shadow-lg active:scale-95"
           >
-            CONFIRMAR RESERVA
+            {initialData ? 'GUARDAR CAMBIOS' : 'CONFIRMAR RESERVA'}
           </button>
         </form>
       </div>
@@ -419,7 +436,113 @@ const PaymentModal = ({ order, onConfirm, onCancel }) => {
   );
 };
 
-const Dashboard = ({ tables, deliveries, reservations, customers, assigningReservationId, setAssigningReservationId, onSelectTable, onSelectDelivery, onAddDelivery, onAddReservation, activeTab, setActiveTab, isEditingLayout, setIsEditingLayout, handleDragStart, handleDragMove, handleDragEnd, saveLayout, handleAddTable, handleDeleteTable, draggedTable, containerRef }) => {
+const ReservationDetailModal = ({ reservation, onClose, tables = [], onUnassignTable }) => {
+  if (!reservation) return null;
+
+  const formattedDate = new Date(reservation.date).toLocaleDateString('es-ES', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
+      <div className="bg-slate-900 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-800 animate-in zoom-in-95 duration-300">
+        <div className="p-6 bg-slate-800 border-b border-slate-700 flex justify-between items-center">
+          <h3 className="text-xl font-bold text-white flex items-center gap-2">
+            <Calendar className="text-orange-500" /> Detalle de Reserva
+          </h3>
+          <button onClick={onClose} className="p-2 bg-slate-700 rounded-full hover:bg-slate-600 transition-colors">
+            <X size={20} className="text-white" />
+          </button>
+        </div>
+        <div className="p-6 space-y-6 text-white text-left">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="text-2xl font-black text-white">{reservation.name}</div>
+              <div className="text-orange-400 font-bold flex items-center gap-2 mt-1">
+                <Clock size={16} /> {reservation.time} • {reservation.date}
+              </div>
+            </div>
+            <div className="bg-slate-800 px-4 py-2 rounded-xl border border-slate-700 text-center">
+              <div className="text-xs text-slate-500 font-bold uppercase">Personas</div>
+              <div className="text-xl font-black text-white">{reservation.pax}</div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 text-slate-300 bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+              <Phone size={18} className="text-slate-500" />
+              <span className="font-medium">{reservation.phone}</span>
+            </div>
+            {reservation.email && (
+              <div className="flex items-center gap-3 text-slate-300 bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+                <Send size={18} className="text-slate-500" />
+                <span className="font-medium">{reservation.email}</span>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <div className="text-xs font-bold text-slate-500 uppercase mb-2">Mesas Asignadas</div>
+            <div className="flex flex-wrap gap-2">
+              {reservation.tableIds?.length > 0 ? (
+                reservation.tableIds.map(tid => {
+                  const t = tables.find(x => x.id === tid);
+                  return (
+                    <div key={tid} className="flex items-center gap-2 bg-orange-500 text-white px-3 py-1.5 rounded-lg font-black text-sm group/tid">
+                      {t?.name || `M${tid}`}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onUnassignTable(reservation.id, tid);
+                        }}
+                        className="hover:bg-black/20 p-0.5 rounded transition-colors"
+                        title="Quitar mesa"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-sm text-slate-600 italic">Ninguna mesa asignada</div>
+              )}
+            </div>
+          </div>
+
+          {reservation.notes && (
+            <div className="bg-slate-800/30 p-4 rounded-xl border border-dashed border-slate-700">
+              <div className="text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-2">
+                <MessageSquare size={14} /> Observaciones
+              </div>
+              <p className="text-slate-400 text-sm italic whitespace-pre-wrap">{reservation.notes}</p>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={() => {
+                onClose();
+                setTimeout(() => onUnassignTable('EDIT_MODE_TRIGGER', reservation), 100);
+              }}
+              className="px-6 bg-slate-700 hover:bg-slate-600 text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-95 border border-slate-600 flex items-center gap-2"
+            >
+              <PenLine size={18} /> EDITAR
+            </button>
+            <button
+              onClick={onClose}
+              className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg active:scale-95 border border-slate-700"
+            >
+              CERRAR
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+const Dashboard = ({ tables, deliveries, reservations, customers, assigningReservationId, setAssigningReservationId, onSelectTable, onSelectDelivery, onAddDelivery, onAddReservation, activeTab, setActiveTab, isEditingLayout, setIsEditingLayout, handleDragStart, handleDragMove, handleDragEnd, saveLayout, handleAddTable, handleDeleteTable, draggedTable, containerRef, selectedDate, setSelectedDate, onShowDetail }) => {
   const [showPlatformSelect, setShowPlatformSelect] = useState(false);
   const [showReservationModal, setShowReservationModal] = useState(false);
   const platforms = [
@@ -454,6 +577,7 @@ const Dashboard = ({ tables, deliveries, reservations, customers, assigningReser
               <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-slate-600"></span> Libre</span>
               <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-yellow-500"></span> Bloqueo</span>
               <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-orange-500"></span> Ocupada</span>
+              <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-500"></span> Pendiente marchar</span>
             </div>
 
             {isEditingLayout && (
@@ -488,22 +612,11 @@ const Dashboard = ({ tables, deliveries, reservations, customers, assigningReser
               </>
             )}
 
-            <button
-              onClick={() => {
-                if (isEditingLayout) {
-                  saveLayout();
-                } else {
-                  setIsEditingLayout(true);
-                }
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all ${isEditingLayout ? 'bg-emerald-500 text-white shadow-emerald-500/20 shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
-            >
-              {isEditingLayout ? <><Save size={18} /> GUARDAR</> : <><PenLine size={18} /> EDITAR SALA</>}
-            </button>
+
           </div>
         </div>
 
-        <div className="flex-1 relative mt-4">
+        <div ref={containerRef} className="flex-1 relative mt-4">
           {/* Grid lines for reference when editing */}
           {isEditingLayout && (
             <div className="absolute inset-0 opacity-10 pointer-events-none"
@@ -641,14 +754,29 @@ const Dashboard = ({ tables, deliveries, reservations, customers, assigningReser
             <div className="p-6 overflow-y-auto flex-1">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                  Reservas Hoy ({reservations.length})
+                  Reservas ({reservations.length})
                 </h3>
-                <button
-                  onClick={() => setShowReservationModal(true)}
-                  className="p-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-bold shadow-lg"
-                >
-                  <Plus size={16} /> NUEVA
-                </button>
+                <div className="flex items-center gap-2">
+                  <div className="relative group/date">
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      onClick={(e) => e.target.showPicker && e.target.showPicker()}
+                      className="absolute inset-0 opacity-0 cursor-pointer z-10 w-full h-full"
+                    />
+                    <div className="p-2 bg-slate-800 text-slate-400 rounded-lg group-hover/date:text-white group-hover/date:bg-slate-700 transition-all border border-slate-700 flex items-center gap-2 text-xs font-bold whitespace-nowrap">
+                      <Calendar size={16} />
+                      {selectedDate === new Date().toISOString().split('T')[0] ? 'HOY' : selectedDate}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowReservationModal(true)}
+                    className="p-2 bg-orange-600 hover:bg-orange-500 text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-bold shadow-lg"
+                  >
+                    <Plus size={16} /> NUEVA
+                  </button>
+                </div>
               </div>
 
               {showReservationModal && (
@@ -664,7 +792,11 @@ const Dashboard = ({ tables, deliveries, reservations, customers, assigningReser
 
               <div className="space-y-3">
                 {reservations.map(res => (
-                  <div key={res.id} className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex flex-col gap-2 relative group hover:border-orange-500/50 transition-all">
+                  <div
+                    key={res.id}
+                    onClick={() => onShowDetail(res)}
+                    className={`bg-slate-800 p-4 rounded-xl border flex flex-col gap-2 relative group hover:border-orange-500 transition-all cursor-pointer ${assigningReservationId === res.id ? 'ring-2 ring-orange-500 border-orange-500' : 'border-slate-700'}`}
+                  >
                     <div className="flex items-center gap-4">
                       <div className="flex flex-col items-center bg-slate-700 px-3 py-2 rounded-lg min-w-[65px] border border-slate-600">
                         <Clock size={16} className="text-orange-400 mb-0.5" />
@@ -677,23 +809,31 @@ const Dashboard = ({ tables, deliveries, reservations, customers, assigningReser
                           <span className="flex items-center gap-1"><Phone size={12} /> {res.phone}</span>
                         </div>
                       </div>
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-1 items-end">
                         <button
-                          onClick={() => setAssigningReservationId(res.id)}
-                          className={`p-2 rounded-lg transition-all ${res.tableId ? 'bg-orange-500/20 text-orange-400' : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white'}`}
-                          title="Asignar mesa"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAssigningReservationId(assigningReservationId === res.id ? null : res.id);
+                          }}
+                          className={`p-2 rounded-lg transition-all ${res.tableIds?.length > 0 ? 'bg-orange-500/20 text-orange-400' : 'bg-slate-700 text-slate-400 hover:bg-slate-600 hover:text-white'}`}
+                          title="Asignar mesa(s)"
                         >
                           <LayoutGrid size={18} />
                         </button>
-                        {res.tableId && (
-                          <span className="text-[10px] font-black text-center bg-orange-500 text-white rounded py-0.5">
-                            M{res.tableId}
-                          </span>
-                        )}
+                        <div className="flex flex-wrap gap-1 justify-end max-w-[80px]">
+                          {res.tableIds?.map(tid => {
+                            const table = tables.find(t => t.id === tid);
+                            return (
+                              <span key={tid} className="text-[10px] font-black text-center bg-orange-500 text-white rounded px-1 min-w-[20px]">
+                                {table?.name || `M${tid}`}
+                              </span>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                     {res.notes && (
-                      <div className="mt-1 p-2 bg-slate-900/50 rounded-lg text-xs text-slate-500 border border-slate-700/50 italic mr-10">
+                      <div className="mt-1 p-2 bg-slate-900/50 rounded-lg text-xs text-slate-500 border border-slate-700/50 italic mr-10 line-clamp-1">
                         <MessageSquare size={10} className="inline mr-1 opacity-50" /> {res.notes}
                       </div>
                     )}
@@ -884,6 +1024,9 @@ const App = () => {
   const [tempOrder, setTempOrder] = useState(null); // New separate state for temp orders
   const [customizingProduct, setCustomizingProduct] = useState(null);
   const [assigningReservationId, setAssigningReservationId] = useState(null);
+  const [viewingReservation, setViewingReservation] = useState(null); // Detail modal
+  const [editingReservation, setEditingReservation] = useState(null); // Edit modal form
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showUnseatConfirm, setShowUnseatConfirm] = useState(false);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -982,54 +1125,14 @@ const App = () => {
           };
         });
 
-        // --- ENSURE FULL SET (M1-M21, T1-T9) ---
-        const existingIds = new Set(data.map(t => t.id));
-        const missingTables = [];
-
-        // Check Sala (1-21)
-        for (let i = 0; i < 21; i++) {
-          const id = (i + 1).toString();
-          if (!existingIds.has(id)) {
-            missingTables.push({
-              id,
-              name: `M${i + 1}`,
-              x: 5 + (i % 7) * 13,
-              y: 5 + Math.floor(i / 7) * 15,
-              type: 'sala',
-              status: 'free'
-            });
-          }
-        }
-
-        // Check Terraza (T1-T9)
-        for (let i = 0; i < 9; i++) {
-          const id = `T${i + 1}`;
-          if (!existingIds.has(id)) {
-            missingTables.push({
-              id,
-              name: `T${i + 1}`,
-              x: 10 + i * 9,
-              y: 70, // Bottom area
-              type: 'terraza',
-              status: 'free'
-            });
-          }
-        }
-
-        // Merge existing + missing
-        const fullData = [...data, ...missingTables];
-
-        // If we found missing tables, save them to DB so next load is complete
-        if (missingTables.length > 0) {
-          missingTables.forEach(t => setDoc(doc(db, 'tables', t.id), t));
-        }
+        setTablesConfig(data);
 
         // Check if many items are at 0,0 (clumping) -> indicates bad data migration
         // Only check existing 'clumped' ones, new ones are created with valid coords
-        const clumped = fullData.filter(t => t.x === 0 && t.y === 0).length;
+        const clumped = data.filter(t => t.x === 0 && t.y === 0).length;
         if (clumped > 5) {
           // Auto-fix: Redistribute them temporarily in a grid
-          const fixedData = fullData.map((t, i) => {
+          const fixedData = data.map((t, i) => {
             if (t.x === 0 && t.y === 0) {
               return {
                 ...t,
@@ -1156,15 +1259,17 @@ const App = () => {
       const order = orders.find(o => o.type === 'sala' && (o.tableId === t.id || o.name === t.name) && o.status !== 'closed');
       // Note: We use t.id to match.
 
-      // Find valid reservation for today
-      const res = reservations.find(r => r.tableId === t.id && r.date === todayStr && !r.seated);
+      // Find valid reservation for the selected date
+      const res = reservations.find(r => r.tableIds?.includes(t.id) && r.date === selectedDate && !r.seated);
       let blocked = false;
       if (res) {
         const [h, m] = res.time.split(':').map(Number);
-        const resTime = new Date();
+        const resTime = new Date(selectedDate); // Use selectedDate for block time calculation
         resTime.setHours(h, m, 0, 0);
         const diff = (resTime - now) / (1000 * 60);
-        if (diff <= 30 && diff > -60) blocked = true;
+        // Only block if it reflects today (actually 'now')
+        const isToday = selectedDate === new Date().toISOString().split('T')[0];
+        if (isToday && diff <= 30 && diff > -60) blocked = true;
       }
 
       const isEffectivelyOccupied = order && (
@@ -1181,14 +1286,30 @@ const App = () => {
     });
   }, [orders, reservations, tablesConfig, now]);
 
+  const derivedReservations = useMemo(() => {
+    return reservations.filter(r => r.date === selectedDate);
+  }, [reservations, selectedDate]);
+
   const derivedDeliveries = useMemo(() => {
     return orders.filter(o => o.type === 'delivery' && o.status !== 'closed');
   }, [orders]);
 
   const handleAssignTable = async (reservationId, tableId) => {
     try {
-      await updateDoc(doc(db, 'reservations', reservationId), { tableId });
-      setAssigningReservationId(null);
+      const res = reservations.find(r => r.id === reservationId);
+      if (!res) return;
+
+      const currentTableIds = res.tableIds || [];
+      const isAlreadyAssigned = currentTableIds.includes(tableId);
+
+      const newTableIds = isAlreadyAssigned
+        ? currentTableIds.filter(id => id !== tableId)
+        : [...currentTableIds, tableId];
+
+      await updateDoc(doc(db, 'reservations', reservationId), {
+        tableIds: newTableIds
+      });
+      // We don't close assignment mode yet so user can click multiple tables
     } catch (e) {
       console.error(e);
     }
@@ -1275,6 +1396,7 @@ const App = () => {
       await setDoc(doc(db, 'reservations', id), {
         id,
         ...data,
+        tableIds: [], // Multi-table initialization
         createdAt: new Date().toISOString()
       });
       // Optionally link customer on reservation too
@@ -1282,6 +1404,17 @@ const App = () => {
     } catch (error) {
       console.error('Error adding reservation:', error);
       alert('Error al añadir reserva: ' + error.message);
+    }
+  };
+
+  const handleUpdateReservation = async (id, data) => {
+    try {
+      const { id: _, createdAt, ...updateData } = data; // Don't overwrite id/createdAt
+      await updateDoc(doc(db, 'reservations', id), updateData);
+      setEditingReservation(null);
+    } catch (error) {
+      console.error('Error updating reservation:', error);
+      alert('Error al actualizar reserva: ' + error.message);
     }
   };
 
@@ -1497,6 +1630,20 @@ const App = () => {
           <h1 className="font-bold text-lg tracking-tight">SMILE <span className="text-orange-500">POS</span></h1>
         </div>
         <div className="flex items-center gap-4 text-sm text-slate-400">
+          {!currentOrder && (
+            <button
+              onClick={() => {
+                if (isEditingLayout) {
+                  saveLayout();
+                } else {
+                  setIsEditingLayout(true);
+                }
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all text-xs ${isEditingLayout ? 'bg-emerald-500 text-white shadow-emerald-500/20 shadow-lg' : 'bg-slate-800 text-slate-400 hover:bg-white hover:text-slate-900 border border-slate-700'}`}
+            >
+              {isEditingLayout ? <><Save size={14} /> GUARDAR</> : <><PenLine size={14} /> EDITAR SALA</>}
+            </button>
+          )}
           <button
             onClick={() => setShowDeleteAllConfirm(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all font-bold text-xs"
@@ -1515,12 +1662,16 @@ const App = () => {
         <Dashboard
           tables={derivedTables}
           deliveries={derivedDeliveries}
-          reservations={reservations}
+          reservations={derivedReservations}
           customers={customers}
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          onShowDetail={(res) => setViewingReservation(res)}
           assigningReservationId={assigningReservationId}
           setAssigningReservationId={setAssigningReservationId}
           onSelectTable={handleSelectTable}
           onSelectDelivery={handleSelectDelivery}
+          onAddDelivery={handleAddDelivery}
           onAddReservation={handleAddReservation}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
@@ -1769,6 +1920,36 @@ const App = () => {
           product={customizingProduct}
           onClose={() => setCustomizingProduct(null)}
           onAdd={addItemToOrder}
+        />
+      )}
+
+      {viewingReservation && (
+        <ReservationDetailModal
+          reservation={viewingReservation}
+          onClose={() => setViewingReservation(null)}
+          tables={tablesConfig}
+          onUnassignTable={async (rid, tid) => {
+            if (rid === 'EDIT_MODE_TRIGGER') {
+              setEditingReservation(tid); // Correctly passing the reservation object stored in 'tid' arg due to messy proxy call
+              return;
+            }
+            const res = reservations.find(r => r.id === rid);
+            if (!res) return;
+            const newTableIds = (res.tableIds || []).filter(id => id !== tid);
+            await updateDoc(doc(db, 'reservations', rid), { tableIds: newTableIds });
+            setViewingReservation({ ...res, tableIds: newTableIds }); // Local update for UI
+          }}
+        />
+      )}
+
+      {editingReservation && (
+        <ReservationModal
+          initialData={editingReservation}
+          onClose={() => setEditingReservation(null)}
+          customers={customers}
+          onAdd={(data) => {
+            handleUpdateReservation(editingReservation.id, data);
+          }}
         />
       )}
 
